@@ -207,7 +207,7 @@
 import { ref, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { generateTripPlan } from '@/services/api'
+import { generateTripPlanStream } from '@/services/api'
 import type { TripFormData } from '@/types'
 import type { Dayjs } from 'dayjs'
 
@@ -253,24 +253,6 @@ const handleSubmit = async () => {
   loadingProgress.value = 0
   loadingStatus.value = '正在初始化...'
 
-  // 模拟进度更新
-  const progressInterval = setInterval(() => {
-    if (loadingProgress.value < 90) {
-      loadingProgress.value += 10
-
-      // 更新状态文本
-      if (loadingProgress.value <= 30) {
-        loadingStatus.value = '🔍 正在搜索景点...'
-      } else if (loadingProgress.value <= 50) {
-        loadingStatus.value = '🌤️ 正在查询天气...'
-      } else if (loadingProgress.value <= 70) {
-        loadingStatus.value = '🏨 正在推荐酒店...'
-      } else {
-        loadingStatus.value = '📋 正在生成行程计划...'
-      }
-    }
-  }, 500)
-
   try {
     const requestData: TripFormData = {
       city: formData.city,
@@ -283,27 +265,23 @@ const handleSubmit = async () => {
       free_text_input: formData.free_text_input
     }
 
-    const response = await generateTripPlan(requestData)
+    await generateTripPlanStream(requestData, (event) => {
+      loadingProgress.value = event.progress
+      loadingStatus.value = event.message
 
-    clearInterval(progressInterval)
-    loadingProgress.value = 100
-    loadingStatus.value = '✅ 完成!'
+      if (event.type === 'complete' && event.data) {
+        sessionStorage.setItem('tripPlan', JSON.stringify(event.data))
+        message.success('旅行计划生成成功!')
+        setTimeout(() => {
+          router.push('/result')
+        }, 500)
+      }
 
-    if (response.success && response.data) {
-      // 保存到sessionStorage
-      sessionStorage.setItem('tripPlan', JSON.stringify(response.data))
-
-      message.success('旅行计划生成成功!')
-
-      // 短暂延迟后跳转
-      setTimeout(() => {
-        router.push('/result')
-      }, 500)
-    } else {
-      message.error(response.message || '生成失败')
-    }
+      if (event.type === 'error') {
+        message.error(event.message)
+      }
+    })
   } catch (error: any) {
-    clearInterval(progressInterval)
     message.error(error.message || '生成旅行计划失败,请稍后重试')
   } finally {
     setTimeout(() => {

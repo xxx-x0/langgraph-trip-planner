@@ -40,6 +40,24 @@ async def _invoke_tool_with_retry(tool: BaseTool, arguments: Dict[str, Any], max
                 print(f"❌ 工具调用最终失败 [{tool.name}] (已重试 {max_retries} 次): {error_name}: {str(e)[:100]}")
     raise last_error
 
+async def _invoke_llm_with_retry(llm_with_tools, messages: list, max_retries: int = 3) -> Any:
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            result = await llm_with_tools.ainvoke(messages)
+            return result
+        except Exception as e:
+            last_error = e
+            error_name = type(e).__name__
+            if attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 3
+                print(f"⚠️ LLM调用失败 (尝试 {attempt + 1}/{max_retries}): {error_name}: {str(e)[:100]}")
+                print(f"   等待 {wait_time} 秒后重试...")
+                await asyncio.sleep(wait_time)
+            else:
+                print(f"❌ LLM调用最终失败 (已重试 {max_retries} 次): {error_name}: {str(e)[:100]}")
+    raise last_error
+
 # ============ Agent提示词 (复用并适配 LangGraph) ============
 
 ATTRACTION_AGENT_PROMPT = """你是景点搜索专家。你的任务是根据城市和用户偏好搜索合适的景点。
@@ -239,7 +257,7 @@ async def search_poi_node(state: TripPlannerState) -> Dict[str, Any]:
     llm_with_tools = llm.bind_tools([search_tool])
 
     prompt = ATTRACTION_AGENT_PROMPT + f"\n请搜索城市: {request.city}, 关键词: {keywords}"
-    response = await llm_with_tools.ainvoke([SystemMessage(content=ATTRACTION_AGENT_PROMPT), HumanMessage(content=prompt)])
+    response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=ATTRACTION_AGENT_PROMPT), HumanMessage(content=prompt)])
 
     if response.tool_calls:
         tool_call = response.tool_calls[0]
@@ -259,7 +277,7 @@ async def search_weather_node(state: TripPlannerState) -> Dict[str, Any]:
     llm_with_tools = llm.bind_tools([weather_tool])
 
     prompt = WEATHER_AGENT_PROMPT + f"\n请查询城市: {request.city} 的天气。"
-    response = await llm_with_tools.ainvoke([SystemMessage(content=WEATHER_AGENT_PROMPT), HumanMessage(content=prompt)])
+    response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=WEATHER_AGENT_PROMPT), HumanMessage(content=prompt)])
 
     if response.tool_calls:
         tool_call = response.tool_calls[0]
@@ -279,7 +297,7 @@ async def search_hotel_node(state: TripPlannerState) -> Dict[str, Any]:
     llm_with_tools = llm.bind_tools([search_tool])
 
     prompt = HOTEL_AGENT_PROMPT + f"\n请搜索城市: {request.city}, 关键词: {request.accommodation} 酒店"
-    response = await llm_with_tools.ainvoke([SystemMessage(content=HOTEL_AGENT_PROMPT), HumanMessage(content=prompt)])
+    response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=HOTEL_AGENT_PROMPT), HumanMessage(content=prompt)])
 
     if response.tool_calls:
         tool_call = response.tool_calls[0]
@@ -319,7 +337,7 @@ async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
 你需要选择其中最相关的位置（或从酒店到某个主要景点），使用工具查询一次路线作为代表性建议。
 注意：路线规划工具需要经纬度坐标，请先用 maps_geo 将地址转为坐标，再调用路线规划工具。
 """
-    response = await llm_with_tools.ainvoke([SystemMessage(content=ROUTE_AGENT_PROMPT), HumanMessage(content=prompt)])
+    response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=ROUTE_AGENT_PROMPT), HumanMessage(content=prompt)])
 
     route_results = []
     for tool_call in response.tool_calls:
@@ -369,7 +387,7 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
 
     llm = get_llm()
     try:
-        response = await llm.ainvoke([SystemMessage(content=PLANNER_AGENT_PROMPT), HumanMessage(content=prompt)])
+        response = await _invoke_llm_with_retry(llm, [SystemMessage(content=PLANNER_AGENT_PROMPT), HumanMessage(content=prompt)])
         trip_plan = _parse_response(response.content, request)
         return {"trip_plan": trip_plan}
     except Exception as e:
@@ -524,6 +542,93 @@ class LangGraphTripPlanner:
             import traceback
             traceback.print_exc()
             return _create_fallback_plan(request)
+
+
+    async def plan_trip_stream(self, request: TripRequest):
+        """流式生成旅行计划，通过 async generator 产出进度事件
+
+        使用 LangGraph 的 astream 方法，每完成一个节点就产出进度事件，
+        同时收集最终状态，无需额外调用 ainvoke。
+        """
+        print(f"\n{'='*60}")
+        print(f"🚀 开始 LangGraph 流式协作规划旅行...")
+        print(f"目的地: {request.city} | 日期: {request.start_date} 至 {request.end_date}")
+        print(f"{'='*60}\n")
+
+        try:
+            print("⏳ 预初始化 LLM 和 MCP 服务...")
+            get_llm()
+            await get_mcp_tools()
+            print("✅ 服务预初始化完成")
+        except Exception as e:
+            print(f"⚠️ 服务预初始化失败: {e}")
+
+        yield {"type": "init", "message": "正在初始化服务...", "progress": 5}
+
+        initial_state = {
+            "request": request,
+            "attractions_info": "",
+            "weather_info": "",
+            "hotels_info": "",
+            "route_info": "",
+            "trip_plan": None,
+            "errors": [],
+            "messages": []
+        }
+
+        NODE_INFO = {
+            "search_poi": {"message": "🔍 正在搜索景点...", "progress": 20, "done_msg": "✅ 景点搜索完成"},
+            "search_weather": {"message": "🌤️ 正在查询天气...", "progress": 20, "done_msg": "✅ 天气查询完成"},
+            "search_hotel": {"message": "🏨 正在推荐酒店...", "progress": 20, "done_msg": "✅ 酒店推荐完成"},
+            "plan_route": {"message": "🗺️ 正在规划路线...", "progress": 60, "done_msg": "✅ 路线规划完成"},
+            "generate_plan": {"message": "📋 正在生成行程计划...", "progress": 80, "done_msg": "✅ 行程计划生成完成"},
+        }
+
+        completed_nodes = set()
+        final_state = dict(initial_state)
+
+        try:
+            async for chunk in self.app.astream(initial_state, stream_mode="updates"):
+                for node_name, node_output in chunk.items():
+                    if isinstance(node_output, dict):
+                        for key, value in node_output.items():
+                            if key in final_state:
+                                existing = final_state[key]
+                                if isinstance(existing, list) and isinstance(value, list):
+                                    existing.extend(value)
+                                else:
+                                    final_state[key] = value
+                            else:
+                                final_state[key] = value
+
+                    if node_name in NODE_INFO and node_name not in completed_nodes:
+                        completed_nodes.add(node_name)
+                        info = NODE_INFO[node_name]
+                        yield {
+                            "type": "node_complete",
+                            "node": node_name,
+                            "message": info["done_msg"],
+                            "progress": info["progress"],
+                        }
+
+            trip_plan = final_state.get("trip_plan")
+
+            if not trip_plan:
+                print("⚠️ 警告：生成的计划为空，使用备用方案")
+                trip_plan = _create_fallback_plan(request)
+
+            plan_dict = trip_plan.model_dump() if hasattr(trip_plan, 'model_dump') else trip_plan.dict()
+            yield {"type": "complete", "message": "✅ 旅行计划生成完成!", "progress": 100, "data": plan_dict}
+
+            print(f"{'='*60}")
+            print(f"✅ LangGraph 流式旅行计划生成完成!")
+            print(f"{'='*60}\n")
+
+        except Exception as e:
+            print(f"❌ 流式生成旅行计划失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            yield {"type": "error", "message": f"生成失败: {str(e)}", "progress": 0}
 
 
 _langgraph_planner = None

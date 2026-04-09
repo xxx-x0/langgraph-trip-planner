@@ -5,9 +5,12 @@
 - 本路由使用 langgraph_agent (LangGraph工作流Agent)
 - LangGraph Agent通过并行节点搜索景点/天气/酒店，再规划路线，最后生成计划
 - 所有服务调用均为异步
+- 新增 SSE 流式端点 /plan/stream，实时推送节点执行进度
 """
 
+import json
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from ...models.schemas import (
     TripRequest,
     TripPlanResponse,
@@ -57,6 +60,37 @@ async def plan_trip(request: TripRequest):
             status_code=500,
             detail=f"生成旅行计划失败: {str(e)}"
         )
+
+
+@router.post(
+    "/plan/stream",
+    summary="流式生成旅行计划",
+    description="使用SSE实时推送LangGraph各节点执行进度，最终返回完整旅行计划"
+)
+async def plan_trip_stream(request: TripRequest):
+    async def event_generator():
+        agent = get_trip_planner_agent()
+        try:
+            async for event in agent.plan_trip_stream(request):
+                data = json.dumps(event, ensure_ascii=False, default=str)
+                yield f"data: {data}\n\n"
+        except Exception as e:
+            error_event = json.dumps({
+                "type": "error",
+                "message": f"流式生成失败: {str(e)}",
+                "progress": 0
+            }, ensure_ascii=False)
+            yield f"data: {error_event}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 @router.get(

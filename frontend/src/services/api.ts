@@ -1,17 +1,16 @@
 import axios from 'axios'
-import type { TripFormData, TripPlanResponse } from '@/types'
+import type { TripFormData, TripPlanResponse, TripPlan } from '@/types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 120000, // 2分钟超时
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json'
   }
 })
 
-// 请求拦截器
 apiClient.interceptors.request.use(
   (config) => {
     console.log('发送请求:', config.method?.toUpperCase(), config.url)
@@ -23,7 +22,6 @@ apiClient.interceptors.request.use(
   }
 )
 
-// 响应拦截器
 apiClient.interceptors.response.use(
   (response) => {
     console.log('收到响应:', response.status, response.config.url)
@@ -35,9 +33,6 @@ apiClient.interceptors.response.use(
   }
 )
 
-/**
- * 生成旅行计划
- */
 export async function generateTripPlan(formData: TripFormData): Promise<TripPlanResponse> {
   try {
     const response = await apiClient.post<TripPlanResponse>('/api/trip/plan', formData)
@@ -48,9 +43,62 @@ export async function generateTripPlan(formData: TripFormData): Promise<TripPlan
   }
 }
 
-/**
- * 健康检查
- */
+export interface StreamEvent {
+  type: 'init' | 'node_complete' | 'complete' | 'error'
+  message: string
+  progress: number
+  node?: string
+  data?: TripPlan
+}
+
+export async function generateTripPlanStream(
+  formData: TripFormData,
+  onEvent: (event: StreamEvent) => void
+): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/trip/plan/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(formData),
+  })
+
+  if (!response.ok) {
+    throw new Error(`请求失败: ${response.status}`)
+  }
+
+  const reader = response.body?.getReader()
+  if (!reader) {
+    throw new Error('无法获取响应流')
+  }
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('data: ')) {
+        try {
+          const event: StreamEvent = JSON.parse(trimmed.slice(6))
+          onEvent(event)
+          if (event.type === 'complete' || event.type === 'error') {
+            return
+          }
+        } catch (e) {
+          console.warn('解析SSE事件失败:', trimmed, e)
+        }
+      }
+    }
+  }
+}
+
 export async function healthCheck(): Promise<any> {
   try {
     const response = await apiClient.get('/health')
