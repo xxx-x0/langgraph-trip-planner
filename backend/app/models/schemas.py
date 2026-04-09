@@ -16,6 +16,7 @@ class TripRequest(BaseModel):
     transportation: str = Field(..., description="交通方式", example="公共交通")
     accommodation: str = Field(..., description="住宿偏好", example="经济型酒店")
     preferences: List[str] = Field(default=[], description="旅行偏好标签", example=["历史文化", "美食"])
+    food_preference: str = Field(default="本地特色", description="美食偏好", example="本地特色")
     free_text_input: Optional[str] = Field(default="", description="额外要求", example="希望多安排一些博物馆")
     
     class Config:
@@ -28,6 +29,7 @@ class TripRequest(BaseModel):
                 "transportation": "公共交通",
                 "accommodation": "经济型酒店",
                 "preferences": ["历史文化", "美食"],
+                "food_preference": "本地特色",
                 "free_text_input": "希望多安排一些博物馆"
             }
         }
@@ -81,10 +83,16 @@ class Attraction(BaseModel):
 class Meal(BaseModel):
     """餐饮信息"""
     type: str = Field(..., description="餐饮类型: breakfast/lunch/dinner/snack")
-    name: str = Field(..., description="餐饮名称")
-    address: Optional[str] = Field(default=None, description="地址")
+    name: str = Field(..., description="餐厅名称")
+    address: Optional[str] = Field(default=None, description="餐厅地址")
     location: Optional[Location] = Field(default=None, description="经纬度坐标")
-    description: Optional[str] = Field(default=None, description="描述")
+    description: Optional[str] = Field(default=None, description="推荐理由")
+    cuisine: Optional[str] = Field(default=None, description="菜系: 川菜/粤菜/日料/本地菜等")
+    rating: Optional[float] = Field(default=None, description="评分(1-5)")
+    avg_cost: Optional[int] = Field(default=None, description="人均消费(元)")
+    distance: Optional[str] = Field(default=None, description="距离景点/酒店的距离")
+    poi_id: Optional[str] = Field(default=None, description="POI ID")
+    source: Optional[str] = Field(default=None, description="来源: nearby=景点周边, popular=城市热门")
     estimated_cost: int = Field(default=0, description="预估费用(元)")
 
 

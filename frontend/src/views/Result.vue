@@ -240,16 +240,80 @@
 
               <!-- 餐饮安排 -->
               <a-divider orientation="left">🍽️ 餐饮安排</a-divider>
-              <a-descriptions :column="1" bordered size="small">
-                <a-descriptions-item
-                  v-for="meal in day.meals"
-                  :key="meal.type"
-                  :label="getMealLabel(meal.type)"
-                >
-                  {{ meal.name }}
-                  <span v-if="meal.description"> - {{ meal.description }}</span>
-                </a-descriptions-item>
-              </a-descriptions>
+              <div class="meals-section">
+                <div v-if="day.meals.filter(m => m.source === 'nearby').length > 0" class="meals-group">
+                  <div class="meals-group-title">📍 景点周边餐厅</div>
+                  <div class="meals-grid">
+                    <a-card
+                      v-for="meal in day.meals.filter(m => m.source === 'nearby')"
+                      :key="meal.type + meal.name"
+                      size="small"
+                      class="meal-card nearby-meal"
+                    >
+                      <div class="meal-card-header">
+                        <span class="meal-type-badge">{{ getMealLabel(meal.type) }}</span>
+                        <span v-if="meal.cuisine" class="meal-cuisine-tag">{{ meal.cuisine }}</span>
+                      </div>
+                      <div class="meal-card-name">{{ meal.name }}</div>
+                      <div class="meal-card-details">
+                        <span v-if="meal.rating" class="meal-detail-item">⭐ {{ meal.rating }}</span>
+                        <span v-if="meal.avg_cost" class="meal-detail-item">💰 ¥{{ meal.avg_cost }}/人</span>
+                        <span v-if="meal.distance" class="meal-detail-item">📏 {{ meal.distance }}</span>
+                      </div>
+                      <div v-if="meal.address" class="meal-card-address">📍 {{ meal.address }}</div>
+                      <div v-if="meal.description" class="meal-card-desc">{{ meal.description }}</div>
+                    </a-card>
+                  </div>
+                </div>
+                <div v-if="day.meals.filter(m => m.source === 'popular').length > 0" class="meals-group">
+                  <div class="meals-group-title">🔥 城市热门餐厅</div>
+                  <div class="meals-grid">
+                    <a-card
+                      v-for="meal in day.meals.filter(m => m.source === 'popular')"
+                      :key="meal.type + meal.name"
+                      size="small"
+                      class="meal-card popular-meal"
+                    >
+                      <div class="meal-card-header">
+                        <span class="meal-type-badge">{{ getMealLabel(meal.type) }}</span>
+                        <span v-if="meal.cuisine" class="meal-cuisine-tag">{{ meal.cuisine }}</span>
+                      </div>
+                      <div class="meal-card-name">{{ meal.name }}</div>
+                      <div class="meal-card-details">
+                        <span v-if="meal.rating" class="meal-detail-item">⭐ {{ meal.rating }}</span>
+                        <span v-if="meal.avg_cost" class="meal-detail-item">💰 ¥{{ meal.avg_cost }}/人</span>
+                        <span v-if="meal.distance" class="meal-detail-item">📏 {{ meal.distance }}</span>
+                      </div>
+                      <div v-if="meal.address" class="meal-card-address">📍 {{ meal.address }}</div>
+                      <div v-if="meal.description" class="meal-card-desc">{{ meal.description }}</div>
+                    </a-card>
+                  </div>
+                </div>
+                <div v-if="day.meals.filter(m => !m.source || (m.source !== 'nearby' && m.source !== 'popular')).length > 0" class="meals-group">
+                  <div class="meals-group-title">🍽️ 餐饮推荐</div>
+                  <div class="meals-grid">
+                    <a-card
+                      v-for="meal in day.meals.filter(m => !m.source || (m.source !== 'nearby' && m.source !== 'popular'))"
+                      :key="meal.type + meal.name"
+                      size="small"
+                      class="meal-card"
+                    >
+                      <div class="meal-card-header">
+                        <span class="meal-type-badge">{{ getMealLabel(meal.type) }}</span>
+                        <span v-if="meal.cuisine" class="meal-cuisine-tag">{{ meal.cuisine }}</span>
+                      </div>
+                      <div class="meal-card-name">{{ meal.name }}</div>
+                      <div class="meal-card-details">
+                        <span v-if="meal.rating" class="meal-detail-item">⭐ {{ meal.rating }}</span>
+                        <span v-if="meal.avg_cost" class="meal-detail-item">💰 ¥{{ meal.avg_cost }}/人</span>
+                        <span v-if="meal.distance" class="meal-detail-item">📏 {{ meal.distance }}</span>
+                      </div>
+                      <div v-if="meal.address" class="meal-card-address">📍 {{ meal.address }}</div>
+                      <div v-if="meal.description" class="meal-card-desc">{{ meal.description }}</div>
+                    </a-card>
+                  </div>
+                </div>
+              </div>
             </a-collapse-panel>
           </a-collapse>
         </a-card>
@@ -871,17 +935,19 @@ const addAttractionMarkers = (AMap: any) => {
           dayIndex,
           attrIndex
         })
+      } else {
+        console.warn(`景点缺少坐标: 第${dayIndex + 1}天 - ${attraction.name}`, attraction.location)
       }
     })
   })
 
-  // 创建标记
+  // 创建景点标记
   allAttractions.forEach((attraction, index) => {
     const marker = new AMap.Marker({
       position: [attraction.location.longitude, attraction.location.latitude],
       title: attraction.name,
       label: {
-        content: `<div style="background: #4CAF50; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${index + 1}</div>`,
+        content: `<div style="background: #4CAF50; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap;">${index + 1}</div>`,
         offset: new AMap.Pixel(0, -30)
       }
     })
@@ -908,11 +974,65 @@ const addAttractionMarkers = (AMap: any) => {
     markers.push(marker)
   })
 
+  // 收集所有餐厅
+  const allMeals: any[] = []
+  tripPlan.value.days.forEach((day, dayIndex) => {
+    day.meals.forEach((meal, mealIndex) => {
+      if (meal.location && meal.location.longitude && meal.location.latitude) {
+        allMeals.push({
+          ...meal,
+          dayIndex,
+          mealIndex
+        })
+      } else {
+        console.warn(`餐厅缺少坐标: 第${dayIndex + 1}天 - ${meal.name}`, meal.location)
+      }
+    })
+  })
+
+  // 创建餐厅标记
+  allMeals.forEach((meal) => {
+    const isNearby = meal.source === 'nearby'
+    const bgColor = isNearby ? '#67c23a' : '#f56c6c'
+    const label = isNearby ? '📍' : '🔥'
+
+    const marker = new AMap.Marker({
+      position: [meal.location.longitude, meal.location.latitude],
+      title: meal.name,
+      label: {
+        content: `<div style="background: ${bgColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap;">${label}${getMealLabel(meal.type)}</div>`,
+        offset: new AMap.Pixel(0, -30)
+      }
+    })
+
+    const infoWindow = new AMap.InfoWindow({
+      content: `
+        <div style="padding: 10px; min-width: 200px;">
+          <h4 style="margin: 0 0 8px 0;">${meal.name}</h4>
+          ${meal.cuisine ? `<p style="margin: 4px 0;"><strong>菜系:</strong> ${meal.cuisine}</p>` : ''}
+          ${meal.rating ? `<p style="margin: 4px 0;"><strong>评分:</strong> ⭐${meal.rating}</p>` : ''}
+          ${meal.avg_cost ? `<p style="margin: 4px 0;"><strong>人均:</strong> ¥${meal.avg_cost}</p>` : ''}
+          ${meal.address ? `<p style="margin: 4px 0;"><strong>地址:</strong> ${meal.address}</p>` : ''}
+          ${meal.distance ? `<p style="margin: 4px 0;"><strong>距离:</strong> ${meal.distance}</p>` : ''}
+          ${meal.description ? `<p style="margin: 4px 0;"><strong>推荐理由:</strong> ${meal.description}</p>` : ''}
+          <p style="margin: 4px 0; color: ${bgColor};"><strong>第${meal.dayIndex + 1}天 ${getMealLabel(meal.type)} · ${isNearby ? '景点周边' : '城市热门'}</strong></p>
+        </div>
+      `,
+      offset: new AMap.Pixel(0, -30)
+    })
+
+    marker.on('click', () => {
+      infoWindow.open(map, marker.getPosition())
+    })
+
+    markers.push(marker)
+  })
+
   // 添加标记到地图
   map.add(markers)
 
   // 自动调整视野以包含所有标记
-  if (allAttractions.length > 0) {
+  if (markers.length > 0) {
     map.setFitView(markers)
   }
 
@@ -1154,6 +1274,115 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
 .hotel-title {
   color: white !important;
   font-weight: 600;
+}
+
+/* 餐饮卡片样式 */
+.meals-section {
+  margin-top: 8px;
+}
+
+.meals-group {
+  margin-bottom: 16px;
+}
+
+.meals-group:last-child {
+  margin-bottom: 0;
+}
+
+.meals-group-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+.meals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.meal-card {
+  border-radius: 12px !important;
+  transition: all 0.3s ease;
+  border: 1px solid #f0f0f0 !important;
+}
+
+.meal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.nearby-meal {
+  background: linear-gradient(135deg, #f0f9eb 0%, #e1f3d8 100%) !important;
+  border-left: 3px solid #67c23a !important;
+}
+
+.popular-meal {
+  background: linear-gradient(135deg, #fef0f0 0%, #fde2e2 100%) !important;
+  border-left: 3px solid #f56c6c !important;
+}
+
+.meal-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.meal-type-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.meal-cuisine-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: #e6a23c;
+  background: #fdf6ec;
+  border: 1px solid #faecd8;
+}
+
+.meal-card-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 6px;
+}
+
+.meal-card-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.meal-detail-item {
+  font-size: 13px;
+  color: #606266;
+}
+
+.meal-card-address {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-card-desc {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
 }
 
 /* 顶部信息区布局 */

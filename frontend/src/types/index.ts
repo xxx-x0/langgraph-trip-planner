@@ -23,6 +23,12 @@ export interface Meal {
   address?: string
   location?: Location
   description?: string
+  cuisine?: string
+  rating?: number
+  avg_cost?: number
+  distance?: string
+  poi_id?: string
+  source?: 'nearby' | 'popular'
   estimated_cost?: number
 }
 
@@ -84,6 +90,7 @@ export interface TripFormData {
   transportation: string
   accommodation: string
   preferences: string[]
+  food_preference: string
   free_text_input: string
 }
 

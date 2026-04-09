@@ -124,6 +124,25 @@
               </a-form-item>
             </a-col>
             <a-col :span="8">
+              <a-form-item name="food_preference">
+                <template #label>
+                  <span class="form-label">美食偏好</span>
+                </template>
+                <a-select v-model:value="formData.food_preference" size="large" class="custom-select">
+                  <a-select-option value="本地特色">🍜 本地特色</a-select-option>
+                  <a-select-option value="川菜">🌶️ 川菜</a-select-option>
+                  <a-select-option value="粤菜">🥘 粤菜</a-select-option>
+                  <a-select-option value="日料">🍣 日料</a-select-option>
+                  <a-select-option value="西餐">🥩 西餐</a-select-option>
+                  <a-select-option value="火锅">🍲 火锅</a-select-option>
+                  <a-select-option value="烧烤">🍢 烧烤</a-select-option>
+                  <a-select-option value="海鲜">🦐 海鲜</a-select-option>
+                  <a-select-option value="小吃">🥟 小吃</a-select-option>
+                  <a-select-option value="无特殊要求">❌ 无特殊要求</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
               <a-form-item name="preferences">
                 <template #label>
                   <span class="form-label">旅行偏好</span>
@@ -132,7 +151,6 @@
                   <a-checkbox-group v-model:value="formData.preferences" class="custom-checkbox-group">
                     <a-checkbox value="历史文化" class="preference-tag">🏛️ 历史文化</a-checkbox>
                     <a-checkbox value="自然风光" class="preference-tag">🏞️ 自然风光</a-checkbox>
-                    <a-checkbox value="美食" class="preference-tag">🍜 美食</a-checkbox>
                     <a-checkbox value="购物" class="preference-tag">🛍️ 购物</a-checkbox>
                     <a-checkbox value="艺术" class="preference-tag">🎨 艺术</a-checkbox>
                     <a-checkbox value="休闲" class="preference-tag">☕ 休闲</a-checkbox>
@@ -223,6 +241,7 @@ const formData = reactive<TripFormData & { start_date: Dayjs | null; end_date: D
   travel_days: 1,
   transportation: '公共交通',
   accommodation: '经济型酒店',
+  food_preference: '本地特色',
   preferences: [],
   free_text_input: ''
 })
@@ -261,6 +280,7 @@ const handleSubmit = async () => {
       travel_days: formData.travel_days,
       transportation: formData.transportation,
       accommodation: formData.accommodation,
+      food_preference: formData.food_preference,
       preferences: formData.preferences,
       free_text_input: formData.free_text_input
     }
