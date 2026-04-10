@@ -108,6 +108,16 @@ class Hotel(BaseModel):
     estimated_cost: int = Field(default=0, description="预估费用(元/晚)")
 
 
+class RouteSegment(BaseModel):
+    """路线段信息"""
+    from_name: str = Field(..., description="起点名称")
+    to_name: str = Field(..., description="终点名称")
+    distance: str = Field(default="", description="距离(如: 3.5公里)")
+    duration: str = Field(default="", description="预计时间(如: 25分钟)")
+    mode: str = Field(default="", description="交通方式(如: 地铁/公交/步行/驾车)")
+    detail: str = Field(default="", description="路线详情(如: 乘坐地铁1号线天安门东→王府井，约3站)")
+
+
 class DayPlan(BaseModel):
     """单日行程"""
     date: str = Field(..., description="日期 YYYY-MM-DD")
@@ -118,6 +128,7 @@ class DayPlan(BaseModel):
     hotel: Optional[Hotel] = Field(default=None, description="推荐酒店")
     attractions: List[Attraction] = Field(default=[], description="景点列表")
     meals: List[Meal] = Field(default=[], description="餐饮列表")
+    route_segments: List[RouteSegment] = Field(default=[], description="路线段列表")
 
 
 class WeatherInfo(BaseModel):

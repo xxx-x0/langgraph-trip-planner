@@ -147,6 +147,36 @@
                 </div>
               </div>
 
+              <!-- 路线规划 -->
+              <a-divider v-if="day.route_segments && day.route_segments.length > 0" orientation="left">🚦 路线规划</a-divider>
+              <div v-if="day.route_segments && day.route_segments.length > 0" class="route-timeline">
+                <div
+                  v-for="(segment, segIdx) in day.route_segments"
+                  :key="segIdx"
+                  class="route-segment"
+                >
+                  <div class="route-segment-connector">
+                    <div class="route-segment-dot" :class="getRouteModeClass(segment.mode)"></div>
+                    <div v-if="segIdx < day.route_segments.length - 1" class="route-segment-line"></div>
+                  </div>
+                  <div class="route-segment-content">
+                    <div class="route-segment-header">
+                      <span class="route-from">{{ segment.from_name }}</span>
+                      <span class="route-arrow">→</span>
+                      <span class="route-to">{{ segment.to_name }}</span>
+                      <a-tag :color="getRouteModeColor(segment.mode)" class="route-mode-tag">
+                        {{ getRouteModeIcon(segment.mode) }} {{ segment.mode }}
+                      </a-tag>
+                    </div>
+                    <div class="route-segment-meta">
+                      <span v-if="segment.distance" class="route-meta-item">📏 {{ segment.distance }}</span>
+                      <span v-if="segment.duration" class="route-meta-item">⏱️ {{ segment.duration }}</span>
+                    </div>
+                    <div v-if="segment.detail" class="route-segment-detail">{{ segment.detail }}</div>
+                  </div>
+                </div>
+              </div>
+
               <!-- 景点安排 -->
               <a-divider orientation="left">🎯 景点安排</a-divider>
               <a-list
@@ -486,6 +516,42 @@ const getMealLabel = (type: string): string => {
     snack: '小吃'
   }
   return labels[type] || type
+}
+
+const getRouteModeColor = (mode: string): string => {
+  const colors: Record<string, string> = {
+    '地铁': 'blue',
+    '公交': 'green',
+    '步行': 'orange',
+    '驾车': 'red',
+    '出租车': 'purple',
+    '骑行': 'cyan',
+  }
+  return colors[mode] || 'default'
+}
+
+const getRouteModeIcon = (mode: string): string => {
+  const icons: Record<string, string> = {
+    '地铁': '🚇',
+    '公交': '🚌',
+    '步行': '🚶',
+    '驾车': '🚗',
+    '出租车': '🚕',
+    '骑行': '🚲',
+  }
+  return icons[mode] || '🚗'
+}
+
+const getRouteModeClass = (mode: string): string => {
+  const classes: Record<string, string> = {
+    '地铁': 'mode-subway',
+    '公交': 'mode-bus',
+    '步行': 'mode-walk',
+    '驾车': 'mode-drive',
+    '出租车': 'mode-taxi',
+    '骑行': 'mode-bike',
+  }
+  return classes[mode] || 'mode-default'
 }
 
 // 加载所有景点图片
@@ -1274,6 +1340,100 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
 .hotel-title {
   color: white !important;
   font-weight: 600;
+}
+
+/* 路线规划时间线样式 */
+.route-timeline {
+  padding: 12px 0 4px 0;
+}
+
+.route-segment {
+  display: flex;
+  gap: 12px;
+  min-height: 60px;
+}
+
+.route-segment-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.route-segment-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #1890ff;
+  background: #1890ff;
+}
+
+.route-segment-dot.mode-subway { background: #1890ff; box-shadow: 0 0 0 2px #1890ff; }
+.route-segment-dot.mode-bus { background: #52c41a; box-shadow: 0 0 0 2px #52c41a; }
+.route-segment-dot.mode-walk { background: #fa8c16; box-shadow: 0 0 0 2px #fa8c16; }
+.route-segment-dot.mode-drive { background: #f5222d; box-shadow: 0 0 0 2px #f5222d; }
+.route-segment-dot.mode-taxi { background: #722ed1; box-shadow: 0 0 0 2px #722ed1; }
+.route-segment-dot.mode-bike { background: #13c2c2; box-shadow: 0 0 0 2px #13c2c2; }
+.route-segment-dot.mode-default { background: #8c8c8c; box-shadow: 0 0 0 2px #8c8c8c; }
+
+.route-segment-line {
+  width: 2px;
+  flex: 1;
+  min-height: 20px;
+  background: linear-gradient(to bottom, #1890ff33, #1890ff);
+  margin: 4px 0;
+}
+
+.route-segment-content {
+  flex: 1;
+  padding-bottom: 16px;
+}
+
+.route-segment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.route-from, .route-to {
+  font-weight: 600;
+  font-size: 14px;
+  color: #262626;
+}
+
+.route-arrow {
+  color: #8c8c8c;
+  font-weight: bold;
+}
+
+.route-mode-tag {
+  margin-left: 4px;
+}
+
+.route-segment-meta {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.route-meta-item {
+  font-size: 13px;
+  color: #8c8c8c;
+}
+
+.route-segment-detail {
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: #f6f8fa;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #595959;
+  line-height: 1.6;
+  border-left: 3px solid #1890ff;
 }
 
 /* 餐饮卡片样式 */

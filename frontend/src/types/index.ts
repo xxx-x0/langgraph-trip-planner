@@ -51,6 +51,15 @@ export interface Budget {
   total: number
 }
 
+export interface RouteSegment {
+  from_name: string
+  to_name: string
+  distance: string
+  duration: string
+  mode: string
+  detail: string
+}
+
 export interface DayPlan {
   date: string
   day_index: number
@@ -60,6 +69,7 @@ export interface DayPlan {
   hotel?: Hotel
   attractions: Attraction[]
   meals: Meal[]
+  route_segments: RouteSegment[]
 }
 
 export interface WeatherInfo {

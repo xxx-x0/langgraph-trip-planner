@@ -7,6 +7,7 @@
 """
 
 import json
+import math
 import operator
 import asyncio
 import random
@@ -259,6 +260,32 @@ PLANNER_AGENT_PROMPT = """你是行程规划专家。你的任务是根据景点
           "source": "popular",
           "estimated_cost": 80
         }
+      ],
+      "route_segments": [
+        {
+          "from_name": "酒店",
+          "to_name": "故宫博物院",
+          "distance": "3.5公里",
+          "duration": "25分钟",
+          "mode": "地铁",
+          "detail": "乘坐地铁1号线天安门东站B口出，步行约5分钟到达"
+        },
+        {
+          "from_name": "故宫博物院",
+          "to_name": "天坛公园",
+          "distance": "5.2公里",
+          "duration": "30分钟",
+          "mode": "公交",
+          "detail": "乘坐公交2路从天安门东→天坛西门"
+        },
+        {
+          "from_name": "天坛公园",
+          "to_name": "酒店",
+          "distance": "4.0公里",
+          "duration": "20分钟",
+          "mode": "地铁",
+          "detail": "乘坐地铁5号线天坛东门站→酒店附近"
+        }
       ]
     }
   ],
@@ -294,8 +321,14 @@ PLANNER_AGENT_PROMPT = """你是行程规划专家。你的任务是根据景点
 7. **source字段说明**: nearby=景点周边餐厅, popular=城市热门餐厅
 8. 早餐推荐景点或酒店附近的餐厅(source=nearby)，午餐推荐景点附近的餐厅(source=nearby)，晚餐推荐城市热门餐厅(source=popular)
 9. **每个景点和餐厅的location字段必须包含经纬度坐标**，从搜索结果中提取真实坐标，不要留空
-10. 提供实用的旅行建议
-11. **必须包含预算信息**:
+10. **每天必须包含route_segments路线段信息**，基于路线搜索结果和距离矩阵，为每天生成以下路线段:
+    - 酒店→当天第1个景点
+    - 景点1→景点2（如有多个景点）
+    - 最后一个景点→酒店
+    每段路线必须包含: from_name, to_name, distance, duration, mode, detail
+    detail字段要写明具体的乘车/步行指引（如地铁几号线、哪站上下车、公交几路等），参考路线搜索结果
+11. 提供实用的旅行建议
+12. **必须包含预算信息**:
    - 景点门票价格(ticket_price)
    - 餐饮预估费用(estimated_cost)
    - 酒店预估费用(estimated_cost)
@@ -312,6 +345,7 @@ class TripPlannerState(TypedDict):
     weather_info: str
     hotels_info: str
     food_info: str
+    cluster_info: str
     route_info: str
     trip_plan: Optional[TripPlan]
     errors: List[str]
@@ -469,52 +503,295 @@ async def search_food_node(state: TripPlannerState) -> Dict[str, Any]:
     return {"food_info": response.content}
 
 
+def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    c = 2 * math.asin(math.sqrt(a))
+    return R * c
+
+
+def _cluster_attractions_by_proximity(attractions: List[Dict], num_days: int) -> List[List[Dict]]:
+    n = len(attractions)
+    if n == 0:
+        return []
+    if n <= num_days:
+        return [[a] for a in attractions]
+
+    dist_matrix = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = _haversine_distance(
+                attractions[i]["latitude"], attractions[i]["longitude"],
+                attractions[j]["latitude"], attractions[j]["longitude"]
+            )
+            dist_matrix[i][j] = d
+            dist_matrix[j][i] = d
+
+    clusters = [[i] for i in range(n)]
+
+    while len(clusters) > num_days:
+        min_dist = float("inf")
+        merge_i, merge_j = 0, 1
+        for i in range(len(clusters)):
+            for j in range(i + 1, len(clusters)):
+                cluster_dist = min(
+                    dist_matrix[a][b]
+                    for a in clusters[i]
+                    for b in clusters[j]
+                )
+                if cluster_dist < min_dist:
+                    min_dist = cluster_dist
+                    merge_i, merge_j = i, j
+
+        clusters[merge_i] = clusters[merge_i] + clusters[merge_j]
+        clusters.pop(merge_j)
+
+    return [[attractions[i] for i in cluster] for cluster in clusters]
+
+
+def _order_cluster_by_tsp(cluster: List[Dict]) -> List[Dict]:
+    if len(cluster) <= 2:
+        return cluster
+
+    ordered = [cluster[0]]
+    remaining = list(cluster[1:])
+
+    while remaining:
+        last = ordered[-1]
+        nearest_idx = 0
+        nearest_dist = float("inf")
+        for i, attr in enumerate(remaining):
+            d = _haversine_distance(last["latitude"], last["longitude"], attr["latitude"], attr["longitude"])
+            if d < nearest_dist:
+                nearest_dist = d
+                nearest_idx = i
+        ordered.append(remaining.pop(nearest_idx))
+
+    return ordered
+
+
+def _select_top_attractions(clusters: List[List[Dict]], max_per_day: int = 3) -> List[List[Dict]]:
+    result = []
+    for cluster in clusters:
+        if len(cluster) <= max_per_day:
+            result.append(cluster)
+        else:
+            if len(cluster) > 1:
+                center_lat = sum(a["latitude"] for a in cluster) / len(cluster)
+                center_lon = sum(a["longitude"] for a in cluster) / len(cluster)
+                scored = []
+                for attr in cluster:
+                    d = _haversine_distance(center_lat, center_lon, attr["latitude"], attr["longitude"])
+                    scored.append((attr, d))
+                scored.sort(key=lambda x: x[1])
+                result.append([s[0] for s in scored[:max_per_day]])
+            else:
+                result.append(cluster[:max_per_day])
+    return result
+
+
+def _format_cluster_info(clusters: List[List[Dict]], all_attractions: List[Dict], dist_matrix: List[List[float]], trimmed: bool = False) -> str:
+    lines = ["=== 每日景点分组建议（基于地理位置聚类） ===", ""]
+
+    if trimmed:
+        lines.append("⚠️ 景点数量超过每天3个的上限，已按距离聚类中心最近的原则筛选，保留每天最多3个景点")
+        lines.append("")
+
+    for day_idx, cluster in enumerate(clusters):
+        lines.append(f"第{day_idx + 1}天建议景点:")
+        for order_idx, attr in enumerate(cluster):
+            lines.append(f"  {order_idx + 1}. {attr['name']} ({attr['longitude']:.4f}, {attr['latitude']:.4f})")
+
+        if len(cluster) > 1:
+            max_dist = 0
+            for i in range(len(cluster)):
+                for j in range(i + 1, len(cluster)):
+                    ci = all_attractions.index(cluster[i])
+                    cj = all_attractions.index(cluster[j])
+                    max_dist = max(max_dist, dist_matrix[ci][cj])
+            lines.append(f"  组内最大距离: {max_dist:.1f}km")
+        lines.append("")
+
+    selected_names = set()
+    for cluster in clusters:
+        for attr in cluster:
+            selected_names.add(attr["name"])
+
+    lines.append("=== 选中景点间距离矩阵 (km) ===")
+    lines.append("")
+
+    selected_attrs = [a for a in all_attractions if a["name"] in selected_names]
+    if len(selected_attrs) > 1:
+        name_col_width = max(len(a["name"]) for a in selected_attrs) + 2
+        header = " " * name_col_width
+        for attr in selected_attrs:
+            header += f"{attr['name'][:6]:>8}"
+        lines.append(header)
+
+        for i, attr in enumerate(selected_attrs):
+            ci = all_attractions.index(attr)
+            row = f"{attr['name'][:name_col_width - 1]:<{name_col_width}}"
+            for j, attr_j in enumerate(selected_attrs):
+                if i == j:
+                    row += f"{'--':>8}"
+                else:
+                    cj = all_attractions.index(attr_j)
+                    row += f"{dist_matrix[ci][cj]:>7.1f}"
+            lines.append(row)
+
+    return "\n".join(lines)
+
+
+async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
+    print("🗺️ 执行节点: cluster_attractions_node")
+    attractions_info = state.get("attractions_info", "")
+    request = state["request"]
+
+    llm = get_llm()
+    extract_prompt = f"""从以下景点搜索结果中，提取所有景点的名称和经纬度坐标。
+请以JSON数组格式返回，每个元素包含 name, longitude, latitude 三个字段。longitude和latitude必须是浮点数。
+
+搜索结果:
+{attractions_info[:3000]}
+
+请直接返回JSON数组，不要包含其他文字。示例:
+[{{"name": "故宫博物院", "longitude": 116.3974, "latitude": 39.9165}}]"""
+
+    response = await _invoke_llm_with_retry(llm, [HumanMessage(content=extract_prompt)])
+
+    try:
+        content = response.content
+        if "```json" in content:
+            json_start = content.find("```json") + 7
+            json_end = content.find("```", json_start)
+            content = content[json_start:json_end].strip()
+        elif "```" in content:
+            json_start = content.find("```") + 3
+            json_end = content.find("```", json_start)
+            content = content[json_start:json_end].strip()
+        elif "[" in content:
+            json_start = content.find("[")
+            json_end = content.rfind("]") + 1
+            content = content[json_start:json_end]
+
+        attractions_list = json.loads(content)
+        valid_attractions = [
+            a for a in attractions_list
+            if isinstance(a.get("longitude"), (int, float)) and isinstance(a.get("latitude"), (int, float))
+        ]
+
+        if not valid_attractions:
+            print("⚠️ 未能提取有效景点坐标，跳过聚类")
+            return {"cluster_info": "景点坐标提取失败，请根据景点信息自行合理分配每日行程。"}
+
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"⚠️ 景点坐标解析失败: {e}，跳过聚类")
+        return {"cluster_info": "景点坐标解析失败，请根据景点信息自行合理分配每日行程。"}
+
+    print(f"📊 成功提取 {len(valid_attractions)} 个景点坐标")
+
+    n = len(valid_attractions)
+    dist_matrix = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = _haversine_distance(
+                valid_attractions[i]["latitude"], valid_attractions[i]["longitude"],
+                valid_attractions[j]["latitude"], valid_attractions[j]["longitude"]
+            )
+            dist_matrix[i][j] = d
+            dist_matrix[j][i] = d
+
+    clusters = _cluster_attractions_by_proximity(valid_attractions, request.travel_days)
+
+    for i in range(len(clusters)):
+        clusters[i] = _order_cluster_by_tsp(clusters[i])
+
+    trimmed = False
+    total_attractions = sum(len(c) for c in clusters)
+    max_per_day = 3
+    if total_attractions > request.travel_days * max_per_day:
+        print(f"✂️ 景点数量({total_attractions})超过上限({request.travel_days * max_per_day})，开始筛选...")
+        clusters = _select_top_attractions(clusters, max_per_day)
+        trimmed = True
+
+    cluster_info = _format_cluster_info(clusters, valid_attractions, dist_matrix, trimmed)
+    final_count = sum(len(c) for c in clusters)
+    print(f"✅ 景点聚类完成: {len(valid_attractions)} 个景点 → 筛选后 {final_count} 个，分为 {len(clusters)} 组")
+
+    return {"cluster_info": cluster_info}
+
+
 async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
     print("🗺️ 执行节点: plan_route_node")
     request = state["request"]
-    attractions = state.get("attractions_info", "")
     hotels = state.get("hotels_info", "")
+    cluster_info = state.get("cluster_info", "")
 
     service = get_langchain_amap_service()
-    geo_tool = await service.get_tool("maps_geo")
-    route_tools = [
-        geo_tool,
-        await service.get_tool("maps_direction_walking"),
-        await service.get_tool("maps_direction_driving"),
-        await service.get_tool("maps_direction_transit_integrated")
-    ]
+    try:
+        direction_tools = [
+            await service.get_tool("maps_direction_walking"),
+            await service.get_tool("maps_direction_driving"),
+            await service.get_tool("maps_direction_transit_integrated")
+        ]
+    except Exception as e:
+        print(f"⚠️ 路线工具加载失败: {e}")
+        return {"route_info": f"路线工具加载失败，请根据距离矩阵自行估算交通时间。"}
+
     llm = get_llm()
-    llm_with_tools = llm.bind_tools(route_tools)
+    llm_with_tools = llm.bind_tools(direction_tools)
 
     prompt = f"""
-请根据以下景点和酒店信息，为用户在 {request.city} 规划合理的交通路线或提供整体的交通建议。
+请根据以下每日景点分组和酒店信息，为用户在 {request.city} 规划每天的交通路线。
 用户偏好的交通方式是：{request.transportation}。
 
-【景点信息】：
-{attractions}
+【每日景点分组（基于地理位置聚类）】：
+{cluster_info}
 
 【酒店信息】：
 {hotels}
 
-你需要选择其中最相关的位置（或从酒店到某个主要景点），使用工具查询一次路线作为代表性建议。
-注意：路线规划工具需要经纬度坐标，请先用 maps_geo 将地址转为坐标，再调用路线规划工具。
+请为每天的关键路段规划路线：
+1. 从酒店到当天第一个景点
+2. 当天景点之间的路线（选择距离最远的一段查询即可）
+3. 从当天最后一个景点返回酒店
+
+注意：
+- 景点分组中已包含经纬度坐标，请直接用坐标作为origin/destination参数调用路线规划工具，不需要再调用maps_geo
+- origin和destination格式为 "经度,纬度"（如 "116.3974,39.9165"）
+- 每次只需查询最具代表性的一段路线（如距离最远的景点间路线），不需要查询所有路段
+- 最多调用3次路线规划工具
+- 如果是公交路线，city参数填写"{request.city}"
 """
-    response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=ROUTE_AGENT_PROMPT), HumanMessage(content=prompt)])
+    try:
+        response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=ROUTE_AGENT_PROMPT), HumanMessage(content=prompt)])
+    except Exception as e:
+        print(f"⚠️ LLM路线规划调用失败: {e}")
+        return {"route_info": f"路线规划LLM调用失败: {str(e)[:200]}，请根据距离矩阵自行估算交通时间。"}
 
     route_results = []
+    direction_count = 0
     for tool_call in response.tool_calls:
         tool_name = tool_call["name"]
         tool_args = tool_call["args"]
 
-        tool = await service.get_tool(tool_name)
-        if tool:
-            tool_result = await _invoke_tool_with_retry(tool, tool_args)
-            route_results.append(f"[{tool_name}]: {str(tool_result)}")
-        else:
-            route_results.append(f"未知工具: {tool_name}")
+        try:
+            tool = await service.get_tool(tool_name)
+            if tool:
+                tool_result = await _invoke_tool_with_retry(tool, tool_args)
+                route_results.append(f"[{tool_name}]: {str(tool_result)}")
+            else:
+                route_results.append(f"未知工具: {tool_name}")
+        except Exception as e:
+            print(f"⚠️ 路线工具[{tool_name}]调用失败: {e}")
+            route_results.append(f"[{tool_name}] 调用失败: {str(e)[:100]}")
 
         if tool_name.startswith("maps_direction"):
-            break
+            direction_count += 1
+            if direction_count >= 3:
+                break
 
     if route_results:
         return {"route_info": "\n".join(route_results)}
@@ -529,6 +806,7 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
     weather = state.get("weather_info", "")
     hotels = state.get("hotels_info", "")
     food = state.get("food_info", "")
+    cluster = state.get("cluster_info", "")
     routes = state.get("route_info", "")
 
     prompt = f"""请根据以下信息生成{request.city}的{request.travel_days}天旅行计划:
@@ -545,7 +823,14 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
 [天气]: {weather}
 [酒店]: {hotels}
 [美食]: {food}
+[景点聚类分组]: {cluster}
 [路线]: {routes}
+
+**关键要求:**
+1. **严格按照[景点聚类分组]的建议安排每日景点**，将同一组的景点安排在同一天，不要随意打散
+2. 每组内的景点按照聚类给出的顺序安排游览（已按最近邻排序）
+3. 如果聚类分组中某天景点过多或过少，可以适当调整，但必须保持地理位置相近的景点在同一天
+4. 每天的餐饮推荐要结合当天的景点位置（早餐和午餐选景点周边，晚餐可选城市热门）
 """
     if request.free_text_input:
         prompt += f"\n**额外要求:** {request.free_text_input}"
@@ -637,6 +922,7 @@ def create_trip_planner_graph() -> StateGraph:
     workflow.add_node("search_weather", search_weather_node)
     workflow.add_node("search_hotel", search_hotel_node)
     workflow.add_node("search_food", search_food_node)
+    workflow.add_node("cluster_attractions", cluster_attractions_node)
     workflow.add_node("plan_route", plan_route_node)
     workflow.add_node("generate_plan", generate_plan_node)
 
@@ -644,8 +930,9 @@ def create_trip_planner_graph() -> StateGraph:
     workflow.add_edge(START, "search_weather")
     workflow.add_edge(START, "search_hotel")
 
+    workflow.add_edge("search_poi", "cluster_attractions")
     workflow.add_edge("search_poi", "search_food")
-    workflow.add_edge("search_poi", "plan_route")
+    workflow.add_edge("cluster_attractions", "plan_route")
     workflow.add_edge("search_hotel", "plan_route")
     workflow.add_edge("search_weather", "plan_route")
     workflow.add_edge("search_food", "plan_route")
@@ -686,6 +973,7 @@ class LangGraphTripPlanner:
             "weather_info": "",
             "hotels_info": "",
             "food_info": "",
+            "cluster_info": "",
             "route_info": "",
             "trip_plan": None,
             "errors": [],
@@ -740,6 +1028,7 @@ class LangGraphTripPlanner:
             "weather_info": "",
             "hotels_info": "",
             "food_info": "",
+            "cluster_info": "",
             "route_info": "",
             "trip_plan": None,
             "errors": [],
@@ -750,8 +1039,9 @@ class LangGraphTripPlanner:
             "search_poi": {"message": "🔍 正在搜索景点...", "progress": 15, "done_msg": "✅ 景点搜索完成"},
             "search_weather": {"message": "🌤️ 正在查询天气...", "progress": 15, "done_msg": "✅ 天气查询完成"},
             "search_hotel": {"message": "🏨 正在推荐酒店...", "progress": 15, "done_msg": "✅ 酒店推荐完成"},
-            "search_food": {"message": "🍜 正在搜索美食...", "progress": 30, "done_msg": "✅ 美食搜索完成"},
-            "plan_route": {"message": "🗺️ 正在规划路线...", "progress": 60, "done_msg": "✅ 路线规划完成"},
+            "search_food": {"message": "🍜 正在搜索美食...", "progress": 25, "done_msg": "✅ 美食搜索完成"},
+            "cluster_attractions": {"message": "📊 正在聚类分析景点...", "progress": 30, "done_msg": "✅ 景点聚类完成"},
+            "plan_route": {"message": "🗺️ 正在规划路线...", "progress": 55, "done_msg": "✅ 路线规划完成"},
             "generate_plan": {"message": "📋 正在生成行程计划...", "progress": 80, "done_msg": "✅ 行程计划生成完成"},
         }
 
