@@ -111,6 +111,9 @@ async def health_check():
                 "search_poi",
                 "search_weather",
                 "search_hotel",
+                "gather_search",
+                "cluster_attractions",
+                "search_food",
                 "plan_route",
                 "generate_plan"
             ]

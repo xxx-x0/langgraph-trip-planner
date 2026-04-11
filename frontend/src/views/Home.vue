@@ -222,7 +222,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { generateTripPlanStream } from '@/services/api'
@@ -233,6 +233,7 @@ const router = useRouter()
 const loading = ref(false)
 const loadingProgress = ref(0)
 const loadingStatus = ref('')
+const abortController = ref<AbortController | null>(null)
 
 const formData = reactive<TripFormData & { start_date: Dayjs | null; end_date: Dayjs | null }>({
   city: '',
@@ -272,6 +273,8 @@ const handleSubmit = async () => {
   loadingProgress.value = 0
   loadingStatus.value = '正在初始化...'
 
+  abortController.value = new AbortController()
+
   try {
     const requestData: TripFormData = {
       city: formData.city,
@@ -300,10 +303,18 @@ const handleSubmit = async () => {
       if (event.type === 'error') {
         message.error(event.message)
       }
+    }, {
+      signal: abortController.value.signal,
+      timeout: 180000
     })
   } catch (error: any) {
-    message.error(error.message || '生成旅行计划失败,请稍后重试')
+    if (error.message === '请求已取消或超时') {
+      message.warning('请求已取消')
+    } else {
+      message.error(error.message || '生成旅行计划失败,请稍后重试')
+    }
   } finally {
+    abortController.value = null
     setTimeout(() => {
       loading.value = false
       loadingProgress.value = 0
@@ -311,6 +322,13 @@ const handleSubmit = async () => {
     }, 1000)
   }
 }
+
+onUnmounted(() => {
+  if (abortController.value) {
+    abortController.value.abort()
+    abortController.value = null
+  }
+})
 </script>
 
 <style scoped>

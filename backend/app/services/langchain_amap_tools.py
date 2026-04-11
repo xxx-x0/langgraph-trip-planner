@@ -19,7 +19,6 @@ from ..config import get_settings
 
 _mcp_client: Optional[MultiServerMCPClient] = None
 _mcp_tools: Optional[List[BaseTool]] = None
-_mcp_lock = threading.Lock()
 _mcp_async_lock: Optional[asyncio.Lock] = None
 
 
@@ -103,29 +102,13 @@ class LangChainAmapService:
     async def _ensure_initialized(self) -> None:
         await _init_mcp_client()
 
-    async def _call_tool(self, tool_name: str, arguments: Dict[str, Any], max_retries: int = 3) -> Any:
+    async def _call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         await self._ensure_initialized()
         tool = await get_mcp_tool_by_name(tool_name)
         if tool is None:
             raise ValueError(f"MCP 工具不存在: {tool_name}")
-
-        last_error = None
-        for attempt in range(max_retries):
-            try:
-                result = await tool.ainvoke(arguments)
-                return result
-            except Exception as e:
-                last_error = e
-                error_name = type(e).__name__
-                if attempt < max_retries - 1:
-                    wait_time = (attempt + 1) * 2
-                    print(f"⚠️ MCP工具调用失败 [{tool_name}] (尝试 {attempt + 1}/{max_retries}): {error_name}: {str(e)[:100]}")
-                    print(f"   等待 {wait_time} 秒后重试...")
-                    await asyncio.sleep(wait_time)
-                else:
-                    print(f"❌ MCP工具调用最终失败 [{tool_name}] (已重试 {max_retries} 次): {error_name}: {str(e)[:100]}")
-
-        raise last_error
+        result = await tool.ainvoke(arguments)
+        return result
 
     async def search_poi(self, keywords: str, city: str) -> Any:
         result = await self._call_tool("maps_text_search", {

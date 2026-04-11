@@ -7,6 +7,7 @@
 """
 
 import json
+import re
 import math
 import operator
 import asyncio
@@ -152,36 +153,26 @@ FOOD_AGENT_PROMPT = """你是美食推荐专家。你的任务是根据城市和
 ROUTE_AGENT_PROMPT = """你是交通路线规划专家。你的任务是根据城市、用户的交通偏好，以及景点和酒店的位置，规划出合理的交通路线或建议。
 
 **重要提示:**
-你必须使用以下工具来规划路线！不要自己编造路线和时间！
+你必须使用路线规划工具来获取真实路线数据！不要自己编造路线和时间！
 
-路线规划工具需要经纬度坐标，你需要先使用 maps_geo 工具将地址转为坐标，再调用路线规划工具。
-
-**第一步：地址转坐标（maps_geo）**
-- address: 待解析的地址（必填）
-- city: 指定查询的城市（可选）
-
-**第二步：路线规划（选择一个）**
+**路线规划工具（选择一个）:**
 - maps_direction_walking (步行路线规划，100km以内)
 - maps_direction_driving (驾车路线规划)
 - maps_direction_transit_integrated (公交路线规划，含火车/公交/地铁)
 
-路线规划参数：
-- origin: 起点经纬度，格式为 "经度,纬度"（必填，从 maps_geo 获取）
-- destination: 终点经纬度，格式为 "经度,纬度"（必填，从 maps_geo 获取）
+**参数说明:**
+- origin: 起点经纬度，格式为 "经度,纬度"（必填）
+- destination: 终点经纬度，格式为 "经度,纬度"（必填）
 - city: 起点城市（仅公交规划必填）
-- cityd: 终点城市（仅公交规划必填）
+- cityd: 终点城市（仅公交规划可选）
 
 **示例:**
-用户需求: "在北京市，从故宫博物院到天安门，偏好步行"
-你的动作:
-1. 调用 maps_geo(address="故宫博物院", city="北京") 获取起点坐标
-2. 调用 maps_geo(address="天安门", city="北京") 获取终点坐标
-3. 调用 maps_direction_walking(origin="116.397428,39.916527", destination="116.397128,39.916527")
+调用 maps_direction_walking(origin="116.397428,39.916527", destination="116.397128,39.916527")
 
 **注意:**
-1. 必须使用提供的工具获取真实路线数据，不要直接编造回答。
-2. 从提供的景点和酒店列表中提取准确的地址。
-3. 路线工具需要经纬度坐标，不能直接传地址文本！必须先用 maps_geo 转换。
+1. 如果输入中已包含经纬度坐标，直接使用坐标调用路线规划工具，不需要调用 maps_geo
+2. 如果没有坐标，先用 maps_geo 工具将地址转为坐标，再调用路线规划工具
+3. 必须调用工具获取真实数据，不要直接编造回答
 """
 
 PLANNER_AGENT_PROMPT = """你是行程规划专家。你的任务是根据景点信息、天气信息和路线信息，生成详细的旅行计划。
@@ -368,11 +359,14 @@ async def search_poi_node(state: TripPlannerState) -> Dict[str, Any]:
     response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=ATTRACTION_AGENT_PROMPT), HumanMessage(content=prompt)])
 
     if response.tool_calls:
-        tool_call = response.tool_calls[0]
-        tool_result = await _invoke_tool_with_retry(search_tool, tool_call["args"])
-        return {"attractions_info": str(tool_result)}
+        results = []
+        for tool_call in response.tool_calls:
+            tool_result = await _invoke_tool_with_retry(search_tool, tool_call["args"])
+            results.append(str(tool_result))
+        return {"attractions_info": "\n".join(results)}
 
-    return {"attractions_info": response.content}
+    print("⚠️ search_poi_node: LLM未调用工具")
+    return {"attractions_info": ""}
 
 
 async def search_weather_node(state: TripPlannerState) -> Dict[str, Any]:
@@ -388,11 +382,14 @@ async def search_weather_node(state: TripPlannerState) -> Dict[str, Any]:
     response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=WEATHER_AGENT_PROMPT), HumanMessage(content=prompt)])
 
     if response.tool_calls:
-        tool_call = response.tool_calls[0]
-        tool_result = await _invoke_tool_with_retry(weather_tool, tool_call["args"])
-        return {"weather_info": str(tool_result)}
+        results = []
+        for tool_call in response.tool_calls:
+            tool_result = await _invoke_tool_with_retry(weather_tool, tool_call["args"])
+            results.append(str(tool_result))
+        return {"weather_info": "\n".join(results)}
 
-    return {"weather_info": response.content}
+    print("⚠️ search_weather_node: LLM未调用工具")
+    return {"weather_info": ""}
 
 
 async def search_hotel_node(state: TripPlannerState) -> Dict[str, Any]:
@@ -408,11 +405,19 @@ async def search_hotel_node(state: TripPlannerState) -> Dict[str, Any]:
     response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=HOTEL_AGENT_PROMPT), HumanMessage(content=prompt)])
 
     if response.tool_calls:
-        tool_call = response.tool_calls[0]
-        tool_result = await _invoke_tool_with_retry(search_tool, tool_call["args"])
-        return {"hotels_info": str(tool_result)}
+        results = []
+        for tool_call in response.tool_calls:
+            tool_result = await _invoke_tool_with_retry(search_tool, tool_call["args"])
+            results.append(str(tool_result))
+        return {"hotels_info": "\n".join(results)}
 
-    return {"hotels_info": response.content}
+    print("⚠️ search_hotel_node: LLM未调用工具")
+    return {"hotels_info": ""}
+
+
+async def gather_search_node(state: TripPlannerState) -> Dict[str, Any]:
+    print("🔗 执行节点: gather_search_node (搜索结果汇总)")
+    return {}
 
 
 CITY_FOOD_MAP = {
@@ -500,7 +505,8 @@ async def search_food_node(state: TripPlannerState) -> Dict[str, Any]:
     if food_results:
         return {"food_info": "\n".join(food_results)}
 
-    return {"food_info": response.content}
+    print("⚠️ search_food_node: LLM未调用工具，返回空数据")
+    return {"food_info": ""}
 
 
 def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -644,51 +650,168 @@ def _format_cluster_info(clusters: List[List[Dict]], all_attractions: List[Dict]
     return "\n".join(lines)
 
 
+def _extract_json_array(text: str) -> Optional[List[Dict]]:
+    if "```json" in text:
+        start = text.find("```json") + 7
+        end = text.find("```", start)
+        text = text[start:end].strip()
+    elif "```" in text:
+        start = text.find("```") + 3
+        end = text.find("```", start)
+        text = text[start:end].strip()
+    elif "[" in text:
+        start = text.find("[")
+        end = text.rfind("]") + 1
+        text = text[start:end]
+
+    try:
+        result = json.loads(text)
+        if isinstance(result, list):
+            return result
+    except json.JSONDecodeError:
+        pass
+
+    bracket_pattern = re.compile(r'\[[\s\S]*?\]', re.DOTALL)
+    for match in bracket_pattern.finditer(text):
+        try:
+            result = json.loads(match.group())
+            if isinstance(result, list):
+                return result
+        except json.JSONDecodeError:
+            continue
+
+    return None
+
+
+def _extract_coordinates_regex(text: str) -> List[Dict]:
+    attractions = []
+
+    amap_location_pattern = re.compile(
+        r'"?name"?\s*[:=]\s*["\']([^"\']+)["\'].*?'
+        r'"?location"?\s*[:=]\s*["\']([\d.]+)\s*,\s*([\d.]+)["\']',
+        re.DOTALL | re.IGNORECASE
+    )
+    for m in amap_location_pattern.finditer(text):
+        name = m.group(1).strip()
+        try:
+            lon = float(m.group(2))
+            lat = float(m.group(3))
+            if 73 < lon < 136 and 3 < lat < 54:
+                attractions.append({"name": name, "longitude": lon, "latitude": lat})
+        except ValueError:
+            continue
+
+    if attractions:
+        return attractions
+
+    name_lon_lat = re.compile(
+        r'"?name"?\s*[:=]\s*["\']([^"\']+)["\'].*?'
+        r'"?longitude"?\s*[:=]\s*["\']?([\d.]+)["\']?.*?'
+        r'"?latitude"?\s*[:=]\s*["\']?([\d.]+)["\']?',
+        re.DOTALL | re.IGNORECASE
+    )
+    for m in name_lon_lat.finditer(text):
+        name = m.group(1).strip()
+        try:
+            lon = float(m.group(2))
+            lat = float(m.group(3))
+            if 73 < lon < 136 and 3 < lat < 54:
+                attractions.append({"name": name, "longitude": lon, "latitude": lat})
+        except ValueError:
+            continue
+
+    if attractions:
+        return attractions
+
+    lon_lat_name = re.compile(
+        r'"?longitude"?\s*[:=]\s*["\']?([\d.]+)["\']?.*?'
+        r'"?latitude"?\s*[:=]\s*["\']?([\d.]+)["\']?.*?'
+        r'"?name"?\s*[:=]\s*["\']([^"\']+)["\']',
+        re.DOTALL | re.IGNORECASE
+    )
+    for m in lon_lat_name.finditer(text):
+        name = m.group(3).strip()
+        try:
+            lon = float(m.group(1))
+            lat = float(m.group(2))
+            if 73 < lon < 136 and 3 < lat < 54:
+                attractions.append({"name": name, "longitude": lon, "latitude": lat})
+        except ValueError:
+            continue
+
+    if attractions:
+        return attractions
+
+    location_pattern = re.compile(
+        r'"?(?:location|坐标)"?\s*[:=]\s*\{[^}]*?"?lon(?:gitude)?"?\s*[:=]\s*["\']?([\d.]+)["\']?\s*,\s*"?lat(?:itude)?"?\s*[:=]\s*["\']?([\d.]+)["\']?',
+        re.DOTALL | re.IGNORECASE
+    )
+    name_pattern = re.compile(r'"?name"?\s*[:=]\s*["\']([^"\']+)["\']', re.IGNORECASE)
+
+    locations = list(location_pattern.finditer(text))
+    names = name_pattern.findall(text)
+
+    for i, m in enumerate(locations):
+        try:
+            lon = float(m.group(1))
+            lat = float(m.group(2))
+            if 73 < lon < 136 and 3 < lat < 54:
+                name = names[i].strip() if i < len(names) else f"景点{i+1}"
+                attractions.append({"name": name, "longitude": lon, "latitude": lat})
+        except (ValueError, IndexError):
+            continue
+
+    return attractions
+
+
 async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
     print("🗺️ 执行节点: cluster_attractions_node")
+
+    if state.get("cluster_info"):
+        print("  ⏭️ 聚类已完成，跳过重复执行")
+        return {}
+
     attractions_info = state.get("attractions_info", "")
     request = state["request"]
 
-    llm = get_llm()
-    extract_prompt = f"""从以下景点搜索结果中，提取所有景点的名称和经纬度坐标。
+    valid_attractions = _extract_coordinates_regex(attractions_info)
+    if valid_attractions:
+        print(f"📊 正则提取到 {len(valid_attractions)} 个景点坐标（跳过LLM提取）")
+    else:
+        print(f"📊 正则未提取到坐标，数据前500字符: {attractions_info[:500]}")
+        print("📊 尝试LLM提取...")
+        llm = get_llm()
+        extract_prompt = f"""从以下景点搜索结果中，提取所有景点的名称和经纬度坐标。
 请以JSON数组格式返回，每个元素包含 name, longitude, latitude 三个字段。longitude和latitude必须是浮点数。
 
+**重要**: 中国的经度范围约73-136，纬度范围约3-54。请确保提取的坐标在此范围内。
+
 搜索结果:
-{attractions_info[:3000]}
+{attractions_info[:4000]}
 
 请直接返回JSON数组，不要包含其他文字。示例:
 [{{"name": "故宫博物院", "longitude": 116.3974, "latitude": 39.9165}}]"""
 
-    response = await _invoke_llm_with_retry(llm, [HumanMessage(content=extract_prompt)])
+        try:
+            response = await _invoke_llm_with_retry(llm, [HumanMessage(content=extract_prompt)])
+            attractions_list = _extract_json_array(response.content)
 
-    try:
-        content = response.content
-        if "```json" in content:
-            json_start = content.find("```json") + 7
-            json_end = content.find("```", json_start)
-            content = content[json_start:json_end].strip()
-        elif "```" in content:
-            json_start = content.find("```") + 3
-            json_end = content.find("```", json_start)
-            content = content[json_start:json_end].strip()
-        elif "[" in content:
-            json_start = content.find("[")
-            json_end = content.rfind("]") + 1
-            content = content[json_start:json_end]
+            if attractions_list:
+                valid_attractions = [
+                    a for a in attractions_list
+                    if isinstance(a.get("longitude"), (int, float)) and isinstance(a.get("latitude"), (int, float))
+                    and 73 < a["longitude"] < 136 and 3 < a["latitude"] < 54
+                ]
 
-        attractions_list = json.loads(content)
-        valid_attractions = [
-            a for a in attractions_list
-            if isinstance(a.get("longitude"), (int, float)) and isinstance(a.get("latitude"), (int, float))
-        ]
+            if not valid_attractions:
+                print("⚠️ LLM提取也失败，尝试从原始文本正则提取...")
+                valid_attractions = _extract_coordinates_regex(response.content)
+        except Exception as e:
+            print(f"⚠️ LLM坐标提取异常: {e}")
 
-        if not valid_attractions:
-            print("⚠️ 未能提取有效景点坐标，跳过聚类")
-            return {"cluster_info": "景点坐标提取失败，请根据景点信息自行合理分配每日行程。"}
-
-    except (json.JSONDecodeError, KeyError) as e:
-        print(f"⚠️ 景点坐标解析失败: {e}，跳过聚类")
-        return {"cluster_info": "景点坐标解析失败，请根据景点信息自行合理分配每日行程。"}
+    if not valid_attractions:
+        print("⚠️ 未能提取有效景点坐标，跳过聚类")
+        return {"cluster_info": "景点坐标提取失败，请根据景点信息自行合理分配每日行程。"}
 
     print(f"📊 成功提取 {len(valid_attractions)} 个景点坐标")
 
@@ -729,6 +852,15 @@ async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
     hotels = state.get("hotels_info", "")
     cluster_info = state.get("cluster_info", "")
 
+    if not hotels:
+        print("⚠️ 酒店数据尚未就绪，路线规划可能不完整")
+    if not state.get("weather_info"):
+        print("⚠️ 天气数据尚未就绪")
+
+    if not cluster_info or "失败" in cluster_info:
+        print("⚠️ 聚类信息不可用，使用原始景点信息进行路线规划")
+        cluster_info = f"（聚类不可用，请根据以下景点信息自行分组规划路线）\n景点搜索结果: {state.get('attractions_info', '')[:2000]}"
+
     service = get_langchain_amap_service()
     try:
         direction_tools = [
@@ -753,17 +885,20 @@ async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
 【酒店信息】：
 {hotels}
 
-请为每天的关键路段规划路线：
-1. 从酒店到当天第一个景点
-2. 当天景点之间的路线（选择距离最远的一段查询即可）
-3. 从当天最后一个景点返回酒店
+**重要：你必须调用路线规划工具来获取实际的路线数据！**
 
-注意：
-- 景点分组中已包含经纬度坐标，请直接用坐标作为origin/destination参数调用路线规划工具，不需要再调用maps_geo
-- origin和destination格式为 "经度,纬度"（如 "116.3974,39.9165"）
-- 每次只需查询最具代表性的一段路线（如距离最远的景点间路线），不需要查询所有路段
-- 最多调用3次路线规划工具
-- 如果是公交路线，city参数填写"{request.city}"
+请执行以下操作：
+1. 从景点分组中提取每天的起点和终点坐标
+2. 根据用户交通偏好选择合适的工具：
+   - 步行: maps_direction_walking
+   - 驾车: maps_direction_driving  
+   - 公交: maps_direction_transit_integrated
+3. 调用工具时参数格式：
+   - origin: "经度,纬度"（如 "116.3974,39.9165"）
+   - destination: "经度,纬度"
+   - city: "{request.city}"（公交必填）
+
+请至少调用1次路线规划工具，为最长路段查询路线信息。
 """
     try:
         response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=ROUTE_AGENT_PROMPT), HumanMessage(content=prompt)])
@@ -796,7 +931,28 @@ async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
     if route_results:
         return {"route_info": "\n".join(route_results)}
 
-    return {"route_info": response.content}
+    print("⚠️ plan_route_node: LLM未调用路线规划工具，尝试直接调用")
+    try:
+        coords = _extract_coordinates_regex(cluster_info)
+        if not coords:
+            coords = _extract_coordinates_regex(state.get("attractions_info", ""))
+    except Exception:
+        coords = []
+
+    if len(coords) >= 2:
+        try:
+            tool_name = "maps_direction_transit_integrated" if request.transportation in ["公共交通", "公交"] else "maps_direction_driving"
+            direct_tool = await service.get_tool(tool_name)
+            origin = f"{coords[0]['longitude']},{coords[0]['latitude']}"
+            destination = f"{coords[-1]['longitude']},{coords[-1]['latitude']}"
+            tool_args = {"origin": origin, "destination": destination, "city": request.city}
+            print(f"  直接调用 {tool_name}: {origin} → {destination}")
+            tool_result = await _invoke_tool_with_retry(direct_tool, tool_args)
+            return {"route_info": f"[{tool_name}]: {str(tool_result)}"}
+        except Exception as e:
+            print(f"⚠️ 直接调用路线工具也失败: {e}")
+
+    return {"route_info": ""}
 
 
 async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
@@ -824,25 +980,118 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
 [酒店]: {hotels}
 [美食]: {food}
 [景点聚类分组]: {cluster}
-[路线]: {routes}
+[路线]: {routes if routes else "路线搜索数据不可用，请根据景点间距离和交通方式自行估算路线信息"}
 
 **关键要求:**
 1. **严格按照[景点聚类分组]的建议安排每日景点**，将同一组的景点安排在同一天，不要随意打散
 2. 每组内的景点按照聚类给出的顺序安排游览（已按最近邻排序）
 3. 如果聚类分组中某天景点过多或过少，可以适当调整，但必须保持地理位置相近的景点在同一天
 4. 每天的餐饮推荐要结合当天的景点位置（早餐和午餐选景点周边，晚餐可选城市热门）
+5. **每个景点的location字段必须包含经纬度坐标**，从[景点]搜索结果中提取，不要留空或编造
+6. **每天必须包含route_segments路线段**，即使路线搜索数据不可用，也要根据景点位置和交通方式估算距离和时间
+7. **返回的JSON必须严格合法**：属性名用双引号，不要有尾随逗号，不要有注释
 """
     if request.free_text_input:
         prompt += f"\n**额外要求:** {request.free_text_input}"
 
     llm = get_llm()
+    messages = [SystemMessage(content=PLANNER_AGENT_PROMPT), HumanMessage(content=prompt)]
+
+    structured_llm = None
     try:
-        response = await _invoke_llm_with_retry(llm, [SystemMessage(content=PLANNER_AGENT_PROMPT), HumanMessage(content=prompt)])
-        trip_plan = _parse_response(response.content, request)
-        return {"trip_plan": trip_plan}
+        structured_llm = llm.with_structured_output(TripPlan, method="function_calling")
+        print("🔧 使用 Structured Output (function_calling) 模式生成计划")
     except Exception as e:
-        print(f"⚠️ 解析计划失败: {str(e)}")
-        return {"trip_plan": None, "errors": [str(e)]}
+        print(f"⚠️ Structured Output 不可用，使用手动JSON解析: {e}")
+
+    max_attempts = 3
+    for attempt in range(max_attempts):
+        try:
+            if structured_llm is not None:
+                try:
+                    trip_plan = await structured_llm.ainvoke(messages)
+                    if trip_plan is not None:
+                        return {"trip_plan": _validate_plan_coordinates(trip_plan)}
+                    print("⚠️ Structured Output 返回空结果，降级到手动解析")
+                except Exception as e:
+                    err_msg = str(e)
+                    if "response_format" in err_msg or "unavailable" in err_msg or "400" in err_msg:
+                        print(f"⚠️ Structured Output 不受API支持，降级到手动解析: {err_msg[:100]}")
+                    else:
+                        print(f"⚠️ Structured Output 调用失败，降级到手动解析: {err_msg[:100]}")
+                structured_llm = None
+
+            response = await _invoke_llm_with_retry(llm, messages)
+            trip_plan = _parse_response(response.content, request)
+            return {"trip_plan": trip_plan}
+        except Exception as e:
+            print(f"⚠️ 解析计划失败 (尝试 {attempt + 1}/{max_attempts}): {str(e)[:200]}")
+            if attempt < max_attempts - 1:
+                prompt = f"""上一次生成的JSON格式有误，解析失败。请重新生成，确保：
+1. 所有属性名用双引号包裹
+2. 不要有尾随逗号（如 "a": 1, }} 或 [1, ]）
+3. 不要有注释
+4. 确保JSON完整，不要截断
+
+错误信息: {str(e)[:100]}
+
+请根据以下信息重新生成{request.city}的{request.travel_days}天旅行计划:
+
+**基本信息:**
+- 城市: {request.city}
+- 日期: {request.start_date} 至 {request.end_date}
+- 交通方式: {request.transportation}
+- 住宿: {request.accommodation}
+- 美食偏好: {request.food_preference}
+
+**收集到的信息:**
+[景点]: {attractions}
+[天气]: {weather}
+[酒店]: {hotels}
+[美食]: {food}
+[景点聚类分组]: {cluster}
+[路线]: {routes if routes else "路线搜索数据不可用，请根据景点间距离和交通方式自行估算路线信息"}
+
+**关键要求:**
+1. 严格按照[景点聚类分组]的建议安排每日景点
+2. 每个景点的location字段必须包含经纬度坐标
+3. 每天必须包含route_segments路线段
+4. 返回的JSON必须严格合法"""
+                if request.free_text_input:
+                    prompt += f"\n**额外要求:** {request.free_text_input}"
+                messages = [SystemMessage(content=PLANNER_AGENT_PROMPT), HumanMessage(content=prompt)]
+            else:
+                print(f"❌ 解析计划最终失败，使用备用方案")
+                return {"trip_plan": None, "errors": [str(e)]}
+
+
+def _repair_json(json_str: str) -> str:
+    json_str = re.sub(r'//.*?$', '', json_str, flags=re.MULTILINE)
+    json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
+    json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
+    json_str = re.sub(r"'", '"', json_str)
+    json_str = re.sub(r'\bNaN\b', 'null', json_str)
+    json_str = re.sub(r'\bInfinity\b', 'null', json_str)
+    json_str = re.sub(r'\b-infinity\b', 'null', json_str, flags=re.IGNORECASE)
+    json_str = re.sub(r'(\{|,)\s*([a-zA-Z_]\w*)\s*:', r'\1"\2":', json_str)
+    return json_str
+
+
+def _validate_plan_coordinates(trip_plan: TripPlan) -> TripPlan:
+    for day in trip_plan.days:
+        for attr in day.attractions:
+            if attr.location is not None:
+                lon = attr.location.longitude
+                lat = attr.location.latitude
+                if not (73 < lon < 136 and 3 < lat < 54):
+                    attr.location = None
+        for meal in day.meals:
+            if meal.location is not None:
+                lon = meal.location.longitude
+                lat = meal.location.latitude
+                if not (73 < lon < 136 and 3 < lat < 54):
+                    meal.location = None
+    return trip_plan
 
 
 def _parse_response(response_text: str, request: TripRequest) -> TripPlan:
@@ -862,9 +1111,29 @@ def _parse_response(response_text: str, request: TripRequest) -> TripPlan:
         else:
             raise ValueError("响应中未找到JSON数据")
 
-        data = json.loads(json_str)
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError:
+            print("⚠️ JSON解析失败，尝试修复...")
+            repaired = _repair_json(json_str)
+            try:
+                data = json.loads(repaired)
+            except json.JSONDecodeError:
+                print("⚠️ JSON修复后仍解析失败，尝试逐步截断...")
+                data = None
+                for end_offset in range(len(json_str) - 1, max(len(json_str) // 2, 100), -1):
+                    if json_str[end_offset] == '}':
+                        try:
+                            candidate = json_str[:end_offset + 1] + "]}" if '"days"' in json_str[:end_offset] else json_str[:end_offset + 1]
+                            data = json.loads(_repair_json(candidate))
+                            break
+                        except json.JSONDecodeError:
+                            continue
+                if data is None:
+                    raise ValueError("JSON截断修复也失败")
+
         trip_plan = TripPlan(**data)
-        return trip_plan
+        return _validate_plan_coordinates(trip_plan)
     except Exception as e:
         raise ValueError(f"解析 JSON 失败: {str(e)}")
 
@@ -921,8 +1190,9 @@ def create_trip_planner_graph() -> StateGraph:
     workflow.add_node("search_poi", search_poi_node)
     workflow.add_node("search_weather", search_weather_node)
     workflow.add_node("search_hotel", search_hotel_node)
-    workflow.add_node("search_food", search_food_node)
+    workflow.add_node("gather_search", gather_search_node)
     workflow.add_node("cluster_attractions", cluster_attractions_node)
+    workflow.add_node("search_food", search_food_node)
     workflow.add_node("plan_route", plan_route_node)
     workflow.add_node("generate_plan", generate_plan_node)
 
@@ -930,13 +1200,15 @@ def create_trip_planner_graph() -> StateGraph:
     workflow.add_edge(START, "search_weather")
     workflow.add_edge(START, "search_hotel")
 
-    workflow.add_edge("search_poi", "cluster_attractions")
-    workflow.add_edge("search_poi", "search_food")
-    workflow.add_edge("cluster_attractions", "plan_route")
-    workflow.add_edge("search_hotel", "plan_route")
-    workflow.add_edge("search_weather", "plan_route")
-    workflow.add_edge("search_food", "plan_route")
+    # workflow.add_edge("search_poi", "gather_search")
+    # workflow.add_edge("search_weather", "gather_search")
+    # workflow.add_edge("search_hotel", "gather_search")
 
+    workflow.add_edge(["search_poi", "search_weather", "search_hotel"], "gather_search")
+
+    workflow.add_edge("gather_search", "cluster_attractions")
+    workflow.add_edge("cluster_attractions", "search_food")
+    workflow.add_edge("search_food", "plan_route")
     workflow.add_edge("plan_route", "generate_plan")
     workflow.add_edge("generate_plan", END)
 
@@ -1036,12 +1308,13 @@ class LangGraphTripPlanner:
         }
 
         NODE_INFO = {
-            "search_poi": {"message": "🔍 正在搜索景点...", "progress": 15, "done_msg": "✅ 景点搜索完成"},
-            "search_weather": {"message": "🌤️ 正在查询天气...", "progress": 15, "done_msg": "✅ 天气查询完成"},
-            "search_hotel": {"message": "🏨 正在推荐酒店...", "progress": 15, "done_msg": "✅ 酒店推荐完成"},
-            "search_food": {"message": "🍜 正在搜索美食...", "progress": 25, "done_msg": "✅ 美食搜索完成"},
+            "search_poi": {"message": "🔍 正在搜索景点...", "progress": 10, "done_msg": "✅ 景点搜索完成"},
+            "search_weather": {"message": "🌤️ 正在查询天气...", "progress": 10, "done_msg": "✅ 天气查询完成"},
+            "search_hotel": {"message": "🏨 正在推荐酒店...", "progress": 10, "done_msg": "✅ 酒店推荐完成"},
+            "gather_search": {"message": "🔗 汇总搜索结果...", "progress": 15, "done_msg": "✅ 搜索结果汇总完成"},
             "cluster_attractions": {"message": "📊 正在聚类分析景点...", "progress": 30, "done_msg": "✅ 景点聚类完成"},
-            "plan_route": {"message": "🗺️ 正在规划路线...", "progress": 55, "done_msg": "✅ 路线规划完成"},
+            "search_food": {"message": "🍜 正在搜索美食...", "progress": 45, "done_msg": "✅ 美食搜索完成"},
+            "plan_route": {"message": "🗺️ 正在规划路线...", "progress": 60, "done_msg": "✅ 路线规划完成"},
             "generate_plan": {"message": "📋 正在生成行程计划...", "progress": 80, "done_msg": "✅ 行程计划生成完成"},
         }
 

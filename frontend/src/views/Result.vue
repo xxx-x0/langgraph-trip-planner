@@ -562,7 +562,7 @@ const loadAttractionPhotos = async () => {
 
   tripPlan.value.days.forEach(day => {
     day.attractions.forEach(attraction => {
-      const promise = fetch(`http://localhost:8000/api/poi/photo?name=${encodeURIComponent(attraction.name)}`)
+      const promise = fetch(`/api/poi/photo?name=${encodeURIComponent(attraction.name)}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.data.photo_url) {
@@ -985,6 +985,16 @@ const initMap = async () => {
   }
 }
 
+const escapeHtml = (str: string | undefined | null): string => {
+  if (str == null) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 // 添加景点标记
 const addAttractionMarkers = (AMap: any) => {
   if (!tripPlan.value) return
@@ -1022,10 +1032,10 @@ const addAttractionMarkers = (AMap: any) => {
     const infoWindow = new AMap.InfoWindow({
       content: `
         <div style="padding: 10px;">
-          <h4 style="margin: 0 0 8px 0;">${attraction.name}</h4>
-          <p style="margin: 4px 0;"><strong>地址:</strong> ${attraction.address}</p>
-          <p style="margin: 4px 0;"><strong>游览时长:</strong> ${attraction.visit_duration}分钟</p>
-          <p style="margin: 4px 0;"><strong>描述:</strong> ${attraction.description}</p>
+          <h4 style="margin: 0 0 8px 0;">${escapeHtml(attraction.name)}</h4>
+          <p style="margin: 4px 0;"><strong>地址:</strong> ${escapeHtml(attraction.address)}</p>
+          <p style="margin: 4px 0;"><strong>游览时长:</strong> ${escapeHtml(String(attraction.visit_duration))}分钟</p>
+          <p style="margin: 4px 0;"><strong>描述:</strong> ${escapeHtml(attraction.description)}</p>
           <p style="margin: 4px 0; color: #1890ff;"><strong>第${attraction.dayIndex + 1}天 景点${attraction.attrIndex + 1}</strong></p>
         </div>
       `,
@@ -1074,14 +1084,14 @@ const addAttractionMarkers = (AMap: any) => {
     const infoWindow = new AMap.InfoWindow({
       content: `
         <div style="padding: 10px; min-width: 200px;">
-          <h4 style="margin: 0 0 8px 0;">${meal.name}</h4>
-          ${meal.cuisine ? `<p style="margin: 4px 0;"><strong>菜系:</strong> ${meal.cuisine}</p>` : ''}
-          ${meal.rating ? `<p style="margin: 4px 0;"><strong>评分:</strong> ⭐${meal.rating}</p>` : ''}
-          ${meal.avg_cost ? `<p style="margin: 4px 0;"><strong>人均:</strong> ¥${meal.avg_cost}</p>` : ''}
-          ${meal.address ? `<p style="margin: 4px 0;"><strong>地址:</strong> ${meal.address}</p>` : ''}
-          ${meal.distance ? `<p style="margin: 4px 0;"><strong>距离:</strong> ${meal.distance}</p>` : ''}
-          ${meal.description ? `<p style="margin: 4px 0;"><strong>推荐理由:</strong> ${meal.description}</p>` : ''}
-          <p style="margin: 4px 0; color: ${bgColor};"><strong>第${meal.dayIndex + 1}天 ${getMealLabel(meal.type)} · ${isNearby ? '景点周边' : '城市热门'}</strong></p>
+          <h4 style="margin: 0 0 8px 0;">${escapeHtml(meal.name)}</h4>
+          ${meal.cuisine ? `<p style="margin: 4px 0;"><strong>菜系:</strong> ${escapeHtml(meal.cuisine)}</p>` : ''}
+          ${meal.rating ? `<p style="margin: 4px 0;"><strong>评分:</strong> ⭐${escapeHtml(String(meal.rating))}</p>` : ''}
+          ${meal.avg_cost ? `<p style="margin: 4px 0;"><strong>人均:</strong> ¥${escapeHtml(String(meal.avg_cost))}</p>` : ''}
+          ${meal.address ? `<p style="margin: 4px 0;"><strong>地址:</strong> ${escapeHtml(meal.address)}</p>` : ''}
+          ${meal.distance ? `<p style="margin: 4px 0;"><strong>距离:</strong> ${escapeHtml(meal.distance)}</p>` : ''}
+          ${meal.description ? `<p style="margin: 4px 0;"><strong>推荐理由:</strong> ${escapeHtml(meal.description)}</p>` : ''}
+          <p style="margin: 4px 0; color: ${bgColor};"><strong>第${meal.dayIndex + 1}天 ${escapeHtml(getMealLabel(meal.type))} · ${isNearby ? '景点周边' : '城市热门'}</strong></p>
         </div>
       `,
       offset: new AMap.Pixel(0, -30)

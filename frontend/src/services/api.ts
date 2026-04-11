@@ -1,7 +1,7 @@
 import axios from 'axios'
 import type { TripFormData, TripPlanResponse, TripPlan } from '@/types'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -51,15 +51,41 @@ export interface StreamEvent {
   data?: TripPlan
 }
 
+export interface StreamOptions {
+  timeout?: number
+  signal?: AbortSignal
+}
+
 export async function generateTripPlanStream(
   formData: TripFormData,
-  onEvent: (event: StreamEvent) => void
+  onEvent: (event: StreamEvent) => void,
+  options?: StreamOptions
 ): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/api/trip/plan/stream`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(formData),
-  })
+  const timeout = options?.timeout || 180000
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+  const signal = options?.signal
+    ? AbortSignal.any([options.signal, controller.signal])
+    : controller.signal
+
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}/api/trip/plan/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+      signal,
+    })
+  } catch (error: any) {
+    clearTimeout(timeoutId)
+    if (error.name === 'AbortError') {
+      throw new Error('请求已取消或超时')
+    }
+    throw error
+  }
+
+  clearTimeout(timeoutId)
 
   if (!response.ok) {
     throw new Error(`请求失败: ${response.status}`)
@@ -73,29 +99,33 @@ export async function generateTripPlanStream(
   const decoder = new TextDecoder()
   let buffer = ''
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
 
-    buffer += decoder.decode(value, { stream: true })
+      buffer += decoder.decode(value, { stream: true })
 
-    const lines = buffer.split('\n')
-    buffer = lines.pop() || ''
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
 
-    for (const line of lines) {
-      const trimmed = line.trim()
-      if (trimmed.startsWith('data: ')) {
-        try {
-          const event: StreamEvent = JSON.parse(trimmed.slice(6))
-          onEvent(event)
-          if (event.type === 'complete' || event.type === 'error') {
-            return
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (trimmed.startsWith('data: ')) {
+          try {
+            const event: StreamEvent = JSON.parse(trimmed.slice(6))
+            onEvent(event)
+            if (event.type === 'complete' || event.type === 'error') {
+              return
+            }
+          } catch (e) {
+            console.warn('解析SSE事件失败:', trimmed, e)
           }
-        } catch (e) {
-          console.warn('解析SSE事件失败:', trimmed, e)
         }
       }
     }
+  } finally {
+    reader.cancel().catch(() => {})
   }
 }
 
