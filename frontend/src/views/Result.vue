@@ -122,6 +122,8 @@
                   </span>
                 </div>
               </div>
+              <!-- 预算可视化图表 -->
+              <BudgetChart v-if="tripPlan.budget.total > 0" :budget="tripPlan.budget" class="budget-chart-section" />
             </a-card>
           </div>
 
@@ -427,6 +429,7 @@ import AMapLoader from '@amap/amap-jsapi-loader'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import type { TripPlan } from '@/types'
+import BudgetChart from '@/components/BudgetChart.vue'
 
 const router = useRouter()
 const tripPlan = ref<TripPlan | null>(null)
@@ -1767,6 +1770,12 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
 .over-budget-text {
   color: #ff4d4f;
   font-weight: 600;
+}
+
+.budget-chart-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .total-label {

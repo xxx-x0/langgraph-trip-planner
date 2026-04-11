@@ -9,24 +9,34 @@
 import json
 import re
 import math
-import operator
 import asyncio
 import random
-from typing import Dict, Any, List, Optional, Annotated
-from typing_extensions import TypedDict
+from typing import Dict, Any, List, Optional
 
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph, START, END
 
 from ..services.llm_service import get_llm
 from ..services.langchain_amap_tools import get_langchain_amap_service, get_mcp_tools
-from ..models.schemas import TripRequest, TripPlan, DayPlan, Attraction, Meal, WeatherInfo, Location, Hotel, CompanionInfo
+from ..models import (
+    TripRequest, TripPlan, DayPlan, Attraction, Meal, WeatherInfo, Location, Hotel, CompanionInfo,
+    POIInfo, WeatherData, HotelData, FoodData, ClusterGroup, RouteSegmentData, TripPlannerState
+)
 from ..config import get_settings
-from ..logger import get_logger
+from ..logger import get_logger, log_print
 
 # 获取日志记录器
 logger = get_logger(__name__)
+
+
+def _tool_result_to_str(result: Any) -> str:
+    if isinstance(result, str):
+        return result
+    try:
+        return json.dumps(result, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return str(result)
 
 
 async def _invoke_tool_with_retry(tool: BaseTool, arguments: Dict[str, Any], max_retries: int = 5) -> Any:
@@ -42,11 +52,11 @@ async def _invoke_tool_with_retry(tool: BaseTool, arguments: Dict[str, Any], max
                 base_wait = min(2 ** attempt, 30)
                 jitter = random.uniform(0, 3)
                 wait_time = base_wait + jitter
-                print(f"⚠️ 工具调用失败 [{tool.name}] (尝试 {attempt + 1}/{max_retries}): {error_name}: {str(e)[:100]}")
-                print(f"   等待 {wait_time:.1f} 秒后重试...")
+                log_print(f"⚠️ 工具调用失败 [{tool.name}] (尝试 {attempt + 1}/{max_retries}): {error_name}: {str(e)[:100]}")
+                log_print(f"   等待 {wait_time:.1f} 秒后重试...")
                 await asyncio.sleep(wait_time)
             else:
-                print(f"❌ 工具调用最终失败 [{tool.name}] (已重试 {max_retries} 次): {error_name}: {str(e)[:100]}")
+                log_print(f"❌ 工具调用最终失败 [{tool.name}] (已重试 {max_retries} 次): {error_name}: {str(e)[:100]}")
     raise last_error
 
 async def _invoke_llm_with_retry(llm_with_tools, messages: list, max_retries: int = 5) -> Any:
@@ -62,11 +72,11 @@ async def _invoke_llm_with_retry(llm_with_tools, messages: list, max_retries: in
                 base_wait = min(2 ** attempt, 30)
                 jitter = random.uniform(0, 3)
                 wait_time = base_wait + jitter
-                print(f"⚠️ LLM调用失败 (尝试 {attempt + 1}/{max_retries}): {error_name}: {str(e)[:100]}")
-                print(f"   等待 {wait_time:.1f} 秒后重试...")
+                log_print(f"⚠️ LLM调用失败 (尝试 {attempt + 1}/{max_retries}): {error_name}: {str(e)[:100]}")
+                log_print(f"   等待 {wait_time:.1f} 秒后重试...")
                 await asyncio.sleep(wait_time)
             else:
-                print(f"❌ LLM调用最终失败 (已重试 {max_retries} 次): {error_name}: {str(e)[:100]}")
+                log_print(f"❌ LLM调用最终失败 (已重试 {max_retries} 次): {error_name}: {str(e)[:100]}")
     raise last_error
 
 # ============ Agent提示词 (复用并适配 LangGraph) ============
@@ -396,26 +406,57 @@ PLANNER_AGENT_PROMPT = """你是行程规划专家。你的任务是根据景点
 """
 
 
-# ============ LangGraph 状态类 (State) ============
-
-class TripPlannerState(TypedDict):
-    """LangGraph 状态类：管理整个旅行规划流程中的数据流转"""
-    request: TripRequest
-    attractions_info: str
-    weather_info: str
-    hotels_info: str
-    food_info: str
-    cluster_info: str
-    route_info: str
-    trip_plan: Optional[TripPlan]
-    errors: List[str]
-    messages: Annotated[List[BaseMessage], operator.add]
-
-
 # ============ LangGraph 节点 (Nodes) ============
 
+def _parse_poi_result(result_str: str) -> List[POIInfo]:
+    """解析POI搜索结果为结构化数据，提取价格和评分"""
+    pois = []
+    try:
+        data = json.loads(result_str)
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict) and "text" in item:
+                    try:
+                        inner = json.loads(item["text"]) if isinstance(item["text"], str) else item["text"]
+                        if isinstance(inner, dict) and "pois" in inner:
+                            for poi in inner["pois"]:
+                                location = None
+                                if "location" in poi:
+                                    try:
+                                        lon, lat = poi["location"].split(",")
+                                        location = Location(longitude=float(lon), latitude=float(lat))
+                                    except (ValueError, AttributeError):
+                                        pass
+
+                                cost = None
+                                rating = None
+                                biz_ext = poi.get("biz_ext", {})
+                                if isinstance(biz_ext, dict):
+                                    cost = biz_ext.get("cost") or biz_ext.get("price")
+                                    rating = biz_ext.get("rating")
+                                if not rating:
+                                    rating = poi.get("rating")
+
+                                pois.append(POIInfo(
+                                    id=poi.get("id", ""),
+                                    name=poi.get("name", ""),
+                                    type=poi.get("type", ""),
+                                    address=poi.get("address", ""),
+                                    location=location,
+                                    typecode=poi.get("typecode"),
+                                    photo=poi.get("photo"),
+                                    cost=str(cost) if cost else None,
+                                    rating=str(rating) if rating else None
+                                ))
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+    except json.JSONDecodeError:
+        pass
+    return pois
+
+
 async def search_poi_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("📍 执行节点: search_poi_node")
+    log_print("📍 执行节点: search_poi_node")
     request = state["request"]
     keywords = request.preferences[0] if request.preferences else "景点"
 
@@ -450,19 +491,122 @@ async def search_poi_node(state: TripPlannerState) -> Dict[str, Any]:
 
     response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=ATTRACTION_AGENT_PROMPT), HumanMessage(content=prompt)])
 
-    if response.tool_calls:
-        results = []
-        for tool_call in response.tool_calls:
-            tool_result = await _invoke_tool_with_retry(search_tool, tool_call["args"])
-            results.append(str(tool_result))
-        return {"attractions_info": "\n".join(results)}
+    results = []
+    all_pois = []
 
-    print("⚠️ search_poi_node: LLM未调用工具")
-    return {"attractions_info": ""}
+    if response.tool_calls:
+        log_print(f"  📝 LLM调用了 {len(response.tool_calls)} 个工具")
+        for i, tool_call in enumerate(response.tool_calls):
+            log_print(f"  🔧 工具调用 {i+1}: {tool_call.get('name', 'unknown')} - 参数: {tool_call.get('args', {})}")
+            tool_result = await _invoke_tool_with_retry(search_tool, tool_call["args"])
+            result_str = _tool_result_to_str(tool_result)
+            log_print(f"  📦 工具返回结果长度: {len(result_str)} 字符")
+            results.append(result_str)
+            pois = _parse_poi_result(result_str)
+            log_print(f"  📍 从结果中解析到 {len(pois)} 个POI")
+            all_pois.extend(pois)
+        log_print(f"  ✅ LLM调用后总共解析到 {len(all_pois)} 个POI")
+
+    # 备用策略：如果LLM调用失败或返回空结果，直接使用预设关键词搜索
+    if not all_pois:
+        log_print("  🔄 LLM调用失败或返回空结果，启用备用搜索策略...")
+        fallback_keywords = ["景点", "旅游", "公园"]
+        if companion_keywords:
+            fallback_keywords.insert(0, companion_keywords.split()[0])
+
+        for keyword in fallback_keywords[:2]:
+            try:
+                log_print(f"  🔍 备用搜索: {request.city} - {keyword}")
+                tool_result = await _invoke_tool_with_retry(search_tool, {"keywords": keyword, "city": request.city})
+                result_str = _tool_result_to_str(tool_result)
+                results.append(result_str)
+                pois = _parse_poi_result(result_str)
+                log_print(f"  📍 备用搜索解析到 {len(pois)} 个POI")
+                all_pois.extend(pois)
+                if len(all_pois) >= 5:
+                    break
+            except Exception as e:
+                log_print(f"  ⚠️ 备用搜索失败: {e}")
+                continue
+
+    log_print(f"  ✅ 最终总共解析到 {len(all_pois)} 个POI")
+    return {
+        "attractions_info": "\n".join(results),
+        "attractions": all_pois
+    }
+
+
+def _parse_weather_result(result_str: str) -> List[WeatherData]:
+    """解析天气结果为结构化数据"""
+    weather_list = []
+    try:
+        data = json.loads(result_str)
+    except json.JSONDecodeError:
+        log_print(f"  ⚠️ 天气数据JSON解析失败，前200字符: {result_str[:200]}")
+        return weather_list
+
+    def _extract_weather_from_dict(inner: dict):
+        if "forecasts" in inner:
+            for forecast in inner["forecasts"]:
+                if isinstance(forecast, dict) and "casts" in forecast:
+                    for cast in forecast["casts"]:
+                        if isinstance(cast, dict):
+                            weather_list.append(WeatherData(
+                                date=cast.get("date", ""),
+                                day_weather=cast.get("dayweather", ""),
+                                night_weather=cast.get("nightweather", ""),
+                                day_temp=int(cast.get("daytemp", 0)) if cast.get("daytemp") else 0,
+                                night_temp=int(cast.get("nighttemp", 0)) if cast.get("nighttemp") else 0,
+                                wind_direction=cast.get("daywind", ""),
+                                wind_power=cast.get("daypower", "")
+                            ))
+        elif "casts" in inner:
+            for cast in inner["casts"]:
+                if isinstance(cast, dict):
+                    weather_list.append(WeatherData(
+                        date=cast.get("date", ""),
+                        day_weather=cast.get("dayweather", ""),
+                        night_weather=cast.get("nightweather", ""),
+                        day_temp=int(cast.get("daytemp", 0)) if cast.get("daytemp") else 0,
+                        night_temp=int(cast.get("nighttemp", 0)) if cast.get("nighttemp") else 0,
+                        wind_direction=cast.get("daywind", ""),
+                        wind_power=cast.get("daypower", "")
+                    ))
+        elif "lives" in inner:
+            for live in inner["lives"]:
+                if isinstance(live, dict):
+                    weather_list.append(WeatherData(
+                        date=live.get("date", ""),
+                        day_weather=live.get("weather", ""),
+                        night_weather=live.get("weather", ""),
+                        day_temp=int(float(live.get("temperature", "0"))),
+                        night_temp=int(float(live.get("temperature", "0"))),
+                        wind_direction=live.get("winddirection", ""),
+                        wind_power=live.get("windpower", "")
+                    ))
+
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict) and "text" in item:
+                try:
+                    inner = json.loads(item["text"]) if isinstance(item["text"], str) else item["text"]
+                    if isinstance(inner, dict):
+                        _extract_weather_from_dict(inner)
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    continue
+            elif isinstance(item, dict):
+                _extract_weather_from_dict(item)
+    elif isinstance(data, dict):
+        _extract_weather_from_dict(data)
+
+    if not weather_list:
+        log_print(f"  ⚠️ 天气数据未匹配已知格式，数据前300字符: {result_str[:300]}")
+
+    return weather_list
 
 
 async def search_weather_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("🌤️  执行节点: search_weather_node")
+    log_print("🌤️  执行节点: search_weather_node")
     request = state["request"]
 
     service = get_langchain_amap_service()
@@ -473,19 +617,81 @@ async def search_weather_node(state: TripPlannerState) -> Dict[str, Any]:
     prompt = WEATHER_AGENT_PROMPT + f"\n请查询城市: {request.city} 的天气。"
     response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=WEATHER_AGENT_PROMPT), HumanMessage(content=prompt)])
 
-    if response.tool_calls:
-        results = []
-        for tool_call in response.tool_calls:
-            tool_result = await _invoke_tool_with_retry(weather_tool, tool_call["args"])
-            results.append(str(tool_result))
-        return {"weather_info": "\n".join(results)}
+    results = []
+    all_weather = []
 
-    print("⚠️ search_weather_node: LLM未调用工具")
-    return {"weather_info": ""}
+    if response.tool_calls:
+        log_print(f"  📝 LLM调用了 {len(response.tool_calls)} 个工具")
+        for i, tool_call in enumerate(response.tool_calls):
+            log_print(f"  🔧 工具调用 {i+1}: {tool_call.get('name', 'unknown')} - 参数: {tool_call.get('args', {})}")
+            tool_result = await _invoke_tool_with_retry(weather_tool, tool_call["args"])
+            result_str = _tool_result_to_str(tool_result)
+            log_print(f"  📦 工具返回结果长度: {len(result_str)} 字符")
+            results.append(result_str)
+            weather_data = _parse_weather_result(result_str)
+            log_print(f"  🌤️ 从结果中解析到 {len(weather_data)} 天天气")
+            all_weather.extend(weather_data)
+        log_print(f"  ✅ LLM调用后总共解析到 {len(all_weather)} 天天气")
+
+    # 备用策略：如果LLM调用失败或返回空结果，直接查询天气
+    if not all_weather:
+        log_print("  🔄 LLM调用失败或返回空结果，启用备用天气查询策略...")
+        try:
+            log_print(f"  🔍 备用查询: {request.city} 天气")
+            tool_result = await _invoke_tool_with_retry(weather_tool, {"city": request.city})
+            result_str = _tool_result_to_str(tool_result)
+            results.append(result_str)
+            weather_data = _parse_weather_result(result_str)
+            log_print(f"  🌤️ 备用查询解析到 {len(weather_data)} 天天气")
+            all_weather.extend(weather_data)
+        except Exception as e:
+            log_print(f"  ⚠️ 备用天气查询失败: {e}")
+
+    log_print(f"  ✅ 最终总共解析到 {len(all_weather)} 天天气")
+    return {
+        "weather_info": "\n".join(results) if results else f"{request.city}天气查询失败",
+        "weather": all_weather
+    }
+
+
+def _parse_hotel_result(result_str: str) -> List[HotelData]:
+    """解析酒店结果为结构化数据"""
+    hotels = []
+    try:
+        data = json.loads(result_str)
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict) and "text" in item:
+                    try:
+                        inner = json.loads(item["text"]) if isinstance(item["text"], str) else item["text"]
+                        if isinstance(inner, dict) and "pois" in inner:
+                            for poi in inner["pois"]:
+                                location = None
+                                if "location" in poi:
+                                    try:
+                                        lon, lat = poi["location"].split(",")
+                                        location = Location(longitude=float(lon), latitude=float(lat))
+                                    except (ValueError, AttributeError):
+                                        pass
+                                hotels.append(HotelData(
+                                    id=poi.get("id", ""),
+                                    name=poi.get("name", ""),
+                                    address=poi.get("address", ""),
+                                    location=location,
+                                    price_range=None,
+                                    rating=None,
+                                    type=None,
+                                    photos=[poi.get("photo")] if poi.get("photo") else []
+                                ))
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+    except json.JSONDecodeError:
+        pass
+    return hotels
 
 
 async def search_hotel_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("🏨 执行节点: search_hotel_node")
+    log_print("🏨 执行节点: search_hotel_node")
     request = state["request"]
 
     service = get_langchain_amap_service()
@@ -503,20 +709,142 @@ async def search_hotel_node(state: TripPlannerState) -> Dict[str, Any]:
 
     response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=HOTEL_AGENT_PROMPT), HumanMessage(content=prompt)])
 
-    if response.tool_calls:
-        results = []
-        for tool_call in response.tool_calls:
-            tool_result = await _invoke_tool_with_retry(search_tool, tool_call["args"])
-            results.append(str(tool_result))
-        return {"hotels_info": "\n".join(results)}
+    results = []
+    all_hotels = []
 
-    print("⚠️ search_hotel_node: LLM未调用工具")
-    return {"hotels_info": ""}
+    if response.tool_calls:
+        log_print(f"  📝 LLM调用了 {len(response.tool_calls)} 个工具")
+        for i, tool_call in enumerate(response.tool_calls):
+            log_print(f"  🔧 工具调用 {i+1}: {tool_call.get('name', 'unknown')} - 参数: {tool_call.get('args', {})}")
+            tool_result = await _invoke_tool_with_retry(search_tool, tool_call["args"])
+            result_str = _tool_result_to_str(tool_result)
+            log_print(f"  📦 工具返回结果长度: {len(result_str)} 字符")
+            results.append(result_str)
+            hotels = _parse_hotel_result(result_str)
+            log_print(f"  🏨 从结果中解析到 {len(hotels)} 个酒店")
+            all_hotels.extend(hotels)
+        log_print(f"  ✅ LLM调用后总共解析到 {len(all_hotels)} 个酒店")
+
+    # 备用策略：如果LLM调用失败或返回空结果，直接使用预设关键词搜索
+    if not all_hotels:
+        log_print("  🔄 LLM调用失败或返回空结果，启用备用酒店搜索策略...")
+        fallback_keywords = ["酒店", "宾馆", "住宿"]
+
+        for keyword in fallback_keywords[:2]:
+            try:
+                log_print(f"  🔍 备用搜索: {request.city} - {keyword}")
+                tool_result = await _invoke_tool_with_retry(search_tool, {"keywords": keyword, "city": request.city})
+                result_str = _tool_result_to_str(tool_result)
+                results.append(result_str)
+                hotels = _parse_hotel_result(result_str)
+                log_print(f"  🏨 备用搜索解析到 {len(hotels)} 个酒店")
+                all_hotels.extend(hotels)
+                if len(all_hotels) >= 3:
+                    break
+            except Exception as e:
+                log_print(f"  ⚠️ 备用搜索失败: {e}")
+                continue
+
+    log_print(f"  ✅ 最终总共解析到 {len(all_hotels)} 个酒店")
+    return {
+        "hotels_info": "\n".join(results),
+        "hotels": all_hotels
+    }
 
 
 async def gather_search_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("🔗 执行节点: gather_search_node (搜索结果汇总)")
+    log_print("🔗 执行节点: gather_search_node (搜索结果汇总)")
     return {}
+
+
+async def fetch_poi_details_node(state: TripPlannerState) -> Dict[str, Any]:
+    """获取POI详细信息（真实价格），使用maps_search_detail工具"""
+    log_print("💰 执行节点: fetch_poi_details_node (获取POI真实价格)")
+    attractions = state.get("attractions", [])
+    hotels = state.get("hotels", [])
+
+    service = get_langchain_amap_service()
+    detail_tool = None
+    try:
+        detail_tool = await service.get_tool("maps_search_detail")
+    except Exception as e:
+        log_print(f"  ⚠️ 获取maps_search_detail工具失败: {e}")
+
+    if not detail_tool:
+        log_print("  ⚠️ maps_search_detail工具不可用，跳过详情获取")
+        return {}
+
+    all_pois = []
+    for poi in attractions:
+        if poi.get("id"):
+            all_pois.append(("attraction", poi))
+    for poi in hotels:
+        if poi.get("id"):
+            all_pois.append(("hotel", poi))
+
+    unique_ids = set()
+    unique_pois = []
+    for poi_type, poi in all_pois:
+        poi_id = poi.get("id", "")
+        if poi_id not in unique_ids:
+            unique_ids.add(poi_id)
+            unique_pois.append((poi_type, poi))
+
+    detail_count = 0
+    max_details = 15
+    for poi_type, poi in unique_pois[:max_details]:
+        try:
+            detail_result = await _invoke_tool_with_retry(detail_tool, {"id": poi.get("id")})
+            detail_str = _tool_result_to_str(detail_result)
+            detail_data = None
+            try:
+                parsed = json.loads(detail_str)
+                if isinstance(parsed, list):
+                    for item in parsed:
+                        if isinstance(item, dict) and "text" in item:
+                            inner = json.loads(item["text"]) if isinstance(item["text"], str) else item["text"]
+                            if isinstance(inner, dict):
+                                detail_data = inner
+                                break
+                elif isinstance(parsed, dict):
+                    detail_data = parsed
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+            if detail_data:
+                cost = None
+                rating = None
+                biz_ext = detail_data.get("biz_ext", {})
+                if isinstance(biz_ext, dict):
+                    cost = biz_ext.get("cost") or biz_ext.get("price")
+                    rating = biz_ext.get("rating")
+                if not rating:
+                    rating = detail_data.get("rating")
+                if not cost:
+                    deep_type = detail_data.get("deep_type", "")
+                    if deep_type == "HOTEL":
+                        hotel_ext = detail_data.get("hotel_exct", {})
+                        if isinstance(hotel_ext, dict):
+                            cost = hotel_ext.get("price") or hotel_ext.get("lowest_price")
+                    elif deep_type == "SCENIC":
+                        scenic_ext = detail_data.get("scenic_exct", {})
+                        if isinstance(scenic_ext, dict):
+                            cost = scenic_ext.get("ticket_price") or scenic_ext.get("price")
+
+                if cost:
+                    poi["cost"] = str(cost)
+                if rating:
+                    poi["rating"] = str(rating)
+
+                detail_count += 1
+
+            await asyncio.sleep(0.1)
+        except Exception as e:
+            log_print(f"  ⚠️ 获取POI详情失败 [{poi.get('name', '未知')}]: {e}")
+            continue
+
+    log_print(f"  ✅ 成功获取 {detail_count}/{min(len(unique_pois), max_details)} 个POI的真实价格")
+    return {"attractions": attractions, "hotels": hotels}
 
 
 CITY_FOOD_MAP = {
@@ -562,7 +890,7 @@ def _get_food_keywords(city: str, food_preference: str) -> list:
 
 
 async def search_food_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("🍜 执行节点: search_food_node")
+    log_print("🍜 执行节点: search_food_node")
     request = state["request"]
     attractions_info = state.get("attractions_info", "")
 
@@ -611,12 +939,12 @@ async def search_food_node(state: TripPlannerState) -> Dict[str, Any]:
         tool = await service.get_tool(tool_name)
         if tool:
             tool_result = await _invoke_tool_with_retry(tool, tool_args)
-            food_results.append(f"[{tool_name}]: {str(tool_result)}")
+            food_results.append(f"[{tool_name}]: {_tool_result_to_str(tool_result)}")
 
     if food_results:
         return {"food_info": "\n".join(food_results)}
 
-    print("⚠️ search_food_node: LLM未调用工具，返回空数据")
+    log_print("⚠️ search_food_node: LLM未调用工具，返回空数据")
     return {"food_info": ""}
 
 
@@ -935,29 +1263,56 @@ def _extract_coordinates_regex(text: str) -> List[Dict]:
 
 
 async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("🗺️ 执行节点: cluster_attractions_node")
+    log_print("🗺️ 执行节点: cluster_attractions_node")
 
     if state.get("cluster_info"):
-        print("  ⏭️ 聚类已完成，跳过重复执行")
+        log_print("  ⏭️ 聚类已完成，跳过重复执行")
         return {}
 
     attractions_info = state.get("attractions_info", "")
+    structured_attractions = state.get("attractions", [])
     request = state["request"]
 
-    valid_attractions = _extract_coordinates_regex(attractions_info)
-    if valid_attractions:
-        print(f"📊 正则提取到 {len(valid_attractions)} 个景点坐标（跳过LLM提取）")
-    else:
+    valid_attractions = []
+
+    # 首先尝试从结构化数据中提取坐标（备用策略B3的成果）
+    if structured_attractions:
+        log_print(f"📊 尝试从结构化attractions中提取坐标，共 {len(structured_attractions)} 个...")
+        for poi in structured_attractions:
+            if poi.get("location"):
+                loc = poi["location"]
+                try:
+                    lon = float(loc.get("longitude", 0))
+                    lat = float(loc.get("latitude", 0))
+                    if 73 < lon < 136 and 3 < lat < 54:
+                        valid_attractions.append({
+                            "name": poi.get("name", "未知景点"),
+                            "longitude": lon,
+                            "latitude": lat
+                        })
+                except (ValueError, TypeError):
+                    continue
+        if valid_attractions:
+            log_print(f"📊 从结构化数据提取到 {len(valid_attractions)} 个景点坐标")
+
+    # 如果结构化数据没有坐标，尝试从文本中提取
+    if not valid_attractions:
+        valid_attractions = _extract_coordinates_regex(attractions_info)
+        if valid_attractions:
+            log_print(f"📊 正则提取到 {len(valid_attractions)} 个景点坐标")
+
+    # 如果正则提取失败，尝试从POI名称调用maps_geo获取坐标
+    if not valid_attractions:
         poi_names = _extract_poi_names(attractions_info)
         if poi_names:
-            print(f"📊 从POI数据提取到 {len(poi_names)} 个景点名称，调用maps_geo获取坐标...")
+            log_print(f"📊 从POI数据提取到 {len(poi_names)} 个景点名称，调用maps_geo获取坐标...")
             try:
                 service = get_langchain_amap_service()
                 geo_tool = await service.get_tool("maps_geo")
                 for poi in poi_names[:20]:
                     try:
                         geo_result = await _invoke_tool_with_retry(geo_tool, {"address": poi["name"], "city": request.city})
-                        result_str = str(geo_result)
+                        result_str = _tool_result_to_str(geo_result)
                         loc_match = re.search(r'"location"\s*:\s*"([\d.]+)\s*,\s*([\d.]+)"', result_str)
                         if not loc_match:
                             loc_match = re.search(r'([\d.]+)\s*,\s*([\d.]+)', result_str)
@@ -967,17 +1322,18 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
                             if 73 < lon < 136 and 3 < lat < 54:
                                 valid_attractions.append({"name": poi["name"], "longitude": lon, "latitude": lat})
                     except Exception as e:
-                        print(f"  ⚠️ maps_geo查询{poi['name']}失败: {e}")
+                        log_print(f"  ⚠️ maps_geo查询{poi['name']}失败: {e}")
                 if valid_attractions:
-                    print(f"📊 maps_geo获取到 {len(valid_attractions)} 个景点坐标")
+                    log_print(f"📊 maps_geo获取到 {len(valid_attractions)} 个景点坐标")
             except Exception as e:
-                print(f"⚠️ maps_geo批量查询失败: {e}")
+                log_print(f"⚠️ maps_geo批量查询失败: {e}")
 
-        if not valid_attractions:
-            print(f"📊 正则未提取到坐标，数据前500字符: {attractions_info[:500]}")
-            print("📊 尝试LLM提取...")
-            llm = get_llm()
-            extract_prompt = f"""从以下景点搜索结果中，提取所有景点的名称和经纬度坐标。
+    # 最后尝试LLM提取
+    if not valid_attractions and attractions_info:
+        log_print(f"📊 正则未提取到坐标，数据前500字符: {attractions_info[:500]}")
+        log_print("📊 尝试LLM提取...")
+        llm = get_llm()
+        extract_prompt = f"""从以下景点搜索结果中，提取所有景点的名称和经纬度坐标。
 请以JSON数组格式返回，每个元素包含 name, longitude, latitude 三个字段。longitude和latitude必须是浮点数。
 
 **重要**: 中国的经度范围约73-136，纬度范围约3-54。请确保提取的坐标在此范围内。
@@ -988,28 +1344,28 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
 请直接返回JSON数组，不要包含其他文字。示例:
 [{{"name": "故宫博物院", "longitude": 116.3974, "latitude": 39.9165}}]"""
 
-            try:
-                response = await _invoke_llm_with_retry(llm, [HumanMessage(content=extract_prompt)])
-                attractions_list = _extract_json_array(response.content)
+        try:
+            response = await _invoke_llm_with_retry(llm, [HumanMessage(content=extract_prompt)])
+            attractions_list = _extract_json_array(response.content)
 
-                if attractions_list:
-                    valid_attractions = [
-                        a for a in attractions_list
-                        if isinstance(a.get("longitude"), (int, float)) and isinstance(a.get("latitude"), (int, float))
-                        and 73 < a["longitude"] < 136 and 3 < a["latitude"] < 54
-                    ]
+            if attractions_list:
+                valid_attractions = [
+                    a for a in attractions_list
+                    if isinstance(a.get("longitude"), (int, float)) and isinstance(a.get("latitude"), (int, float))
+                    and 73 < a["longitude"] < 136 and 3 < a["latitude"] < 54
+                ]
 
-                if not valid_attractions:
-                    print("⚠️ LLM提取也失败，尝试从原始文本正则提取...")
-                    valid_attractions = _extract_coordinates_regex(response.content)
-            except Exception as e:
-                print(f"⚠️ LLM坐标提取异常: {e}")
+            if not valid_attractions:
+                log_print("⚠️ LLM提取也失败，尝试从原始文本正则提取...")
+                valid_attractions = _extract_coordinates_regex(response.content)
+        except Exception as e:
+            log_print(f"⚠️ LLM坐标提取异常: {e}")
 
     if not valid_attractions:
-        print("⚠️ 未能提取有效景点坐标，跳过聚类")
+        log_print("⚠️ 未能提取有效景点坐标，跳过聚类")
         return {"cluster_info": "景点坐标提取失败，请根据景点信息自行合理分配每日行程。"}
 
-    print(f"📊 成功提取 {len(valid_attractions)} 个景点坐标")
+    log_print(f"📊 成功提取 {len(valid_attractions)} 个景点坐标")
 
     n = len(valid_attractions)
     dist_matrix = [[0.0] * n for _ in range(n)]
@@ -1031,30 +1387,30 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
     total_attractions = sum(len(c) for c in clusters)
     max_per_day = 3
     if total_attractions > request.travel_days * max_per_day:
-        print(f"✂️ 景点数量({total_attractions})超过上限({request.travel_days * max_per_day})，开始筛选...")
+        log_print(f"✂️ 景点数量({total_attractions})超过上限({request.travel_days * max_per_day})，开始筛选...")
         clusters = _select_top_attractions(clusters, max_per_day)
         trimmed = True
 
     cluster_info = _format_cluster_info(clusters, valid_attractions, dist_matrix, trimmed)
     final_count = sum(len(c) for c in clusters)
-    print(f"✅ 景点聚类完成: {len(valid_attractions)} 个景点 → 筛选后 {final_count} 个，分为 {len(clusters)} 组")
+    log_print(f"✅ 景点聚类完成: {len(valid_attractions)} 个景点 → 筛选后 {final_count} 个，分为 {len(clusters)} 组")
 
     return {"cluster_info": cluster_info}
 
 
 async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("🗺️ 执行节点: plan_route_node")
+    log_print("🗺️ 执行节点: plan_route_node")
     request = state["request"]
     hotels = state.get("hotels_info", "")
     cluster_info = state.get("cluster_info", "")
 
     if not hotels:
-        print("⚠️ 酒店数据尚未就绪，路线规划可能不完整")
+        log_print("⚠️ 酒店数据尚未就绪，路线规划可能不完整")
     if not state.get("weather_info"):
-        print("⚠️ 天气数据尚未就绪")
+        log_print("⚠️ 天气数据尚未就绪")
 
     if not cluster_info or "失败" in cluster_info:
-        print("⚠️ 聚类信息不可用，使用原始景点信息进行路线规划")
+        log_print("⚠️ 聚类信息不可用，使用原始景点信息进行路线规划")
         cluster_info = f"（聚类不可用，请根据以下景点信息自行分组规划路线）\n景点搜索结果: {state.get('attractions_info', '')[:2000]}"
 
     service = get_langchain_amap_service()
@@ -1065,7 +1421,7 @@ async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
             await service.get_tool("maps_direction_transit_integrated")
         ]
     except Exception as e:
-        print(f"⚠️ 路线工具加载失败: {e}")
+        log_print(f"⚠️ 路线工具加载失败: {e}")
         return {"route_info": f"路线工具加载失败，请根据距离矩阵自行估算交通时间。"}
 
     llm = get_llm()
@@ -1099,7 +1455,7 @@ async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
     try:
         response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=ROUTE_AGENT_PROMPT), HumanMessage(content=prompt)])
     except Exception as e:
-        print(f"⚠️ LLM路线规划调用失败: {e}")
+        log_print(f"⚠️ LLM路线规划调用失败: {e}")
         return {"route_info": f"路线规划LLM调用失败: {str(e)[:200]}，请根据距离矩阵自行估算交通时间。"}
 
     route_results = []
@@ -1112,11 +1468,11 @@ async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
             tool = await service.get_tool(tool_name)
             if tool:
                 tool_result = await _invoke_tool_with_retry(tool, tool_args)
-                route_results.append(f"[{tool_name}]: {str(tool_result)}")
+                route_results.append(f"[{tool_name}]: {_tool_result_to_str(tool_result)}")
             else:
                 route_results.append(f"未知工具: {tool_name}")
         except Exception as e:
-            print(f"⚠️ 路线工具[{tool_name}]调用失败: {e}")
+            log_print(f"⚠️ 路线工具[{tool_name}]调用失败: {e}")
             route_results.append(f"[{tool_name}] 调用失败: {str(e)[:100]}")
 
         if tool_name.startswith("maps_direction"):
@@ -1125,15 +1481,46 @@ async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
                 break
 
     if route_results:
+        log_print(f"  ✅ 路线规划完成，获取到 {len(route_results)} 条路线信息")
         return {"route_info": "\n".join(route_results)}
 
-    print("⚠️ plan_route_node: LLM未调用路线规划工具，尝试直接调用")
-    try:
-        coords = _extract_coordinates_regex(cluster_info)
+    log_print("⚠️ plan_route_node: LLM未调用路线规划工具，尝试直接调用")
+
+    # 尝试从多个来源提取坐标
+    coords = []
+    sources = [
+        ("cluster_info", cluster_info),
+        ("attractions_info", state.get("attractions_info", "")),
+        ("structured_attractions", state.get("attractions", []))
+    ]
+
+    for source_name, source_data in sources:
         if not coords:
-            coords = _extract_coordinates_regex(state.get("attractions_info", ""))
-    except Exception:
-        coords = []
+            try:
+                if source_name == "structured_attractions" and isinstance(source_data, list):
+                    # 从结构化数据提取
+                    for poi in source_data:
+                        if poi.get("location"):
+                            loc = poi["location"]
+                            try:
+                                lon = float(loc.get("longitude", 0))
+                                lat = float(loc.get("latitude", 0))
+                                if 73 < lon < 136 and 3 < lat < 54:
+                                    coords.append({
+                                        "name": poi.get("name", "景点"),
+                                        "longitude": lon,
+                                        "latitude": lat
+                                    })
+                            except (ValueError, TypeError):
+                                continue
+                    if coords:
+                        log_print(f"  📍 从结构化attractions提取到 {len(coords)} 个坐标")
+                elif isinstance(source_data, str) and source_data:
+                    coords = _extract_coordinates_regex(source_data)
+                    if coords:
+                        log_print(f"  📍 从{source_name}提取到 {len(coords)} 个坐标")
+            except Exception as e:
+                log_print(f"  ⚠️ 从{source_name}提取坐标失败: {e}")
 
     if len(coords) >= 2:
         try:
@@ -1142,17 +1529,19 @@ async def plan_route_node(state: TripPlannerState) -> Dict[str, Any]:
             origin = f"{coords[0]['longitude']},{coords[0]['latitude']}"
             destination = f"{coords[-1]['longitude']},{coords[-1]['latitude']}"
             tool_args = {"origin": origin, "destination": destination, "city": request.city}
-            print(f"  直接调用 {tool_name}: {origin} → {destination}")
+            log_print(f"  直接调用 {tool_name}: {origin} → {destination}")
             tool_result = await _invoke_tool_with_retry(direct_tool, tool_args)
-            return {"route_info": f"[{tool_name}]: {str(tool_result)}"}
+            log_print(f"  ✅ 直接调用成功")
+            return {"route_info": f"[{tool_name}]: {_tool_result_to_str(tool_result)}"}
         except Exception as e:
-            print(f"⚠️ 直接调用路线工具也失败: {e}")
+            log_print(f"⚠️ 直接调用路线工具也失败: {e}")
 
-    return {"route_info": ""}
+    log_print("⚠️ 无法获取有效坐标进行路线规划")
+    return {"route_info": "路线规划：未能获取景点坐标信息，请根据实际位置自行规划交通路线。"}
 
 
 async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("📋 执行节点: generate_plan_node")
+    log_print("📋 执行节点: generate_plan_node")
     request = state["request"]
     attractions = state.get("attractions_info", "")
     weather = state.get("weather_info", "")
@@ -1160,6 +1549,22 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
     food = state.get("food_info", "")
     cluster = state.get("cluster_info", "")
     routes = state.get("route_info", "")
+
+    structured_attractions = state.get("attractions", [])
+    structured_hotels = state.get("hotels", [])
+
+    price_info = ""
+    poi_with_prices = []
+    for poi in structured_attractions:
+        if poi.get("cost"):
+            poi_type = poi.get("type", "")
+            poi_with_prices.append(f"  - {poi.get('name', '未知')}: {poi.get('cost')}元{'(门票)' if poi_type and '景点' in poi_type else '(人均)'}")
+    for poi in structured_hotels:
+        if poi.get("cost"):
+            poi_with_prices.append(f"  - {poi.get('name', '未知')}: {poi.get('cost')}元/晚")
+
+    if poi_with_prices:
+        price_info = "\n**已确认的真实价格（必须优先使用）:**\n" + "\n".join(poi_with_prices)
 
     prompt = f"""请根据以下信息生成{request.city}的{request.travel_days}天旅行计划:
 
@@ -1189,6 +1594,7 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
 [美食]: {food}
 [景点聚类分组]: {cluster}
 [路线]: {routes if routes else "路线搜索数据不可用，请根据景点间距离和交通方式自行估算路线信息"}
+{price_info}
 
 **关键要求:**
 1. **严格按照[景点聚类分组]的建议安排每日景点**，将同一组的景点安排在同一天，不要随意打散
@@ -1198,11 +1604,11 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
 5. **每个景点的location字段必须包含经纬度坐标**，从[景点]搜索结果中提取，不要留空或编造
 6. **每天必须包含route_segments路线段**，即使路线搜索数据不可用，也要根据景点位置和交通方式估算距离和时间
 7. **返回的JSON必须严格合法**：属性名用双引号，不要有尾随逗号，不要有注释
-8. **价格数据必须从搜索结果中提取真实价格**，不要随意编造价格。搜索结果中通常包含:
-   - 景点的门票价格信息
-   - 酒店的价格范围信息
-   - 餐厅的人均消费信息
-   如果搜索结果中没有价格，再使用你的知识估算
+8. **价格数据必须优先使用已获取的真实价格**！以下POI已通过详情查询获取到真实价格，必须优先使用:
+   - 如果POI信息中包含cost字段，这就是真实价格，必须直接使用
+   - 景点的cost字段即门票价格，酒店的cost字段即每晚价格，餐厅的cost字段即人均消费
+   - 只有当POI没有cost字段时，才从搜索结果文本中提取价格
+   - 如果搜索结果中也没有价格，再使用你的知识估算，但必须在描述中标注"价格仅供参考"
 9. **餐饮estimated_cost = avg_cost × 出行人数**
 """
     if request.budget:
@@ -1220,9 +1626,9 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
     structured_llm = None
     try:
         structured_llm = llm.with_structured_output(TripPlan, method="function_calling")
-        print("🔧 使用 Structured Output (function_calling) 模式生成计划")
+        log_print("🔧 使用 Structured Output (function_calling) 模式生成计划")
     except Exception as e:
-        print(f"⚠️ Structured Output 不可用，使用手动JSON解析: {e}")
+        log_print(f"⚠️ Structured Output 不可用，使用手动JSON解析: {e}")
 
     max_attempts = 3
     for attempt in range(max_attempts):
@@ -1232,20 +1638,20 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
                     trip_plan = await structured_llm.ainvoke(messages)
                     if trip_plan is not None:
                         return {"trip_plan": _validate_plan_coordinates(trip_plan, request)}
-                    print("⚠️ Structured Output 返回空结果，降级到手动解析")
+                    log_print("⚠️ Structured Output 返回空结果，降级到手动解析")
                 except Exception as e:
                     err_msg = str(e)
                     if "response_format" in err_msg or "unavailable" in err_msg or "400" in err_msg:
-                        print(f"⚠️ Structured Output 不受API支持，降级到手动解析: {err_msg[:100]}")
+                        log_print(f"⚠️ Structured Output 不受API支持，降级到手动解析: {err_msg[:100]}")
                     else:
-                        print(f"⚠️ Structured Output 调用失败，降级到手动解析: {err_msg[:100]}")
+                        log_print(f"⚠️ Structured Output 调用失败，降级到手动解析: {err_msg[:100]}")
                 structured_llm = None
 
             response = await _invoke_llm_with_retry(llm, messages)
             trip_plan = _parse_response(response.content, request)
             return {"trip_plan": trip_plan}
         except Exception as e:
-            print(f"⚠️ 解析计划失败 (尝试 {attempt + 1}/{max_attempts}): {str(e)[:200]}")
+            log_print(f"⚠️ 解析计划失败 (尝试 {attempt + 1}/{max_attempts}): {str(e)[:200]}")
             if attempt < max_attempts - 1:
                 prompt = f"""上一次生成的JSON格式有误，解析失败。请重新生成，确保：
 1. 所有属性名用双引号包裹
@@ -1281,7 +1687,7 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
                     prompt += f"\n**额外要求:** {request.free_text_input}"
                 messages = [SystemMessage(content=PLANNER_AGENT_PROMPT), HumanMessage(content=prompt)]
             else:
-                print(f"❌ 解析计划最终失败，使用备用方案")
+                log_print(f"❌ 解析计划最终失败，使用备用方案")
                 return {"trip_plan": None, "errors": [str(e)]}
 
 
@@ -1342,12 +1748,12 @@ def _parse_response(response_text: str, request: TripRequest) -> TripPlan:
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError:
-            print("⚠️ JSON解析失败，尝试修复...")
+            log_print("⚠️ JSON解析失败，尝试修复...")
             repaired = _repair_json(json_str)
             try:
                 data = json.loads(repaired)
             except json.JSONDecodeError:
-                print("⚠️ JSON修复后仍解析失败，尝试逐步截断...")
+                log_print("⚠️ JSON修复后仍解析失败，尝试逐步截断...")
                 data = None
                 for end_offset in range(len(json_str) - 1, max(len(json_str) // 2, 100), -1):
                     if json_str[end_offset] == '}':
@@ -1419,6 +1825,7 @@ def create_trip_planner_graph() -> StateGraph:
     workflow.add_node("search_weather", search_weather_node)
     workflow.add_node("search_hotel", search_hotel_node)
     workflow.add_node("gather_search", gather_search_node)
+    workflow.add_node("fetch_poi_details", fetch_poi_details_node)
     workflow.add_node("cluster_attractions", cluster_attractions_node)
     workflow.add_node("search_food", search_food_node)
     workflow.add_node("plan_route", plan_route_node)
@@ -1428,13 +1835,10 @@ def create_trip_planner_graph() -> StateGraph:
     workflow.add_edge(START, "search_weather")
     workflow.add_edge(START, "search_hotel")
 
-    # workflow.add_edge("search_poi", "gather_search")
-    # workflow.add_edge("search_weather", "gather_search")
-    # workflow.add_edge("search_hotel", "gather_search")
-
     workflow.add_edge(["search_poi", "search_weather", "search_hotel"], "gather_search")
 
-    workflow.add_edge("gather_search", "cluster_attractions")
+    workflow.add_edge("gather_search", "fetch_poi_details")
+    workflow.add_edge("fetch_poi_details", "cluster_attractions")
     workflow.add_edge("cluster_attractions", "search_food")
     workflow.add_edge("search_food", "plan_route")
     workflow.add_edge("plan_route", "generate_plan")
@@ -1450,25 +1854,33 @@ class LangGraphTripPlanner:
     """基于 LangGraph 的旅行规划系统封装类"""
 
     def __init__(self):
-        print("🔄 初始化 LangGraph 旅行规划系统...")
+        log_print("🔄 初始化 LangGraph 旅行规划系统...")
         self.app = create_trip_planner_graph()
 
     async def plan_trip(self, request: TripRequest) -> TripPlan:
-        print(f"\n{'='*60}")
-        print(f"🚀 开始 LangGraph 协作规划旅行...")
-        print(f"目的地: {request.city} | 日期: {request.start_date} 至 {request.end_date}")
-        print(f"{'='*60}\n")
+        log_print(f"\n{'='*60}")
+        log_print(f"🚀 开始 LangGraph 协作规划旅行...")
+        log_print(f"目的地: {request.city} | 日期: {request.start_date} 至 {request.end_date}")
+        log_print(f"{'='*60}\n")
 
         try:
-            print("⏳ 预初始化 LLM 和 MCP 服务...")
+            log_print("⏳ 预初始化 LLM 和 MCP 服务...")
             get_llm()
             await get_mcp_tools()
-            print("✅ 服务预初始化完成")
+            log_print("✅ 服务预初始化完成")
         except Exception as e:
-            print(f"⚠️ 服务预初始化失败: {e}")
+            log_print(f"⚠️ 服务预初始化失败: {e}")
 
         initial_state = {
             "request": request,
+            # 结构化数据
+            "attractions": [],
+            "weather": [],
+            "hotels": [],
+            "foods": [],
+            "clusters": [],
+            "routes": [],
+            # 原始字符串（兼容）
             "attractions_info": "",
             "weather_info": "",
             "hotels_info": "",
@@ -1485,17 +1897,17 @@ class LangGraphTripPlanner:
             trip_plan = final_state.get("trip_plan")
 
             if not trip_plan:
-                print("⚠️ 警告：生成的计划为空，可能大模型解析失败。将使用备用方案生成计划。")
+                log_print("⚠️ 警告：生成的计划为空，可能大模型解析失败。将使用备用方案生成计划。")
                 return _create_fallback_plan(request)
 
-            print(f"{'='*60}")
-            print(f"✅ LangGraph 旅行计划生成完成!")
-            print(f"{'='*60}\n")
+            log_print(f"{'='*60}")
+            log_print(f"✅ LangGraph 旅行计划生成完成!")
+            log_print(f"{'='*60}\n")
 
             return trip_plan
 
         except Exception as e:
-            print(f"❌ 生成旅行计划失败: {str(e)}")
+            log_print(f"❌ 生成旅行计划失败: {str(e)}")
             import traceback
             traceback.print_exc()
             return _create_fallback_plan(request)
@@ -1507,23 +1919,31 @@ class LangGraphTripPlanner:
         使用 LangGraph 的 astream 方法，每完成一个节点就产出进度事件，
         同时收集最终状态，无需额外调用 ainvoke。
         """
-        print(f"\n{'='*60}")
-        print(f"🚀 开始 LangGraph 流式协作规划旅行...")
-        print(f"目的地: {request.city} | 日期: {request.start_date} 至 {request.end_date}")
-        print(f"{'='*60}\n")
+        log_print(f"\n{'='*60}")
+        log_print(f"🚀 开始 LangGraph 流式协作规划旅行...")
+        log_print(f"目的地: {request.city} | 日期: {request.start_date} 至 {request.end_date}")
+        log_print(f"{'='*60}\n")
 
         try:
-            print("⏳ 预初始化 LLM 和 MCP 服务...")
+            log_print("⏳ 预初始化 LLM 和 MCP 服务...")
             get_llm()
             await get_mcp_tools()
-            print("✅ 服务预初始化完成")
+            log_print("✅ 服务预初始化完成")
         except Exception as e:
-            print(f"⚠️ 服务预初始化失败: {e}")
+            log_print(f"⚠️ 服务预初始化失败: {e}")
 
         yield {"type": "init", "message": "正在初始化服务...", "progress": 5}
 
         initial_state = {
             "request": request,
+            # 结构化数据
+            "attractions": [],
+            "weather": [],
+            "hotels": [],
+            "foods": [],
+            "clusters": [],
+            "routes": [],
+            # 原始字符串（兼容）
             "attractions_info": "",
             "weather_info": "",
             "hotels_info": "",
@@ -1576,18 +1996,18 @@ class LangGraphTripPlanner:
             trip_plan = final_state.get("trip_plan")
 
             if not trip_plan:
-                print("⚠️ 警告：生成的计划为空，使用备用方案")
+                log_print("⚠️ 警告：生成的计划为空，使用备用方案")
                 trip_plan = _create_fallback_plan(request)
 
             plan_dict = trip_plan.model_dump() if hasattr(trip_plan, 'model_dump') else trip_plan.dict()
             yield {"type": "complete", "message": "✅ 旅行计划生成完成!", "progress": 100, "data": plan_dict}
 
-            print(f"{'='*60}")
-            print(f"✅ LangGraph 流式旅行计划生成完成!")
-            print(f"{'='*60}\n")
+            log_print(f"{'='*60}")
+            log_print(f"✅ LangGraph 流式旅行计划生成完成!")
+            log_print(f"{'='*60}\n")
 
         except Exception as e:
-            print(f"❌ 流式生成旅行计划失败: {str(e)}")
+            log_print(f"❌ 流式生成旅行计划失败: {str(e)}")
             import traceback
             traceback.print_exc()
             yield {"type": "error", "message": f"生成失败: {str(e)}", "progress": 0}

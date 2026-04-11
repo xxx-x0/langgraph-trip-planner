@@ -1,6 +1,6 @@
 """数据模型定义"""
 
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 from pydantic import BaseModel, Field, field_validator
 from datetime import date
 
@@ -203,6 +203,11 @@ class POIInfo(BaseModel):
     address: str = Field(..., description="地址")
     location: Location = Field(..., description="经纬度坐标")
     tel: Optional[str] = Field(default=None, description="电话")
+    typecode: Optional[str] = Field(default=None, description="类型编码")
+    photo: Optional[str] = Field(default=None, description="图片URL")
+    cost: Optional[str] = Field(default=None, description="人均消费/价格")
+    rating: Optional[str] = Field(default=None, description="评分")
+    detail_info: Optional[Dict[str, Any]] = Field(default=None, description="详细信息(来自详情查询)")
 
 
 class POISearchResponse(BaseModel):
