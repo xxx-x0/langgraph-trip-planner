@@ -74,6 +74,12 @@
                   <span class="info-label">📅 日期:</span>
                   <span class="info-value">{{ tripPlan.start_date }} 至 {{ tripPlan.end_date }}</span>
                 </div>
+                <div class="info-item" v-if="tripPlan.companions">
+                  <span class="info-label">👥 出行信息:</span>
+                  <span class="info-value">
+                    {{ getCompanionLabel(tripPlan.companions.type) }} · {{ tripPlan.companions.count }}人
+                  </span>
+                </div>
                 <div class="info-item">
                   <span class="info-label">💡 建议:</span>
                   <span class="info-value">{{ tripPlan.overall_suggestions }}</span>
@@ -101,9 +107,20 @@
                   <div class="budget-value">¥{{ tripPlan.budget.total_transportation }}</div>
                 </div>
               </div>
-              <div class="budget-total">
+              <div class="budget-total" :class="{ 'over-budget': tripPlan.budget.budget_limit && !tripPlan.budget.is_within_budget }">
                 <span class="total-label">预估总费用</span>
                 <span class="total-value">¥{{ tripPlan.budget.total }}</span>
+              </div>
+              <div v-if="tripPlan.budget.budget_limit" class="budget-limit-info">
+                <div class="budget-limit-bar">
+                  <div class="budget-limit-fill" :style="{ width: Math.min((tripPlan.budget.total / tripPlan.budget.budget_limit) * 100, 100) + '%' }" :class="{ 'over': tripPlan.budget.total > tripPlan.budget.budget_limit }"></div>
+                </div>
+                <div class="budget-limit-text">
+                  <span>预算上限: ¥{{ tripPlan.budget.budget_limit }}</span>
+                  <span :class="tripPlan.budget.is_within_budget ? 'within-budget' : 'over-budget-text'">
+                    {{ tripPlan.budget.is_within_budget ? '✅ 在预算范围内' : '⚠️ 超出预算 ¥' + (tripPlan.budget.total - tripPlan.budget.budget_limit) }}
+                  </span>
+                </div>
               </div>
             </a-card>
           </div>
@@ -222,7 +239,7 @@
                           @error="handleImageError"
                         />
                         <div class="attraction-badge">
-                          <span class="badge-number">{{ index + 1 }}</span>
+                          <span class="badge-number">{{ getAttractionGlobalIndex(day.day_index, index) }}</span>
                         </div>
                         <div v-if="item.ticket_price" class="price-tag">
                           ¥{{ item.ticket_price }}
@@ -518,6 +535,18 @@ const getMealLabel = (type: string): string => {
   return labels[type] || type
 }
 
+const getCompanionLabel = (type: string): string => {
+  const labels: Record<string, string> = {
+    solo: '🧑 独自出行',
+    couple: '💑 情侣出行',
+    family: '👨‍👩‍👧 家庭亲子',
+    friends: '👫 朋友出行',
+    elderly: '👴 带老人出行',
+    group: '👥 团队出行'
+  }
+  return labels[type] || type
+}
+
 const getRouteModeColor = (mode: string): string => {
   const colors: Record<string, string> = {
     '地铁': 'blue',
@@ -581,6 +610,15 @@ const loadAttractionPhotos = async () => {
 }
 
 // 获取景点图片
+const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number => {
+  if (!tripPlan.value) return attrIndex + 1
+  let count = 0
+  for (let i = 0; i < dayIndex; i++) {
+    count += tripPlan.value.days[i]?.attractions?.length || 0
+  }
+  return count + attrIndex + 1
+}
+
 const getAttractionImage = (name: string, index: number): string => {
   // 如果已加载真实图片,返回真实图片
   if (attractionPhotos.value[name]) {
@@ -1102,6 +1140,46 @@ const addAttractionMarkers = (AMap: any) => {
     })
 
     markers.push(marker)
+  })
+
+  // 收集所有酒店
+  const addedHotels = new Set<string>()
+  tripPlan.value.days.forEach((day, dayIndex) => {
+    if (day.hotel && day.hotel.location && day.hotel.location.longitude && day.hotel.location.latitude) {
+      const hotelKey = day.hotel.name
+      if (addedHotels.has(hotelKey)) return
+      addedHotels.add(hotelKey)
+
+      const hotelMarker = new AMap.Marker({
+        position: [day.hotel.location.longitude, day.hotel.location.latitude],
+        title: day.hotel.name,
+        label: {
+          content: `<div style="background: #9C27B0; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap;">🏨${escapeHtml(day.hotel.name)}</div>`,
+          offset: new AMap.Pixel(0, -30)
+        }
+      })
+
+      const hotelInfoWindow = new AMap.InfoWindow({
+        content: `
+          <div style="padding: 10px; min-width: 200px;">
+            <h4 style="margin: 0 0 8px 0;">🏨 ${escapeHtml(day.hotel.name)}</h4>
+            ${day.hotel.address ? `<p style="margin: 4px 0;"><strong>地址:</strong> ${escapeHtml(day.hotel.address)}</p>` : ''}
+            ${day.hotel.price_range ? `<p style="margin: 4px 0;"><strong>价格:</strong> ${escapeHtml(day.hotel.price_range)}</p>` : ''}
+            ${day.hotel.rating ? `<p style="margin: 4px 0;"><strong>评分:</strong> ⭐${escapeHtml(day.hotel.rating)}</p>` : ''}
+            ${day.hotel.type ? `<p style="margin: 4px 0;"><strong>类型:</strong> ${escapeHtml(day.hotel.type)}</p>` : ''}
+            ${day.hotel.estimated_cost ? `<p style="margin: 4px 0;"><strong>预估费用:</strong> ¥${escapeHtml(String(day.hotel.estimated_cost))}/晚</p>` : ''}
+            <p style="margin: 4px 0; color: #9C27B0;"><strong>第${dayIndex + 1}天住宿</strong></p>
+          </div>
+        `,
+        offset: new AMap.Pixel(0, -30)
+      })
+
+      hotelMarker.on('click', () => {
+        hotelInfoWindow.open(map, hotelMarker.getPosition())
+      })
+
+      markers.push(hotelMarker)
+    }
   })
 
   // 添加标记到地图
@@ -1642,6 +1720,53 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 8px;
   color: white;
+}
+
+.budget-total.over-budget {
+  background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%);
+}
+
+.budget-limit-info {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.budget-limit-bar {
+  height: 8px;
+  background: #e8e8e8;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.budget-limit-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #52c41a, #73d13d);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.budget-limit-fill.over {
+  background: linear-gradient(90deg, #ff4d4f, #cf1322);
+}
+
+.budget-limit-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #666;
+}
+
+.within-budget {
+  color: #52c41a;
+  font-weight: 600;
+}
+
+.over-budget-text {
+  color: #ff4d4f;
+  font-weight: 600;
 }
 
 .total-label {

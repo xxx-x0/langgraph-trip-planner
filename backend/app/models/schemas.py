@@ -7,6 +7,12 @@ from datetime import date
 
 # ============ 请求模型 ============
 
+class CompanionInfo(BaseModel):
+    """出行同伴信息"""
+    count: int = Field(default=1, description="出行人数", ge=1, le=20, example=2)
+    type: str = Field(default="solo", description="同伴类型: solo/couple/family/friends/elderly/group", example="couple")
+
+
 class TripRequest(BaseModel):
     """旅行规划请求"""
     city: str = Field(..., description="目的地城市", example="北京")
@@ -18,7 +24,9 @@ class TripRequest(BaseModel):
     preferences: List[str] = Field(default=[], description="旅行偏好标签", example=["历史文化", "美食"])
     food_preference: str = Field(default="本地特色", description="美食偏好", example="本地特色")
     free_text_input: Optional[str] = Field(default="", description="额外要求", example="希望多安排一些博物馆")
-    
+    budget: Optional[int] = Field(default=None, description="总预算上限(元)，为空表示不限预算", example=5000)
+    companions: Optional[CompanionInfo] = Field(default=None, description="出行同伴信息")
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -30,7 +38,9 @@ class TripRequest(BaseModel):
                 "accommodation": "经济型酒店",
                 "preferences": ["历史文化", "美食"],
                 "food_preference": "本地特色",
-                "free_text_input": "希望多安排一些博物馆"
+                "free_text_input": "希望多安排一些博物馆",
+                "budget": 5000,
+                "companions": {"count": 2, "type": "couple"}
             }
         }
 
@@ -162,6 +172,8 @@ class Budget(BaseModel):
     total_meals: int = Field(default=0, description="餐饮总费用")
     total_transportation: int = Field(default=0, description="交通总费用")
     total: int = Field(default=0, description="总费用")
+    budget_limit: Optional[int] = Field(default=None, description="用户预算上限(元)")
+    is_within_budget: Optional[bool] = Field(default=None, description="是否在预算范围内")
 
 
 class TripPlan(BaseModel):
@@ -173,6 +185,7 @@ class TripPlan(BaseModel):
     weather_info: List[WeatherInfo] = Field(default=[], description="天气信息")
     overall_suggestions: str = Field(..., description="总体建议")
     budget: Optional[Budget] = Field(default=None, description="预算信息")
+    companions: Optional[CompanionInfo] = Field(default=None, description="出行同伴信息")
 
 
 class TripPlanResponse(BaseModel):

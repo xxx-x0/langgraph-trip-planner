@@ -9,6 +9,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from ..config import get_settings, validate_config, print_config
+from ..logger import setup_logging, log_print, LOG_FILE
 
 # 旧路由导入 (已弃用，保留供参考)
 # from .routes import trip, poi, map as map_routes
@@ -18,6 +19,9 @@ from .routes import trip_lg, poi_lg, map_lg
 
 # 获取配置
 settings = get_settings()
+
+# 设置日志
+setup_logging(settings.log_level)
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -51,9 +55,10 @@ app.include_router(map_lg.router, prefix="/api")
 @app.on_event("startup")
 async def startup_event():
     """应用启动事件"""
-    print("\n" + "="*60)
-    print(f"🚀 {settings.app_name} v{settings.app_version}")
-    print("="*60)
+    log_print("\n" + "="*60)
+    log_print(f"🚀 {settings.app_name} v{settings.app_version}")
+    log_print("="*60)
+    log_print(f"日志文件: {LOG_FILE}")
     
     # 打印配置信息
     print_config()
@@ -61,17 +66,17 @@ async def startup_event():
     # 验证配置
     try:
         validate_config()
-        print("\n✅ 配置验证通过")
+        log_print("\n✅ 配置验证通过")
     except ValueError as e:
-        print(f"\n❌ 配置验证失败:\n{e}")
-        print("\n请检查.env文件并确保所有必要的配置项都已设置")
+        log_print(f"\n❌ 配置验证失败:\n{e}", level="error")
+        log_print("\n请检查.env文件并确保所有必要的配置项都已设置", level="error")
         raise
     
-    print("\n" + "="*60)
-    print("📚 API文档: http://localhost:8000/docs")
-    print("📖 ReDoc文档: http://localhost:8000/redoc")
-    print("🔧 框架: LangGraph + LangChain MCP Tools")
-    print("="*60 + "\n")
+    log_print("\n" + "="*60)
+    log_print("📚 API文档: http://localhost:8000/docs")
+    log_print("📖 ReDoc文档: http://localhost:8000/redoc")
+    log_print("🔧 框架: LangGraph + LangChain MCP Tools")
+    log_print("="*60 + "\n")
 
 
 @app.on_event("shutdown")

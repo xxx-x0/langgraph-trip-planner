@@ -37,6 +37,8 @@ async def plan_trip(request: TripRequest):
         print(f"   交通: {request.transportation}")
         print(f"   住宿: {request.accommodation}")
         print(f"   偏好: {request.preferences}")
+        print(f"   预算: {request.budget if request.budget else '不限'}")
+        print(f"   同伴: {request.companions}")
         print(f"{'='*60}\n")
 
         agent = get_trip_planner_agent()

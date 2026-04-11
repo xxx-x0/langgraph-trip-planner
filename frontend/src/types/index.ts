@@ -43,12 +43,19 @@ export interface Hotel {
   estimated_cost?: number
 }
 
+export interface CompanionInfo {
+  count: number
+  type: string
+}
+
 export interface Budget {
   total_attractions: number
   total_hotels: number
   total_meals: number
   total_transportation: number
   total: number
+  budget_limit?: number
+  is_within_budget?: boolean
 }
 
 export interface RouteSegment {
@@ -90,6 +97,7 @@ export interface TripPlan {
   weather_info: WeatherInfo[]
   overall_suggestions: string
   budget?: Budget
+  companions?: CompanionInfo
 }
 
 export interface TripFormData {
@@ -102,6 +110,8 @@ export interface TripFormData {
   preferences: string[]
   food_preference: string
   free_text_input: string
+  budget?: number
+  companions?: CompanionInfo
 }
 
 export interface TripPlanResponse {

@@ -161,6 +161,94 @@
           </a-row>
         </div>
 
+        <!-- 预算与同伴 -->
+        <div class="form-section">
+          <div class="section-header">
+            <span class="section-icon">💰</span>
+            <span class="section-title">预算与同伴</span>
+          </div>
+
+          <a-row :gutter="24">
+            <a-col :span="12">
+              <a-form-item name="budget">
+                <template #label>
+                  <span class="form-label">预算上限（元）</span>
+                </template>
+                <div class="budget-input-wrapper">
+                  <a-input-number
+                    v-model:value="formData.budget"
+                    :min="0"
+                    :step="500"
+                    :max="100000"
+                    placeholder="不限预算"
+                    size="large"
+                    class="budget-input"
+                  >
+                    <template #prefix>
+                      <span style="color: #1890ff;">¥</span>
+                    </template>
+                    <template #suffix>
+                      <span style="color: #999; font-size: 12px;">元</span>
+                    </template>
+                  </a-input-number>
+                  <a-button
+                    v-if="formData.budget"
+                    type="link"
+                    size="small"
+                    @click="formData.budget = undefined"
+                    class="budget-clear-btn"
+                  >
+                    清除
+                  </a-button>
+                </div>
+                <div class="budget-hint">
+                  <span v-if="!formData.budget" class="hint-text">💡 不设置预算将推荐最佳方案</span>
+                  <span v-else class="hint-text active">
+                    💰 预计分配：酒店{{ Math.round((formData.budget || 0) * 0.45) }}元 ·
+                    餐饮{{ Math.round((formData.budget || 0) * 0.30) }}元 ·
+                    门票{{ Math.round((formData.budget || 0) * 0.15) }}元 ·
+                    交通{{ Math.round((formData.budget || 0) * 0.10) }}元
+                  </span>
+                </div>
+              </a-form-item>
+            </a-col>
+            <a-col :span="6">
+              <a-form-item>
+                <template #label>
+                  <span class="form-label">出行人数</span>
+                </template>
+                <a-input-number
+                  v-model:value="formData.companions!.count"
+                  :min="1"
+                  :max="20"
+                  size="large"
+                  class="custom-input"
+                  style="width: 100%"
+                >
+                  <template #suffix>
+                    <span style="color: #999; font-size: 12px;">人</span>
+                  </template>
+                </a-input-number>
+              </a-form-item>
+            </a-col>
+            <a-col :span="6">
+              <a-form-item>
+                <template #label>
+                  <span class="form-label">同伴类型</span>
+                </template>
+                <a-select v-model:value="formData.companions!.type" size="large" class="custom-select">
+                  <a-select-option value="solo">🧑 独自出行</a-select-option>
+                  <a-select-option value="couple">💑 情侣出行</a-select-option>
+                  <a-select-option value="family">👨‍👩‍👧 家庭亲子</a-select-option>
+                  <a-select-option value="friends">👫 朋友出行</a-select-option>
+                  <a-select-option value="elderly">👴 带老人出行</a-select-option>
+                  <a-select-option value="group">👥 团队出行</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
         <!-- 第三步:额外要求 -->
         <div class="form-section">
           <div class="section-header">
@@ -244,7 +332,9 @@ const formData = reactive<TripFormData & { start_date: Dayjs | null; end_date: D
   accommodation: '经济型酒店',
   food_preference: '本地特色',
   preferences: [],
-  free_text_input: ''
+  free_text_input: '',
+  budget: undefined,
+  companions: { count: 1, type: 'solo' }
 })
 
 // 监听日期变化,自动计算旅行天数
@@ -285,7 +375,9 @@ const handleSubmit = async () => {
       accommodation: formData.accommodation,
       food_preference: formData.food_preference,
       preferences: formData.preferences,
-      free_text_input: formData.free_text_input
+      free_text_input: formData.free_text_input,
+      budget: formData.budget || undefined,
+      companions: formData.companions
     }
 
     await generateTripPlanStream(requestData, (event) => {
@@ -595,6 +687,56 @@ onUnmounted(() => {
 .custom-textarea :deep(.ant-input:focus) {
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* 预算输入 */
+.budget-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.budget-input {
+  flex: 1;
+}
+
+.budget-input :deep(.ant-input-number-input) {
+  border-radius: 12px;
+}
+
+.budget-input :deep(.ant-input-number) {
+  border-radius: 12px;
+  border: 2px solid #e8e8e8;
+  width: 100%;
+}
+
+.budget-input :deep(.ant-input-number:hover) {
+  border-color: #667eea;
+}
+
+.budget-input :deep(.ant-input-number-focused) {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.budget-clear-btn {
+  color: #999;
+  font-size: 12px;
+}
+
+.budget-hint {
+  margin-top: 8px;
+}
+
+.hint-text {
+  font-size: 12px;
+  color: #999;
+}
+
+.hint-text.active {
+  color: #667eea;
+  font-weight: 500;
 }
 
 /* 提交按钮 */
