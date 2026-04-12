@@ -1,13 +1,6 @@
 <template>
   <div class="budget-chart-container">
-    <div class="chart-row">
-      <div class="chart-item">
-        <div ref="pieChartRef" class="chart-box"></div>
-      </div>
-      <div class="chart-item">
-        <div ref="barChartRef" class="chart-box"></div>
-      </div>
-    </div>
+    <div ref="barChartRef" class="chart-box"></div>
   </div>
 </template>
 
@@ -20,73 +13,15 @@ const props = defineProps<{
   budget: Budget
 }>()
 
-const pieChartRef = ref<HTMLElement>()
 const barChartRef = ref<HTMLElement>()
-let pieChart: echarts.ECharts | null = null
 let barChart: echarts.ECharts | null = null
 
-const initCharts = () => {
+const initChart = () => {
   if (!props.budget) return
-
-  if (pieChartRef.value) {
-    pieChart = echarts.init(pieChartRef.value)
-    pieChart.setOption(getPieOption())
-  }
 
   if (barChartRef.value) {
     barChart = echarts.init(barChartRef.value)
     barChart.setOption(getBarOption())
-  }
-}
-
-const getPieOption = () => {
-  const b = props.budget
-  const data = [
-    { value: b.total_attractions, name: '景点门票', itemStyle: { color: '#5470c6' } },
-    { value: b.total_hotels, name: '酒店住宿', itemStyle: { color: '#91cc75' } },
-    { value: b.total_meals, name: '餐饮费用', itemStyle: { color: '#fac858' } },
-    { value: b.total_transportation, name: '交通费用', itemStyle: { color: '#ee6666' } }
-  ].filter(d => d.value > 0)
-
-  return {
-    title: {
-      text: '费用占比',
-      left: 'center',
-      top: 10,
-      textStyle: { fontSize: 14, color: '#333', fontWeight: 600 }
-    },
-    tooltip: {
-      trigger: 'item',
-      formatter: '{b}: ¥{c} ({d}%)'
-    },
-    legend: {
-      orient: 'horizontal',
-      bottom: 10,
-      itemWidth: 12,
-      itemHeight: 12,
-      textStyle: { fontSize: 12 }
-    },
-    series: [{
-      type: 'pie',
-      radius: ['40%', '70%'],
-      center: ['50%', '50%'],
-      avoidLabelOverlap: true,
-      itemStyle: {
-        borderRadius: 6,
-        borderColor: '#fff',
-        borderWidth: 2
-      },
-      label: {
-        show: true,
-        formatter: '{b}\n¥{c}',
-        fontSize: 11
-      },
-      emphasis: {
-        label: { show: true, fontSize: 14, fontWeight: 'bold' },
-        itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.3)' }
-      },
-      data
-    }]
   }
 }
 
@@ -177,23 +112,20 @@ const getBarOption = () => {
 }
 
 const handleResize = () => {
-  pieChart?.resize()
   barChart?.resize()
 }
 
 onMounted(() => {
-  initCharts()
+  initChart()
   window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
-  pieChart?.dispose()
   barChart?.dispose()
 })
 
 watch(() => props.budget, () => {
-  if (pieChart) pieChart.setOption(getPieOption())
   if (barChart) barChart.setOption(getBarOption())
 }, { deep: true })
 </script>
@@ -201,16 +133,6 @@ watch(() => props.budget, () => {
 <style scoped>
 .budget-chart-container {
   width: 100%;
-}
-
-.chart-row {
-  display: flex;
-  gap: 16px;
-}
-
-.chart-item {
-  flex: 1;
-  min-width: 0;
 }
 
 .chart-box {
