@@ -141,14 +141,6 @@ HOTEL_AGENT_PROMPT = """你是酒店推荐专家。你的任务是根据城市�
 - keywords: 包含住宿类型和"酒店"或"宾馆"的关键词（例如："经济型酒店"、"五星级酒店"）
 - city: 城市名称（例如："北京"、"上海"）
 
-**同伴类型适配策略:**
-- solo(独自出行): 搜索青旅、经济型酒店、民宿单间
-- couple(情侣): 搜索精品酒店、浪漫主题酒店、舒适型酒店
-- family(家庭亲子): 搜索家庭房、亲子主题酒店、有儿童设施的酒店
-- friends(朋友出行): 搜索多人间、公寓式酒店、民宿
-- elderly(带老人): 搜索有电梯、无障碍设施的舒适型酒店，避免偏远位置
-- group(团队出行): 搜索大型酒店、有多人间的酒店、会议酒店
-
 **预算适配策略:**
 - 如果有预算限制，根据预算计算每晚可承受的酒店价格，搜索对应价位的酒店
 - 例如：3天行程预算5000元，扣除门票约300元、餐饮约900元、交通约300元，酒店预算约3500元，每晚约1166元
@@ -165,7 +157,7 @@ HOTEL_AGENT_PROMPT = """你是酒店推荐专家。你的任务是根据城市�
 4. 优先推荐搜索结果中价格在用户预算范围内的酒店。
 """
 
-FOOD_AGENT_PROMPT = """你是美食推荐专家。你的任务是根据城市、用户美食偏好、出行人数和预算搜索真实餐厅信息。
+FOOD_AGENT_PROMPT = """你是美食推荐专家。你的任务是根据城市、用户美食偏好、出行人数和预算搜索真实餐厅信息，整合多维度数据生成全面的美食推荐。
 
 **重要提示:**
 你必须使用工具来搜索真实餐厅！不要自己编造餐厅信息！
@@ -177,35 +169,46 @@ FOOD_AGENT_PROMPT = """你是美食推荐专家。你的任务是根据城市、
 2. maps_text_search - 关键词搜索（搜索城市热门餐厅）
    参数: keywords(关键词), city(城市名称)
 
-**搜索策略:**
-- 景点周边餐厅: 使用 maps_around_search，以景点坐标为中心，搜索半径2000米内的餐厅
-- 城市热门餐厅: 使用 maps_text_search，搜索城市特色菜系的热门餐厅
+**搜索策略（多维度覆盖）:**
+- 景点周边餐厅: 使用 maps_around_search，以景点坐标为中心，搜索半径2000米内的餐厅（用于早餐和午餐推荐）
+- 城市热门餐厅: 使用 maps_text_search，搜索城市特色菜系的热门餐厅（用于晚餐推荐）
+- 特色小吃/夜市: 使用 maps_text_search，搜索城市特色小吃和夜市（用于零食和夜宵推荐）
+- 如果提供了多个景点坐标，优先搜索不同区域的周边餐厅，确保覆盖面广
 
 **同伴类型适配策略:**
-- solo(独自出行): 搜索适合一人食的餐厅、吧台座位、快餐小吃
-- couple(情侣): 搜索氛围餐厅、特色私房菜、网红餐厅
-- family(家庭亲子): 搜索亲子友好餐厅、有儿童餐的餐厅、环境宽敞的餐厅
-- friends(朋友出行): 搜索火锅、烧烤、大排档等适合聚餐的餐厅
-- elderly(带老人): 搜索清淡菜系、环境安静的餐厅、老字号
-- group(团队出行): 搜索包间餐厅、大型餐厅、自助餐
+- solo(独自出行): 搜索适合一人食的餐厅、吧台座位、快餐小吃、便利店美食
+- couple(情侣): 搜索氛围餐厅、特色私房菜、网红餐厅、景观餐厅
+- family(家庭亲子): 搜索亲子友好餐厅、有儿童餐的餐厅、环境宽敞的餐厅、连锁品牌餐厅
+- friends(朋友出行): 搜索火锅、烧烤、大排档等适合聚餐的餐厅、网红打卡店
+- elderly(带老人): 搜索清淡菜系、环境安静的餐厅、老字号、易消化的菜品
+- group(团队出行): 搜索包间餐厅、大型餐厅、自助餐、可预约的餐厅
 
 **预算适配策略:**
 - 如果有预算限制，根据预算计算每餐可承受的人均消费
 - 例如：3天2人行程预算5000元，餐饮预算约1500元(30%)，每日约500元，每餐约170元，人均约85元
 - 搜索时加入价格关键词，如"平价美食"(人均50以下)、"特色小吃"(人均30-80)、"中档餐厅"(人均80-200)
+- 预算有限时，午餐推荐景点周边平价餐厅，晚餐可适当放宽选择城市特色
+
+**饮食文化参考:**
+- 不同城市有不同的饮食文化和用餐习惯，搜索时注意结合当地特色
+- 注意当地特色食材和时令美食
+- 尊重当地用餐习俗和禁忌
 
 **示例:**
 用户需求: "城市: 成都, 美食偏好: 本地特色, 出行人数: 2, 人均预算: 80元, 景点坐标: 104.065735,30.659462"
 你的动作:
 1. 调用 maps_around_search(keywords="川菜", location="104.065735,30.659462", radius="2000") 搜索景点周边餐厅
 2. 调用 maps_text_search(keywords="成都火锅", city="成都") 搜索城市热门餐厅
+3. 调用 maps_text_search(keywords="成都特色小吃", city="成都") 搜索城市特色小吃
 
 **注意:**
 1. 必须使用工具获取真实数据，不要直接编造回答。
 2. 根据用户偏好、同伴类型和预算构建准确的搜索关键词。
-3. 每次搜索调用1-2个工具即可，不要过度调用。
+3. 每次搜索调用2-4个工具，确保覆盖周边餐厅、热门餐厅和特色小吃三个维度。
 4. 搜索结果中可能包含人均消费信息，请保留这些信息，后续需要用于预算计算。
 5. 优先推荐搜索结果中价格在用户预算范围内的餐厅。
+6. 如果提供了多个景点坐标，至少对1-2个不同区域的坐标执行周边搜索。
+7. 注意区分不同用餐场景：早餐(酒店/景点周边)、午餐(景点周边)、晚餐(城市热门)、夜宵(特色小吃)。
 """
 
 ROUTE_AGENT_PROMPT = """你是交通路线规划专家。你的任务是根据城市、用户的交通偏好，以及景点和酒店的位置，规划出合理的交通路线或建议。
@@ -389,6 +392,11 @@ PLANNER_AGENT_PROMPT = """你是行程规划专家。你的任务是根据景点
     - 酒店预估费用(estimated_cost) - 从搜索结果中的price_range提取真实价格
     - 预算汇总(budget)包含各项总费用
     - 如果用户设置了预算上限(budget_limit)，必须填写is_within_budget字段
+13. **visit_duration(游览时长)必须合理**:
+    - 大型景点(故宫/长城/颐和园等): 180-240分钟
+    - 中型景点(博物馆/公园/寺庙等): 90-150分钟
+    - 小型景点(街区/广场/观景台等): 45-90分钟
+    - 不要所有景点都设为120分钟，要根据景点实际规模给出合理时长
 
 **预算约束规则（如果用户设置了预算上限）:**
 - 总费用(total)必须尽量控制在预算上限(budget_limit)以内
@@ -530,6 +538,10 @@ async def search_poi_node(state: TripPlannerState) -> Dict[str, Any]:
                 continue
 
     log_print(f"  ✅ 最终总共解析到 {len(all_pois)} 个POI")
+    pois_with_coords = sum(1 for p in all_pois if p.get("location"))
+    log_print(f"  📍 其中 {pois_with_coords}/{len(all_pois)} 个POI有坐标信息")
+    if pois_with_coords == 0 and len(all_pois) > 0:
+        log_print("  ⚠️ 所有POI都没有坐标！_parse_poi_result 可能未正确解析 location 字段")
     return {
         "attractions_info": "\n".join(results),
         "attractions": all_pois
@@ -548,7 +560,9 @@ def _parse_weather_result(result_str: str) -> List[WeatherData]:
     def _extract_weather_from_dict(inner: dict):
         if "forecasts" in inner:
             for forecast in inner["forecasts"]:
-                if isinstance(forecast, dict) and "casts" in forecast:
+                if not isinstance(forecast, dict):
+                    continue
+                if "casts" in forecast:
                     for cast in forecast["casts"]:
                         if isinstance(cast, dict):
                             weather_list.append(WeatherData(
@@ -560,6 +574,16 @@ def _parse_weather_result(result_str: str) -> List[WeatherData]:
                                 wind_direction=cast.get("daywind", ""),
                                 wind_power=cast.get("daypower", "")
                             ))
+                elif "dayweather" in forecast or "daytemp" in forecast:
+                    weather_list.append(WeatherData(
+                        date=forecast.get("date", ""),
+                        day_weather=forecast.get("dayweather", ""),
+                        night_weather=forecast.get("nightweather", ""),
+                        day_temp=int(forecast.get("daytemp", 0)) if forecast.get("daytemp") else 0,
+                        night_temp=int(forecast.get("nighttemp", 0)) if forecast.get("nighttemp") else 0,
+                        wind_direction=forecast.get("daywind", ""),
+                        wind_power=forecast.get("daypower", "")
+                    ))
         elif "casts" in inner:
             for cast in inner["casts"]:
                 if isinstance(cast, dict):
@@ -847,35 +871,138 @@ async def fetch_poi_details_node(state: TripPlannerState) -> Dict[str, Any]:
     return {"attractions": attractions, "hotels": hotels}
 
 
+def _parse_food_result(result_str: str) -> List[FoodData]:
+    """解析美食搜索结果为结构化数据，提取菜系、评分、人均消费等"""
+    foods = []
+    try:
+        data = json.loads(result_str)
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict) and "text" in item:
+                    try:
+                        inner = json.loads(item["text"]) if isinstance(item["text"], str) else item["text"]
+                        if isinstance(inner, dict) and "pois" in inner:
+                            for poi in inner["pois"]:
+                                location = None
+                                if "location" in poi:
+                                    try:
+                                        lon, lat = poi["location"].split(",")
+                                        location = Location(longitude=float(lon), latitude=float(lat))
+                                    except (ValueError, AttributeError):
+                                        pass
+
+                                cuisine = None
+                                poi_type = poi.get("type", "")
+                                if poi_type:
+                                    type_parts = poi_type.split(";")
+                                    for part in type_parts:
+                                        for kw in ["菜", "餐", "料理", "火锅", "烧烤", "面", "小吃", "海鲜", "日料", "西餐"]:
+                                            if kw in part:
+                                                cuisine = part.strip()
+                                                break
+                                        if cuisine:
+                                            break
+
+                                rating = None
+                                avg_cost = None
+                                biz_ext = poi.get("biz_ext", {})
+                                if isinstance(biz_ext, dict):
+                                    rating_raw = biz_ext.get("rating")
+                                    if rating_raw:
+                                        try:
+                                            rating = float(rating_raw)
+                                        except (ValueError, TypeError):
+                                            pass
+                                    cost_raw = biz_ext.get("cost") or biz_ext.get("price")
+                                    if cost_raw:
+                                        try:
+                                            avg_cost = int(float(str(cost_raw).replace("元", "").strip()))
+                                        except (ValueError, TypeError):
+                                            pass
+                                if not rating:
+                                    rating_raw = poi.get("rating")
+                                    if rating_raw:
+                                        try:
+                                            rating = float(rating_raw)
+                                        except (ValueError, TypeError):
+                                            pass
+
+                                photos = []
+                                if poi.get("photo"):
+                                    photos.append(poi.get("photo"))
+                                if poi.get("photos"):
+                                    try:
+                                        extra = poi["photos"]
+                                        if isinstance(extra, list):
+                                            photos.extend([p for p in extra if isinstance(p, str) and p not in photos])
+                                    except Exception:
+                                        pass
+
+                                foods.append(FoodData(
+                                    id=poi.get("id", ""),
+                                    name=poi.get("name", ""),
+                                    address=poi.get("address", "") or poi.get("pname", "") + poi.get("cityname", "") + poi.get("adname", ""),
+                                    location=location,
+                                    cuisine=cuisine,
+                                    rating=rating,
+                                    avg_cost=avg_cost,
+                                    photos=photos
+                                ))
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+    except json.JSONDecodeError:
+        pass
+    return foods
+
+
 CITY_FOOD_MAP = {
-    "北京": {"cuisine": "京菜", "keywords": ["烤鸭", "涮羊肉", "炸酱面", "京菜"]},
-    "上海": {"cuisine": "本帮菜", "keywords": ["本帮菜", "小笼包", "生煎", "上海菜"]},
-    "成都": {"cuisine": "川菜", "keywords": ["火锅", "川菜", "串串", "担担面"]},
-    "重庆": {"cuisine": "渝菜", "keywords": ["火锅", "小面", "渝菜", "酸辣粉"]},
-    "广州": {"cuisine": "粤菜", "keywords": ["早茶", "粤菜", "煲仔饭", "肠粉"]},
-    "深圳": {"cuisine": "粤菜", "keywords": ["粤菜", "潮汕菜", "海鲜", "早茶"]},
-    "西安": {"cuisine": "陕菜", "keywords": ["肉夹馍", "羊肉泡馍", "凉皮", "陕菜"]},
-    "杭州": {"cuisine": "杭帮菜", "keywords": ["杭帮菜", "西湖醋鱼", "龙井虾仁", "东坡肉"]},
-    "南京": {"cuisine": "金陵菜", "keywords": ["盐水鸭", "鸭血粉丝", "金陵菜", "小笼包"]},
-    "长沙": {"cuisine": "湘菜", "keywords": ["臭豆腐", "湘菜", "剁椒鱼头", "茶颜悦色"]},
-    "武汉": {"cuisine": "鄂菜", "keywords": ["热干面", "豆皮", "鄂菜", "武昌鱼"]},
-    "厦门": {"cuisine": "闽南菜", "keywords": ["沙茶面", "海蛎煎", "闽南菜", "海鲜"]},
-    "昆明": {"cuisine": "滇菜", "keywords": ["过桥米线", "滇菜", "汽锅鸡", "鲜花饼"]},
-    "大理": {"cuisine": "滇菜", "keywords": ["白族菜", "饵丝", "滇菜", "酸辣鱼"]},
-    "丽江": {"cuisine": "滇菜", "keywords": ["纳西菜", "滇菜", "腊排骨", "鸡豆凉粉"]},
-    "苏州": {"cuisine": "苏帮菜", "keywords": ["苏帮菜", "松鼠桂鱼", "阳春面", "苏式汤面"]},
-    "天津": {"cuisine": "津菜", "keywords": ["狗不理", "煎饼果子", "津菜", "麻花"]},
-    "青岛": {"cuisine": "鲁菜", "keywords": ["海鲜", "啤酒", "鲁菜", "烧烤"]},
-    "哈尔滨": {"cuisine": "东北菜", "keywords": ["锅包肉", "东北菜", "红肠", "杀猪菜"]},
-    "拉萨": {"cuisine": "藏餐", "keywords": ["酥油茶", "藏餐", "糌粑", "牦牛肉"]},
-    "乌鲁木齐": {"cuisine": "新疆菜", "keywords": ["大盘鸡", "烤羊肉", "新疆菜", "手抓饭"]},
+    "北京": {"cuisine": "京菜", "keywords": ["烤鸭", "涮羊肉", "炸酱面", "京菜"], "must_try": ["烤鸭", "涮羊肉", "炸酱面"], "food_culture": "北京饮食融合宫廷菜与市井小吃，讲究原汁原味，四季分明", "dining_etiquette": "烤鸭建议配薄饼和葱丝，涮羊肉蘸麻酱"},
+    "上海": {"cuisine": "本帮菜", "keywords": ["本帮菜", "小笼包", "生煎", "上海菜"], "must_try": ["小笼包", "生煎", "红烧肉"], "food_culture": "上海本帮菜浓油赤酱，偏甜鲜，早餐文化丰富", "dining_etiquette": "小笼包先开窗后喝汤，生煎底朝上"},
+    "成都": {"cuisine": "川菜", "keywords": ["火锅", "川菜", "串串", "担担面"], "must_try": ["火锅", "担担面", "龙抄手"], "food_culture": "成都以麻辣鲜香著称，有'美食之都'称号，夜市文化丰富", "dining_etiquette": "火锅建议选牛油底料，微辣起步"},
+    "重庆": {"cuisine": "渝菜", "keywords": ["火锅", "小面", "渝菜", "酸辣粉"], "must_try": ["火锅", "小面", "酸辣粉"], "food_culture": "重庆火锅以麻辣为主，小面是早餐灵魂，江湖菜豪放", "dining_etiquette": "火锅蘸油碟解辣，小面可加各种浇头"},
+    "广州": {"cuisine": "粤菜", "keywords": ["早茶", "粤菜", "煲仔饭", "肠粉"], "must_try": ["早茶", "煲仔饭", "肠粉"], "food_culture": "广州'食在广州'，早茶文化深厚，讲究食材新鲜和烹饪技艺", "dining_etiquette": "早茶一盅两件，先点茶后点菜"},
+    "深圳": {"cuisine": "粤菜", "keywords": ["粤菜", "潮汕菜", "海鲜", "早茶"], "must_try": ["潮汕牛肉火锅", "海鲜", "早茶"], "food_culture": "深圳汇聚全国美食，潮汕菜和海鲜为特色", "dining_etiquette": "潮汕牛肉火锅涮8秒即可"},
+    "西安": {"cuisine": "陕菜", "keywords": ["肉夹馍", "羊肉泡馍", "凉皮", "陕菜"], "must_try": ["肉夹馍", "羊肉泡馍", "凉皮"], "food_culture": "西安以面食为主，回民街小吃丰富，碳水天堂", "dining_etiquette": "泡馍要自己掰，越小越入味"},
+    "杭州": {"cuisine": "杭帮菜", "keywords": ["杭帮菜", "西湖醋鱼", "龙井虾仁", "东坡肉"], "must_try": ["西湖醋鱼", "东坡肉", "龙井虾仁"], "food_culture": "杭帮菜清淡精致，注重时令和刀工", "dining_etiquette": "西湖醋鱼趁热吃，龙井虾仁配茶"},
+    "南京": {"cuisine": "金陵菜", "keywords": ["盐水鸭", "鸭血粉丝", "金陵菜", "小笼包"], "must_try": ["盐水鸭", "鸭血粉丝", "汤包"], "food_culture": "南京无鸭不成席，鸭文化深入骨髓", "dining_etiquette": "盐水鸭冷吃最佳，鸭血粉丝加辣油"},
+    "长沙": {"cuisine": "湘菜", "keywords": ["臭豆腐", "湘菜", "剁椒鱼头", "茶颜悦色"], "must_try": ["臭豆腐", "剁椒鱼头", "糖油粑粑"], "food_culture": "长沙嗜辣，夜宵文化发达，茶饮文化兴起", "dining_etiquette": "臭豆腐配辣椒和萝卜干"},
+    "武汉": {"cuisine": "鄂菜", "keywords": ["热干面", "豆皮", "鄂菜", "武昌鱼"], "must_try": ["热干面", "豆皮", "武昌鱼"], "food_culture": "武汉早餐文化'过早'丰富，热干面是灵魂", "dining_etiquette": "热干面拌匀趁热吃，豆皮要现做"},
+    "厦门": {"cuisine": "闽南菜", "keywords": ["沙茶面", "海蛎煎", "闽南菜", "海鲜"], "must_try": ["沙茶面", "海蛎煎", "土笋冻"], "food_culture": "厦门海鲜和闽南小吃为主，沙茶是灵魂调料", "dining_etiquette": "海鲜现点现做，沙茶面汤底可续"},
+    "昆明": {"cuisine": "滇菜", "keywords": ["过桥米线", "滇菜", "汽锅鸡", "鲜花饼"], "must_try": ["过桥米线", "汽锅鸡", "鲜花饼"], "food_culture": "昆明食材丰富，野生菌和鲜花入菜，口味酸辣", "dining_etiquette": "过桥米线先荤后素，野生菌必须煮熟"},
+    "大理": {"cuisine": "滇菜", "keywords": ["白族菜", "饵丝", "滇菜", "酸辣鱼"], "must_try": ["饵丝", "酸辣鱼", "乳扇"], "food_culture": "大理白族饮食酸辣为主，乳制品独特", "dining_etiquette": "饵丝可煮可拌，乳扇烤着吃"},
+    "丽江": {"cuisine": "滇菜", "keywords": ["纳西菜", "滇菜", "腊排骨", "鸡豆凉粉"], "must_try": ["腊排骨", "鸡豆凉粉", "纳西烤鱼"], "food_culture": "丽江纳西族饮食，腊味和野生菌为特色", "dining_etiquette": "腊排骨火锅配当地蔬菜"},
+    "苏州": {"cuisine": "苏帮菜", "keywords": ["苏帮菜", "松鼠桂鱼", "阳春面", "苏式汤面"], "must_try": ["松鼠桂鱼", "苏式汤面", "蟹粉豆腐"], "food_culture": "苏州菜精细讲究，甜咸适中，时令性强", "dining_etiquette": "苏式面浇头现炒最佳"},
+    "天津": {"cuisine": "津菜", "keywords": ["狗不理", "煎饼果子", "津菜", "麻花"], "must_try": ["煎饼果子", "狗不理包子", "麻花"], "food_culture": "天津小吃文化丰富，早餐是灵魂", "dining_etiquette": "煎饼果子必须加薄脆"},
+    "青岛": {"cuisine": "鲁菜", "keywords": ["海鲜", "啤酒", "鲁菜", "烧烤"], "must_try": ["海鲜", "啤酒", "烤鱿鱼"], "food_culture": "青岛海鲜配啤酒是标配，鲁菜咸鲜为主", "dining_etiquette": "啤酒配海鲜，注意痛风"},
+    "哈尔滨": {"cuisine": "东北菜", "keywords": ["锅包肉", "东北菜", "红肠", "杀猪菜"], "must_try": ["锅包肉", "红肠", "杀猪菜"], "food_culture": "哈尔滨东北菜量大实惠，俄式影响深远", "dining_etiquette": "东北菜份量大，点菜注意适量"},
+    "拉萨": {"cuisine": "藏餐", "keywords": ["酥油茶", "藏餐", "糌粑", "牦牛肉"], "must_try": ["酥油茶", "牦牛肉", "糌粑"], "food_culture": "拉萨藏餐以牦牛肉和奶制品为主，高热量", "dining_etiquette": "酥油茶咸口为主，初到高原少食多餐"},
+    "乌鲁木齐": {"cuisine": "新疆菜", "keywords": ["大盘鸡", "烤羊肉", "新疆菜", "手抓饭"], "must_try": ["大盘鸡", "烤羊肉串", "手抓饭"], "food_culture": "新疆菜以牛羊肉为主，香料丰富，份量十足", "dining_etiquette": "大盘鸡配皮带面，手抓饭用手或勺"},
+    "三亚": {"cuisine": "海南菜", "keywords": ["海鲜", "椰子鸡", "海南菜", "清补凉"], "must_try": ["椰子鸡", "海鲜", "清补凉"], "food_culture": "三亚海鲜和热带水果丰富，椰子入菜多", "dining_etiquette": "海鲜市场买后加工，注意比价"},
+    "桂林": {"cuisine": "桂菜", "keywords": ["桂林米粉", "啤酒鱼", "桂菜", "螺蛳"], "must_try": ["桂林米粉", "啤酒鱼", "螺蛳粉"], "food_culture": "桂林米粉文化深厚，酸辣口味为主", "dining_etiquette": "米粉干捞或汤粉皆可，加酸豆角"},
+    "郑州": {"cuisine": "豫菜", "keywords": ["烩面", "胡辣汤", "豫菜", "焖饼"], "must_try": ["烩面", "胡辣汤", "焖饼"], "food_culture": "郑州以面食为主，胡辣汤是早餐标配", "dining_etiquette": "胡辣汤配油条或水煎包"},
+    "福州": {"cuisine": "闽菜", "keywords": ["佛跳墙", "鱼丸", "闽菜", "肉燕"], "must_try": ["佛跳墙", "鱼丸", "肉燕"], "food_culture": "福州闽菜以汤菜见长，口味清淡鲜甜", "dining_etiquette": "鱼丸和肉燕是汤品，先喝汤"},
+    "大连": {"cuisine": "辽菜", "keywords": ["海鲜", "烧烤", "辽菜", "东北菜"], "must_try": ["海鲜", "烤鱿鱼", "锅包肉"], "food_culture": "大连海鲜新鲜实惠，日式和俄式影响", "dining_etiquette": "海鲜当季最佳，秋蟹最肥"},
+    "沈阳": {"cuisine": "辽菜", "keywords": ["老边饺子", "辽菜", "东北菜", "烧烤"], "must_try": ["老边饺子", "锅包肉", "鸡架"], "food_culture": "沈阳东北菜和烧烤文化发达，鸡架是特色", "dining_etiquette": "鸡架配老雪花啤酒"},
+    "济南": {"cuisine": "鲁菜", "keywords": ["鲁菜", "把子肉", "甜沫", "油旋"], "must_try": ["把子肉", "甜沫", "油旋"], "food_culture": "济南鲁菜发源地，咸鲜为主，早餐文化丰富", "dining_etiquette": "把子肉配米饭，甜沫是咸口"},
+    "太原": {"cuisine": "晋菜", "keywords": ["刀削面", "晋菜", "过油肉", "莜面"], "must_try": ["刀削面", "过油肉", "莜面栲栳栳"], "food_culture": "太原面食种类繁多，醋文化深厚", "dining_etiquette": "面食配山西老陈醋"},
+    "兰州": {"cuisine": "陇菜", "keywords": ["牛肉面", "陇菜", "手抓羊肉", "酿皮"], "must_try": ["牛肉面", "手抓羊肉", "酿皮"], "food_culture": "兰州牛肉面是灵魂，清真饮食为主", "dining_etiquette": "牛肉面讲究一清二白三红四绿五黄"},
+    "贵阳": {"cuisine": "黔菜", "keywords": ["酸汤鱼", "丝娃娃", "黔菜", "肠旺面"], "must_try": ["酸汤鱼", "丝娃娃", "肠旺面"], "food_culture": "贵阳酸辣口味独特，酸汤是灵魂", "dining_etiquette": "丝娃娃自己包，蘸水是关键"},
+    "南宁": {"cuisine": "桂菜", "keywords": ["老友粉", "酸嘢", "桂菜", "柠檬鸭"], "must_try": ["老友粉", "酸嘢", "柠檬鸭"], "food_culture": "南宁粉文化丰富，酸嘢开胃解腻", "dining_etiquette": "老友粉趁热吃，酸嘢可当零食"},
+    "呼和浩特": {"cuisine": "蒙餐", "keywords": ["手把肉", "蒙餐", "奶茶", "烧麦"], "must_try": ["手把肉", "奶茶", "烧麦"], "food_culture": "呼和浩特蒙餐以牛羊肉和奶制品为主", "dining_etiquette": "奶茶咸口，手把肉蘸韭菜花"},
+    "银川": {"cuisine": "清真菜", "keywords": ["手抓羊肉", "清真菜", "羊杂碎", "盖碗茶"], "must_try": ["手抓羊肉", "羊杂碎", "盖碗茶"], "food_culture": "银川清真饮食为主，羊肉品质极佳", "dining_etiquette": "手抓羊肉配蒜，盖碗茶慢品"},
+    "西宁": {"cuisine": "青藏菜", "keywords": ["牦牛肉", "青藏菜", "酿皮", "甜醅"], "must_try": ["牦牛肉", "酿皮", "甜醅"], "food_culture": "西宁多民族饮食融合，牦牛肉和面食为主", "dining_etiquette": "高原少食多餐，注意适应海拔"},
+    "黄山": {"cuisine": "徽菜", "keywords": ["臭鳜鱼", "徽菜", "毛豆腐", "黄山烧饼"], "must_try": ["臭鳜鱼", "毛豆腐", "黄山烧饼"], "food_culture": "黄山徽菜重油重色重火功，发酵食品独特", "dining_etiquette": "臭鳜鱼闻臭吃香，毛豆腐煎着吃"},
 }
 
 
 def _get_food_keywords(city: str, food_preference: str) -> list:
-    city_info = CITY_FOOD_MAP.get(city, {"cuisine": "本地菜", "keywords": ["特色菜", "美食"]})
+    city_info = CITY_FOOD_MAP.get(city, {"cuisine": "本地菜", "keywords": ["特色菜", "美食"], "must_try": ["特色菜"]})
     if food_preference == "本地特色" or food_preference == "无特殊要求":
-        return city_info["keywords"][:2]
+        keywords = city_info["keywords"][:2]
+        must_try = city_info.get("must_try", [])
+        if must_try:
+            keywords = keywords + must_try[:1]
+        return keywords
     preference_keywords = {
         "川菜": ["川菜", "火锅", "麻辣"],
         "粤菜": ["粤菜", "早茶", "海鲜"],
@@ -893,6 +1020,8 @@ async def search_food_node(state: TripPlannerState) -> Dict[str, Any]:
     log_print("🍜 执行节点: search_food_node")
     request = state["request"]
     attractions_info = state.get("attractions_info", "")
+    attractions = state.get("attractions", [])
+    clusters = state.get("clusters", [])
 
     service = get_langchain_amap_service()
     around_tool = await service.get_tool("maps_around_search")
@@ -903,6 +1032,28 @@ async def search_food_node(state: TripPlannerState) -> Dict[str, Any]:
     food_keywords = _get_food_keywords(request.city, request.food_preference)
     city_info = CITY_FOOD_MAP.get(request.city, {"cuisine": "本地菜"})
 
+    attraction_coords = []
+    for cluster in clusters:
+        center = cluster.get("center")
+        if center:
+            attraction_coords.append(f"{center.longitude},{center.latitude}")
+    if not attraction_coords:
+        for attr in attractions[:5]:
+            loc = attr.get("location")
+            if loc:
+                lon = loc.longitude if hasattr(loc, 'longitude') else loc.get('longitude')
+                lat = loc.latitude if hasattr(loc, 'latitude') else loc.get('latitude')
+                if lon and lat:
+                    attraction_coords.append(f"{lon},{lat}")
+
+    coords_text = ""
+    if attraction_coords:
+        coords_text = "**景点坐标列表（用于周边搜索）:**\n" + "\n".join(
+            f"  坐标{i+1}: {coord}" for i, coord in enumerate(attraction_coords[:6])
+        )
+    else:
+        coords_text = f"**景点原始信息:**\n{attractions_info[:1500]}"
+
     prompt = FOOD_AGENT_PROMPT + f"""
 请搜索城市: {request.city} 的餐厅信息。
 
@@ -910,6 +1061,12 @@ async def search_food_node(state: TripPlannerState) -> Dict[str, Any]:
 **城市特色菜系:** {city_info.get("cuisine", "本地菜")}
 **推荐搜索关键词:** {', '.join(food_keywords)}
 """
+    if city_info.get("must_try"):
+        prompt += f"\n**城市必吃美食:** {', '.join(city_info['must_try'])}"
+    if city_info.get("food_culture"):
+        prompt += f"\n**城市饮食文化:** {city_info['food_culture']}"
+    if city_info.get("dining_etiquette"):
+        prompt += f"\n**用餐提示:** {city_info['dining_etiquette']}"
     if request.companions:
         prompt += f"\n**出行人数:** {request.companions.count}人, **同伴类型:** {request.companions.type}"
     if request.budget:
@@ -922,30 +1079,152 @@ async def search_food_node(state: TripPlannerState) -> Dict[str, Any]:
 
     prompt += f"""
 
-**景点信息（用于周边搜索）:**
-{attractions_info[:2000]}
+{coords_text}
 
 请执行以下搜索:
-1. 使用 maps_around_search 搜索景点周边的餐厅（从景点信息中提取坐标）
+1. 使用 maps_around_search 搜索景点周边的餐厅（使用上方坐标列表中的坐标）
 2. 使用 maps_text_search 搜索城市热门餐厅（关键词: {food_keywords[0]})
+3. 使用 maps_text_search 搜索城市特色小吃或夜市（关键词: {request.city}特色小吃）
 """
+
     response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=FOOD_AGENT_PROMPT), HumanMessage(content=prompt)])
 
-    food_results = []
-    for tool_call in response.tool_calls:
-        tool_name = tool_call["name"]
-        tool_args = tool_call["args"]
+    results = []
+    all_foods = []
 
-        tool = await service.get_tool(tool_name)
-        if tool:
-            tool_result = await _invoke_tool_with_retry(tool, tool_args)
-            food_results.append(f"[{tool_name}]: {_tool_result_to_str(tool_result)}")
+    if response.tool_calls:
+        log_print(f"  📝 LLM调用了 {len(response.tool_calls)} 个工具")
+        for i, tool_call in enumerate(response.tool_calls):
+            tool_name = tool_call["name"]
+            tool_args = tool_call["args"]
+            log_print(f"  🔧 工具调用 {i+1}: {tool_name} - 参数: {tool_args}")
 
-    if food_results:
-        return {"food_info": "\n".join(food_results)}
+            tool = await service.get_tool(tool_name)
+            if tool:
+                tool_result = await _invoke_tool_with_retry(tool, tool_args)
+                result_str = _tool_result_to_str(tool_result)
+                log_print(f"  📦 工具返回结果长度: {len(result_str)} 字符")
+                results.append(f"[{tool_name}]: {result_str}")
+                foods = _parse_food_result(result_str)
+                log_print(f"  🍜 从结果中解析到 {len(foods)} 个餐厅")
+                all_foods.extend(foods)
+        log_print(f"  ✅ LLM调用后总共解析到 {len(all_foods)} 个餐厅")
 
-    log_print("⚠️ search_food_node: LLM未调用工具，返回空数据")
-    return {"food_info": ""}
+    if not all_foods:
+        log_print("  🔄 LLM调用失败或返回空结果，启用备用美食搜索策略...")
+        fallback_keywords = food_keywords[:2] if food_keywords else ["美食", "餐厅"]
+
+        for keyword in fallback_keywords[:2]:
+            try:
+                log_print(f"  🔍 备用搜索: {request.city} - {keyword}")
+                tool_result = await _invoke_tool_with_retry(search_tool, {"keywords": keyword, "city": request.city})
+                result_str = _tool_result_to_str(tool_result)
+                results.append(f"[maps_text_search]: {result_str}")
+                foods = _parse_food_result(result_str)
+                log_print(f"  🍜 备用搜索解析到 {len(foods)} 个餐厅")
+                all_foods.extend(foods)
+                if len(all_foods) >= 5:
+                    break
+            except Exception as e:
+                log_print(f"  ⚠️ 备用搜索失败: {e}")
+                continue
+
+        if attraction_coords and len(all_foods) < 5:
+            try:
+                coord = attraction_coords[0]
+                log_print(f"  🔍 备用周边搜索: 坐标 {coord}")
+                tool_result = await _invoke_tool_with_retry(around_tool, {"keywords": "餐厅", "location": coord, "radius": "2000"})
+                result_str = _tool_result_to_str(tool_result)
+                results.append(f"[maps_around_search]: {result_str}")
+                foods = _parse_food_result(result_str)
+                log_print(f"  🍜 备用周边搜索解析到 {len(foods)} 个餐厅")
+                all_foods.extend(foods)
+            except Exception as e:
+                log_print(f"  ⚠️ 备用周边搜索失败: {e}")
+
+    unique_ids = set()
+    unique_foods = []
+    for food in all_foods:
+        food_id = food.get("id", "")
+        if food_id and food_id not in unique_ids:
+            unique_ids.add(food_id)
+            unique_foods.append(food)
+        elif not food_id:
+            unique_foods.append(food)
+
+    unique_foods.sort(key=lambda x: x.get("rating") or 0, reverse=True)
+
+    try:
+        from hello_agents.tools.builtin.search_tool import SearchTool
+        web_search_tool = SearchTool()
+        web_query = f"{request.city} 美食攻略 必吃 {request.food_preference}"
+        log_print(f"  🔍 网络搜索: {web_query}")
+        web_result = await asyncio.to_thread(web_search_tool.run, {"input": web_query, "mode": "text"})
+        if web_result:
+            web_text = str(web_result)[:3000]
+            results.append(f"[web_search]: {web_text}")
+            log_print(f"  📦 网络搜索结果长度: {len(web_text)} 字符")
+    except ImportError:
+        log_print("  ⚠️ SearchTool 不可用，跳过网络搜索")
+    except Exception as e:
+        log_print(f"  ⚠️ 网络搜索失败: {e}")
+
+    food_detail_count = 0
+    max_food_details = 10
+    foods_needing_detail = [f for f in unique_foods if f.get("id") and not f.get("avg_cost")]
+    if foods_needing_detail:
+        try:
+            detail_tool = await service.get_tool("maps_search_detail")
+            if detail_tool:
+                log_print(f"  🔍 获取 {min(len(foods_needing_detail), max_food_details)} 个餐厅详情...")
+                for food_item in foods_needing_detail[:max_food_details]:
+                    try:
+                        detail_result = await _invoke_tool_with_retry(detail_tool, {"id": food_item.get("id")})
+                        detail_str = _tool_result_to_str(detail_result)
+                        detail_data = None
+                        try:
+                            parsed = json.loads(detail_str)
+                            if isinstance(parsed, list):
+                                for item in parsed:
+                                    if isinstance(item, dict) and "text" in item:
+                                        inner = json.loads(item["text"]) if isinstance(item["text"], str) else item["text"]
+                                        if isinstance(inner, dict):
+                                            detail_data = inner
+                                            break
+                            elif isinstance(parsed, dict):
+                                detail_data = parsed
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+
+                        if detail_data:
+                            biz_ext = detail_data.get("biz_ext", {})
+                            if isinstance(biz_ext, dict):
+                                cost_raw = biz_ext.get("cost") or biz_ext.get("price")
+                                if cost_raw:
+                                    try:
+                                        food_item["avg_cost"] = int(float(str(cost_raw).replace("元", "").strip()))
+                                    except (ValueError, TypeError):
+                                        pass
+                                rating_raw = biz_ext.get("rating")
+                                if rating_raw and not food_item.get("rating"):
+                                    try:
+                                        food_item["rating"] = float(rating_raw)
+                                    except (ValueError, TypeError):
+                                        pass
+                            food_detail_count += 1
+                        await asyncio.sleep(0.1)
+                    except Exception as e:
+                        log_print(f"  ⚠️ 获取餐厅详情失败 [{food_item.get('name', '未知')}]: {e}")
+                        continue
+                log_print(f"  ✅ 成功获取 {food_detail_count} 个餐厅的详情")
+        except Exception as e:
+            log_print(f"  ⚠️ 获取maps_search_detail工具失败: {e}")
+
+    log_print(f"  ✅ 最终去重后共 {len(unique_foods)} 个餐厅")
+    return {
+        "food_info": "\n".join(results) if results else "",
+        "foods": unique_foods
+    }
 
 
 def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -1275,23 +1554,38 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
 
     valid_attractions = []
 
-    # 首先尝试从结构化数据中提取坐标（备用策略B3的成果）
+    def _get_loc_coord(loc: Any) -> Optional[tuple]:
+        """从 Location 对象或 dict 中提取经纬度，兼容两种格式"""
+        if loc is None:
+            return None
+        try:
+            if hasattr(loc, 'longitude') and hasattr(loc, 'latitude'):
+                return (float(loc.longitude), float(loc.latitude))
+            if isinstance(loc, dict):
+                lon = loc.get("longitude") or loc.get("lon")
+                lat = loc.get("latitude") or loc.get("lat")
+                if lon is not None and lat is not None:
+                    return (float(lon), float(lat))
+            if isinstance(loc, str) and "," in loc:
+                parts = loc.split(",")
+                return (float(parts[0]), float(parts[1]))
+        except (ValueError, TypeError, AttributeError):
+            pass
+        return None
+
     if structured_attractions:
         log_print(f"📊 尝试从结构化attractions中提取坐标，共 {len(structured_attractions)} 个...")
         for poi in structured_attractions:
-            if poi.get("location"):
-                loc = poi["location"]
-                try:
-                    lon = float(loc.get("longitude", 0))
-                    lat = float(loc.get("latitude", 0))
-                    if 73 < lon < 136 and 3 < lat < 54:
-                        valid_attractions.append({
-                            "name": poi.get("name", "未知景点"),
-                            "longitude": lon,
-                            "latitude": lat
-                        })
-                except (ValueError, TypeError):
-                    continue
+            loc = poi.get("location")
+            coord = _get_loc_coord(loc)
+            if coord:
+                lon, lat = coord
+                if 73 < lon < 136 and 3 < lat < 54:
+                    valid_attractions.append({
+                        "name": poi.get("name", "未知景点"),
+                        "longitude": lon,
+                        "latitude": lat
+                    })
         if valid_attractions:
             log_print(f"📊 从结构化数据提取到 {len(valid_attractions)} 个景点坐标")
 
@@ -1302,14 +1596,20 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
             log_print(f"📊 正则提取到 {len(valid_attractions)} 个景点坐标")
 
     # 如果正则提取失败，尝试从POI名称调用maps_geo获取坐标
-    if not valid_attractions:
+    # 仅在坐标不足时才调用 maps_geo，避免不必要的 API 调用
+    min_required = request.travel_days * 2
+    if len(valid_attractions) < min_required:
         poi_names = _extract_poi_names(attractions_info)
-        if poi_names:
-            log_print(f"📊 从POI数据提取到 {len(poi_names)} 个景点名称，调用maps_geo获取坐标...")
+        # 过滤掉已有坐标的景点名称
+        existing_names = {a["name"] for a in valid_attractions}
+        missing_pois = [p for p in poi_names if p["name"] not in existing_names]
+        if missing_pois:
+            need_count = min_required - len(valid_attractions)
+            log_print(f"📊 坐标不足({len(valid_attractions)}/{min_required})，调用maps_geo补充 {min(len(missing_pois), need_count)} 个坐标...")
             try:
                 service = get_langchain_amap_service()
                 geo_tool = await service.get_tool("maps_geo")
-                for poi in poi_names[:20]:
+                for poi in missing_pois[:need_count]:
                     try:
                         geo_result = await _invoke_tool_with_retry(geo_tool, {"address": poi["name"], "city": request.city})
                         result_str = _tool_result_to_str(geo_result)
@@ -1323,10 +1623,12 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
                                 valid_attractions.append({"name": poi["name"], "longitude": lon, "latitude": lat})
                     except Exception as e:
                         log_print(f"  ⚠️ maps_geo查询{poi['name']}失败: {e}")
-                if valid_attractions:
-                    log_print(f"📊 maps_geo获取到 {len(valid_attractions)} 个景点坐标")
+                if len(valid_attractions) > 0:
+                    log_print(f"📊 maps_geo补充后共 {len(valid_attractions)} 个景点坐标")
             except Exception as e:
                 log_print(f"⚠️ maps_geo批量查询失败: {e}")
+    else:
+        log_print(f"📊 已有 {len(valid_attractions)} 个坐标(需{min_required}个)，跳过maps_geo调用")
 
     # 最后尝试LLM提取
     if not valid_attractions and attractions_info:
@@ -1552,6 +1854,7 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
 
     structured_attractions = state.get("attractions", [])
     structured_hotels = state.get("hotels", [])
+    structured_foods = state.get("foods", [])
 
     price_info = ""
     poi_with_prices = []
@@ -1562,6 +1865,10 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
     for poi in structured_hotels:
         if poi.get("cost"):
             poi_with_prices.append(f"  - {poi.get('name', '未知')}: {poi.get('cost')}元/晚")
+    for food_item in structured_foods:
+        if food_item.get("avg_cost"):
+            cuisine_label = food_item.get("cuisine", "未知菜系")
+            poi_with_prices.append(f"  - {food_item.get('name', '未知')}: 人均{food_item.get('avg_cost')}元 ({cuisine_label})")
 
     if poi_with_prices:
         price_info = "\n**已确认的真实价格（必须优先使用）:**\n" + "\n".join(poi_with_prices)
@@ -1586,6 +1893,35 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
         prompt += f"- **出行人数: {request.companions.count}人**\n"
         prompt += f"- **同伴类型: {type_label}**\n"
 
+    food_summary = ""
+    if structured_foods:
+        nearby_foods = [f for f in structured_foods if f.get("location")]
+        popular_foods = [f for f in structured_foods if not f.get("location")]
+        food_lines = []
+        for f in structured_foods[:20]:
+            parts = [f.get("name", "")]
+            if f.get("cuisine"):
+                parts.append(f"菜系:{f['cuisine']}")
+            if f.get("avg_cost"):
+                parts.append(f"人均:{f['avg_cost']}元")
+            if f.get("rating"):
+                parts.append(f"评分:{f['rating']}")
+            if f.get("address"):
+                parts.append(f"地址:{f['address']}")
+            loc = f.get("location")
+            if loc:
+                lon = loc.longitude if hasattr(loc, 'longitude') else loc.get('longitude', '')
+                lat = loc.latitude if hasattr(loc, 'latitude') else loc.get('latitude', '')
+                if lon and lat:
+                    parts.append(f"坐标:{lon},{lat}")
+            food_lines.append("  - " + " | ".join(parts))
+        if food_lines:
+            food_summary = "\n**结构化餐厅数据（优先使用）:**\n" + "\n".join(food_lines)
+            if nearby_foods:
+                food_summary += f"\n（其中{len(nearby_foods)}家有坐标，适合作为source=nearby推荐）"
+            if popular_foods:
+                food_summary += f"\n（其中{len(popular_foods)}家无坐标，适合作为source=popular推荐）"
+
     prompt += f"""
 **收集到的信息:**
 [景点]: {attractions}
@@ -1595,6 +1931,7 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
 [景点聚类分组]: {cluster}
 [路线]: {routes if routes else "路线搜索数据不可用，请根据景点间距离和交通方式自行估算路线信息"}
 {price_info}
+{food_summary}
 
 **关键要求:**
 1. **严格按照[景点聚类分组]的建议安排每日景点**，将同一组的景点安排在同一天，不要随意打散
