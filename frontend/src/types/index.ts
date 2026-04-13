@@ -120,3 +120,31 @@ export interface TripPlanResponse {
   data?: TripPlan
 }
 
+export interface TripRecord {
+  id: number
+  title: string
+  city: string
+  start_date: string
+  end_date: string
+  travel_days: number
+  status: 'completed' | 'favorite' | 'archived'
+  budget_limit?: number
+  total_cost: number
+  companion_type?: string
+  companion_count: number
+  tags: string[]
+  cover_image?: string
+  created_at?: string
+  updated_at?: string
+  plan?: TripPlan
+  request?: TripFormData
+}
+
+export interface TripListResponse {
+  success: boolean
+  data: TripRecord[]
+  total: number
+  page: number
+  page_size: number
+}
+

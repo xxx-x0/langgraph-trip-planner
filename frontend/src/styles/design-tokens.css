@@ -1,0 +1,122 @@
+:root {
+  --color-primary: #667eea;
+  --color-primary-dark: #5a6fd6;
+  --color-primary-light: #8b9cf0;
+  --color-primary-bg: #f0f3ff;
+  --color-primary-bg-hover: #e4e9ff;
+  --color-accent: #764ba2;
+  --color-accent-dark: #6a4292;
+  --color-accent-light: #9168b8;
+  --color-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --color-gradient-hover: linear-gradient(135deg, #5a6fd6 0%, #6a4292 100%);
+
+  --color-text-primary: #1a1a2e;
+  --color-text-secondary: #555770;
+  --color-text-tertiary: #8e8ea0;
+  --color-text-disabled: #b8b8c8;
+  --color-text-inverse: #ffffff;
+  --color-text-link: #667eea;
+
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f7f7fb;
+  --color-bg-tertiary: #eeeef5;
+  --color-bg-elevated: #ffffff;
+  --color-bg-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+  --color-success: #52c41a;
+  --color-success-bg: #f6ffed;
+  --color-warning: #faad14;
+  --color-warning-bg: #fffbe6;
+  --color-error: #ff4d4f;
+  --color-error-bg: #fff2f0;
+  --color-info: #1890ff;
+  --color-info-bg: #e6f7ff;
+
+  --color-border: rgba(0, 0, 0, 0.08);
+  --color-border-light: rgba(0, 0, 0, 0.04);
+  --color-border-strong: rgba(0, 0, 0, 0.12);
+  --color-divider: rgba(0, 0, 0, 0.06);
+
+  --color-meal-nearby: #67c23a;
+  --color-meal-popular: #f56c6c;
+  --color-route-subway: #1890ff;
+  --color-route-bus: #52c41a;
+  --color-route-walk: #fa8c16;
+  --color-route-drive: #f5222d;
+  --color-route-taxi: #722ed1;
+  --color-route-bike: #13c2c2;
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+  --radius-circle: 50%;
+
+  --shadow-card: rgba(0, 0, 0, 0.02) 0px 0px 0px 1px,
+    rgba(0, 0, 0, 0.04) 0px 2px 6px, rgba(102, 126, 234, 0.06) 0px 4px 12px;
+  --shadow-card-hover: rgba(0, 0, 0, 0.02) 0px 0px 0px 1px,
+    rgba(0, 0, 0, 0.06) 0px 4px 12px, rgba(102, 126, 234, 0.1) 0px 8px 24px;
+  --shadow-elevated: rgba(0, 0, 0, 0.04) 0px 8px 24px,
+    rgba(102, 126, 234, 0.08) 0px 16px 48px;
+  --shadow-modal: rgba(0, 0, 0, 0.08) 0px 16px 48px,
+    rgba(102, 126, 234, 0.06) 0px 24px 64px;
+  --shadow-button: rgba(102, 126, 234, 0.3) 0px 4px 12px;
+  --shadow-button-hover: rgba(102, 126, 234, 0.4) 0px 8px 20px;
+  --shadow-float: rgba(0, 0, 0, 0.1) 0px 8px 30px;
+
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC",
+    sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Consolas", "Courier New", monospace;
+
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+  --font-size-4xl: 28px;
+  --font-size-5xl: 36px;
+  --font-size-6xl: 48px;
+  --font-size-7xl: 56px;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 300;
+  --z-tooltip: 400;
+  --z-toast: 500;
+
+  --header-height: 64px;
+  --side-nav-width: 240px;
+  --content-max-width: 1400px;
+}

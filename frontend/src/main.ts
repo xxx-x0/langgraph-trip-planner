@@ -5,6 +5,7 @@ import 'ant-design-vue/dist/reset.css'
 import App from './App.vue'
 import Home from './views/Home.vue'
 import Result from './views/Result.vue'
+import MyTrips from './views/MyTrips.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,6 +19,17 @@ const router = createRouter({
       path: '/result',
       name: 'Result',
       component: Result
+    },
+    {
+      path: '/my-trips',
+      name: 'MyTrips',
+      component: MyTrips
+    },
+    {
+      path: '/trip/:id',
+      name: 'trip-detail',
+      component: Result,
+      props: true
     }
   ]
 })

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { TripFormData, TripPlanResponse, TripPlan } from '@/types'
+import type { TripFormData, TripPlanResponse, TripPlan, TripListResponse, TripRecord } from '@/types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -137,6 +137,36 @@ export async function healthCheck(): Promise<any> {
     console.error('健康检查失败:', error)
     throw new Error(error.message || '健康检查失败')
   }
+}
+
+export async function getTripList(params?: { status?: string; page?: number; page_size?: number }): Promise<TripListResponse> {
+  const response = await apiClient.get<TripListResponse>('/api/trips', { params })
+  return response.data
+}
+
+export async function getTripDetail(tripId: number): Promise<{ success: boolean; data: TripRecord }> {
+  const response = await apiClient.get(`/api/trips/${tripId}`)
+  return response.data
+}
+
+export async function saveTripToHistory(plan: TripPlan, request?: TripFormData): Promise<{ success: boolean; data: TripRecord; message: string }> {
+  const response = await apiClient.post('/api/trips', { plan, request })
+  return response.data
+}
+
+export async function deleteTripFromHistory(tripId: number): Promise<{ success: boolean; message: string }> {
+  const response = await apiClient.delete(`/api/trips/${tripId}`)
+  return response.data
+}
+
+export async function updateTripStatus(tripId: number, status: string): Promise<{ success: boolean; data: TripRecord }> {
+  const response = await apiClient.patch(`/api/trips/${tripId}/status`, { status })
+  return response.data
+}
+
+export async function searchTrips(keyword: string, page?: number, pageSize?: number): Promise<TripListResponse> {
+  const response = await apiClient.get<TripListResponse>('/api/trips/search', { params: { keyword, page, page_size: pageSize } })
+  return response.data
 }
 
 export default apiClient
