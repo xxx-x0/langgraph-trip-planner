@@ -15,7 +15,8 @@ from ..logger import setup_logging, log_print, LOG_FILE
 # from .routes import trip, poi, map as map_routes
 
 # 新路由导入 (LangGraph + LangChain MCP)
-from .routes import trip_lg, poi_lg, map_lg
+from .routes import trip_lg, poi_lg, map_lg, trip_history
+from ..database import init_db
 
 # 获取配置
 settings = get_settings()
@@ -45,6 +46,7 @@ app.add_middleware(
 app.include_router(trip_lg.router, prefix="/api")
 app.include_router(poi_lg.router, prefix="/api")
 app.include_router(map_lg.router, prefix="/api")
+app.include_router(trip_history.router, prefix="/api")
 
 # 旧路由注册 (已弃用)
 # app.include_router(trip.router, prefix="/api")
@@ -55,6 +57,8 @@ app.include_router(map_lg.router, prefix="/api")
 @app.on_event("startup")
 async def startup_event():
     """应用启动事件"""
+    await init_db()
+    log_print("✅ 数据库初始化完成")
     log_print("\n" + "="*60)
     log_print(f"🚀 {settings.app_name} v{settings.app_version}")
     log_print("="*60)

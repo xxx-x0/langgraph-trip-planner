@@ -49,6 +49,12 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# 数据库文件
+backend/data/*.db
+
+# 设计参考文件
+design-md/
+
 # 旧 HelloAgents 框架代码 (已重构为 LangGraph)
 backend/app/agents/trip_planner_agent.py
 backend/app/api/routes/map.py

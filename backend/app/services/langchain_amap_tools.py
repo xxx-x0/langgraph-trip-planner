@@ -62,7 +62,7 @@ async def _init_mcp_client() -> None:
         print(f"   工具数量: {len(_mcp_tools)}")
         if _mcp_tools:
             print("   可用工具:")
-            for t in _mcp_tools[:5]:
+            for t in _mcp_tools:
                 print(f"     - {t.name}")
             if len(_mcp_tools) > 5:
                 print(f"     ... 还有 {len(_mcp_tools) - 5} 个工具")

@@ -91,13 +91,22 @@ ATTRACTION_AGENT_PROMPT = """你是景点搜索专家。你的任务是根据城
 - keywords: 景点关键词（例如："历史文化"、"公园"、"博物馆"、"亲子乐园"）
 - city: 城市名称（例如："北京"、"上海"）
 
+**关键词规则（非常重要！）:**
+1. keywords必须包含"景点"、"公园"、"风景区"、"博物馆"、"寺"、"园"等景点类后缀词，确保搜索结果都是真正的景点
+2. 禁止使用"浪漫景点"、"网红景点"等模糊词，这些会搜出婚纱店、SPA等非景点场所
+3. 正确示例: "观景台 景点"、"湖 公园"、"古镇 风景区"、"博物馆"、"寺庙 园林"
+4. 错误示例: "浪漫景点"、"网红打卡"、"情侣景点"（会搜出非景点结果）
+
 **同伴类型适配策略:**
-- solo(独自出行): 搜索文化体验、独立探索类景点，如博物馆、历史街区、文艺书店
-- couple(情侣): 搜索浪漫景点、观景台、特色街区、网红打卡地
-- family(家庭亲子): 搜索亲子乐园、动物园、科技馆、主题乐园、公园等适合儿童的景点
-- friends(朋友出行): 搜索刺激体验、团队活动、网红景点、夜生活区域
-- elderly(带老人): 搜索平缓步道、园林、寺庙、文化古迹等体力要求低的景点
-- group(团队出行): 搜索大型景区、可容纳团队的景点、标志性景点
+- solo(独自出行): 搜索"博物馆 景点"、"历史街区 风景区"、"文艺 公园"
+- couple(情侣): 搜索"观景台 景点"、"湖 公园"、"古镇 风景区"、"特色街区 景点"
+- family(家庭亲子): 搜索"亲子乐园 景点"、"动物园 公园"、"科技馆 博物馆"、"主题乐园 景点"
+- friends(朋友出行): 搜索"主题乐园 景点"、"风景区 公园"、"特色街区 景点"
+- elderly(带老人): 搜索"园林 公园"、"寺庙 景点"、"文化古迹 风景区"、"公园 景点"
+- group(团队出行): 搜索"大型景区 风景区"、"标志性景点 公园"、"名胜古迹 景点"
+
+**多次搜索:**
+请调用2-3次工具，使用不同的关键词组合搜索，以获取更丰富的景点结果。
 
 **预算适配策略:**
 - 如果有预算限制，优先搜索免费或低价景点（公园、历史街区、免费博物馆等）
@@ -105,7 +114,9 @@ ATTRACTION_AGENT_PROMPT = """你是景点搜索专家。你的任务是根据城
 
 **示例:**
 用户需求: "城市: 北京, 偏好: 历史文化, 同伴: 家庭亲子"
-你的动作: 调用 maps_text_search(keywords="亲子博物馆", city="北京") 和 maps_text_search(keywords="历史文化", city="北京")
+你的动作: 
+1. 调用 maps_text_search(keywords="亲子 博物馆 景点", city="北京")
+2. 调用 maps_text_search(keywords="公园 景点", city="北京")
 
 **注意:**
 1. 必须使用提供的工具获取真实数据，不要直接编造回答。
@@ -540,8 +551,32 @@ async def search_poi_node(state: TripPlannerState) -> Dict[str, Any]:
     log_print(f"  ✅ 最终总共解析到 {len(all_pois)} 个POI")
     pois_with_coords = sum(1 for p in all_pois if p.get("location"))
     log_print(f"  📍 其中 {pois_with_coords}/{len(all_pois)} 个POI有坐标信息")
-    if pois_with_coords == 0 and len(all_pois) > 0:
-        log_print("  ⚠️ 所有POI都没有坐标！_parse_poi_result 可能未正确解析 location 字段")
+
+    # 补充坐标：对没有location的POI调用maps_geo
+    if pois_with_coords < len(all_pois):
+        log_print(f"  🔄 补充坐标: {len(all_pois) - pois_with_coords} 个POI缺少坐标，调用maps_geo...")
+        try:
+            geo_tool = await service.get_tool("maps_geo")
+            for poi in all_pois:
+                if not poi.get("location") and poi.get("name"):
+                    try:
+                        geo_result = await _invoke_tool_with_retry(geo_tool, {"address": poi["name"], "city": request.city})
+                        result_str = _tool_result_to_str(geo_result)
+                        loc_match = re.search(r'"location"\s*:\s*"([\d.]+)\s*,\s*([\d.]+)"', result_str)
+                        if not loc_match:
+                            loc_match = re.search(r'([\d.]+)\s*,\s*([\d.]+)', result_str)
+                        if loc_match:
+                            lon = float(loc_match.group(1))
+                            lat = float(loc_match.group(2))
+                            if 73 < lon < 136 and 3 < lat < 54:
+                                poi["location"] = Location(longitude=lon, latitude=lat)
+                    except Exception as e:
+                        log_print(f"  ⚠️ maps_geo查询{poi.get('name', '未知')}失败: {type(e).__name__}")
+            pois_with_coords = sum(1 for p in all_pois if p.get("location"))
+            log_print(f"  📍 补充后 {pois_with_coords}/{len(all_pois)} 个POI有坐标")
+        except Exception as e:
+            log_print(f"  ⚠️ maps_geo工具获取失败: {e}")
+
     return {
         "attractions_info": "\n".join(results),
         "attractions": all_pois
@@ -671,6 +706,11 @@ async def search_weather_node(state: TripPlannerState) -> Dict[str, Any]:
         except Exception as e:
             log_print(f"  ⚠️ 备用天气查询失败: {e}")
 
+    # 截取行程天数对应的天气
+    if len(all_weather) > request.travel_days:
+        log_print(f"  ✂️ 天气预报{len(all_weather)}天，截取前{request.travel_days}天")
+        all_weather = all_weather[:request.travel_days]
+
     log_print(f"  ✅ 最终总共解析到 {len(all_weather)} 天天气")
     return {
         "weather_info": "\n".join(results) if results else f"{request.city}天气查询失败",
@@ -770,6 +810,32 @@ async def search_hotel_node(state: TripPlannerState) -> Dict[str, Any]:
                 continue
 
     log_print(f"  ✅ 最终总共解析到 {len(all_hotels)} 个酒店")
+
+    hotels_with_coords = sum(1 for h in all_hotels if h.get("location"))
+    if hotels_with_coords < len(all_hotels):
+        log_print(f"  🔄 补充坐标: {len(all_hotels) - hotels_with_coords} 个酒店缺少坐标，调用maps_geo...")
+        try:
+            geo_tool = await service.get_tool("maps_geo")
+            for hotel in all_hotels:
+                if not hotel.get("location") and hotel.get("name"):
+                    try:
+                        geo_result = await _invoke_tool_with_retry(geo_tool, {"address": hotel["name"], "city": request.city})
+                        result_str = _tool_result_to_str(geo_result)
+                        loc_match = re.search(r'"location"\s*:\s*"([\d.]+)\s*,\s*([\d.]+)"', result_str)
+                        if not loc_match:
+                            loc_match = re.search(r'([\d.]+)\s*,\s*([\d.]+)', result_str)
+                        if loc_match:
+                            lon = float(loc_match.group(1))
+                            lat = float(loc_match.group(2))
+                            if 73 < lon < 136 and 3 < lat < 54:
+                                hotel["location"] = Location(longitude=lon, latitude=lat)
+                    except Exception:
+                        pass
+            hotels_with_coords = sum(1 for h in all_hotels if h.get("location"))
+            log_print(f"  📍 补充后 {hotels_with_coords}/{len(all_hotels)} 个酒店有坐标")
+        except Exception as e:
+            log_print(f"  ⚠️ maps_geo工具获取失败: {e}")
+
     return {
         "hotels_info": "\n".join(results),
         "hotels": all_hotels
@@ -2055,7 +2121,31 @@ def _validate_plan_coordinates(trip_plan: TripPlan, request: TripRequest = None)
                 if not (73 < lon < 136 and 3 < lat < 54):
                     meal.location = None
 
-    if trip_plan.budget and request and request.budget:
+    calc_attractions = sum(attr.ticket_price for day in trip_plan.days for attr in day.attractions)
+    calc_hotels = sum(day.hotel.estimated_cost for day in trip_plan.days if day.hotel)
+    calc_meals = sum(meal.estimated_cost for day in trip_plan.days for meal in day.meals)
+
+    if trip_plan.budget is None:
+        trip_plan.budget = Budget()
+
+    if calc_attractions > 0 or calc_hotels > 0 or calc_meals > 0:
+        if trip_plan.budget.total_attractions == 0 and calc_attractions > 0:
+            trip_plan.budget.total_attractions = calc_attractions
+        if trip_plan.budget.total_hotels == 0 and calc_hotels > 0:
+            trip_plan.budget.total_hotels = calc_hotels
+        if trip_plan.budget.total_meals == 0 and calc_meals > 0:
+            trip_plan.budget.total_meals = calc_meals
+
+        recalc_total = (
+            trip_plan.budget.total_attractions
+            + trip_plan.budget.total_hotels
+            + trip_plan.budget.total_meals
+            + trip_plan.budget.total_transportation
+        )
+        if trip_plan.budget.total == 0 and recalc_total > 0:
+            trip_plan.budget.total = recalc_total
+
+    if request and request.budget:
         trip_plan.budget.budget_limit = request.budget
         trip_plan.budget.is_within_budget = trip_plan.budget.total <= request.budget
 
