@@ -48,6 +48,7 @@ export interface StreamEvent {
   message: string
   progress: number
   node?: string
+  current_node?: string
   data?: TripPlan
 }
 
