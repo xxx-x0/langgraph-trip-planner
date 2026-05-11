@@ -203,3 +203,11 @@
 .fade-leave-active {
   animation: fadeIn var(--transition-fast) reverse;
 }
+
+.tab-fade-enter-active {
+  animation: fadeInUp var(--transition-normal);
+}
+
+.tab-fade-leave-active {
+  animation: fadeIn var(--transition-fast) reverse;
+}

@@ -41,6 +41,17 @@ export interface Hotel {
   distance: string
   type: string
   estimated_cost?: number
+  // AIGoHotel 新增字段
+  star_rating?: number
+  price?: number
+  original_price?: number
+  currency?: string
+  hotel_amenities?: string[]
+  room_amenities?: string[]
+  description?: string
+  image_url?: string
+  detail_url?: string
+  distance_in_meters?: number
 }
 
 export interface CompanionInfo {
@@ -98,6 +109,8 @@ export interface TripPlan {
   overall_suggestions: string
   budget?: Budget
   companions?: CompanionInfo
+  trip_tagline?: string
+  weather_summary?: string
 }
 
 export interface TripFormData {
@@ -146,5 +159,51 @@ export interface TripListResponse {
   total: number
   page: number
   page_size: number
+}
+
+export interface UserPreference {
+  user_id: string
+  preferred_hotel_types: string[]
+  preferred_cuisines: string[]
+  preferred_transportation: string[]
+  budget_range?: number[]
+  preferred_attraction_categories: string[]
+  preferred_visit_duration: number
+  preferred_attractions_per_day: number
+  preferred_meal_price_range: number[]
+  preferred_hotel_price_range: number[]
+  total_trips: number
+  cities_visited: string[]
+  last_updated: string
+}
+
+export interface DiscoveredAttraction {
+  name: string
+  description: string
+  address: string
+  category: string
+  rating?: number
+  ticket_price?: string
+  image_url?: string
+  location?: Location
+  poi_id?: string
+  selected?: boolean
+  manuallyAdded?: boolean
+}
+
+export interface DiscoveryStreamEvent {
+  type: 'attraction' | 'weather' | 'hotels' | 'progress' | 'complete' | 'error'
+  message?: string
+  data?: any
+  node?: string
+  progress?: number
+}
+
+export interface PlanFromSelectionsPayload {
+  request: TripFormData
+  selected_attractions: DiscoveredAttraction[]
+  day_assignments?: DiscoveredAttraction[][]
+  weather_info: string
+  user_id?: string
 }
 

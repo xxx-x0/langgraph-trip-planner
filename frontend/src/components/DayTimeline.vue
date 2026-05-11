@@ -6,36 +6,34 @@
         {{ timelineItems.length }}项活动 · {{ formatTimeRange }}
       </span>
     </div>
-    <div class="timeline-body">
-      <div class="time-ruler">
-        <div
-          v-for="hour in displayHours"
-          :key="hour"
-          class="ruler-mark"
-          :style="getHourStyle(hour)"
-        >
-          <span class="ruler-label">{{ formatHourLabel(hour) }}</span>
-          <div class="ruler-line"></div>
+    <div class="timeline-list">
+      <div
+        v-for="(item, idx) in timelineItems"
+        :key="idx"
+        class="tl-row"
+        :class="item.type"
+        @click="$emit('itemClick', item)"
+      >
+        <div class="tl-time">
+          <span class="tl-time-start">{{ item.startTime }}</span>
+          <span class="tl-time-end">{{ item.endTime }}</span>
         </div>
-      </div>
-      <div class="timeline-track">
-        <div
-          v-for="(item, idx) in timelineItems"
-          :key="idx"
-          class="timeline-item"
-          :class="item.type"
-          :style="getItemStyle(item)"
-          @click="$emit('itemClick', item)"
-        >
-          <div class="item-bar">
-            <div class="item-icon">{{ getIcon(item.type) }}</div>
-            <div class="item-info">
-              <div class="item-name">{{ item.name }}</div>
-              <div class="item-time">{{ item.startTime }} - {{ item.endTime }}</div>
-            </div>
-            <div v-if="item.cost" class="item-cost">¥{{ item.cost }}</div>
+        <div class="tl-connector">
+          <div class="tl-dot" :class="item.type"></div>
+          <div v-if="idx < timelineItems.length - 1" class="tl-line"></div>
+        </div>
+        <div class="tl-card" :class="item.type">
+          <div class="tl-card-header">
+            <span class="tl-icon">{{ getIcon(item.type) }}</span>
+            <span class="tl-name">{{ item.name }}</span>
+            <span v-if="item.cost" class="tl-cost">¥{{ item.cost }}</span>
           </div>
-          <div v-if="item.detail && item.type !== 'travel'" class="item-detail">{{ item.detail }}</div>
+          <div class="tl-card-meta">
+            <span class="tl-duration">{{ item.duration }}分钟</span>
+            <span v-if="item.mode" class="tl-mode">· {{ getModeIcon(item.mode) }} {{ item.mode }}</span>
+            <span v-if="item.distance" class="tl-distance">· 📏 {{ item.distance }}</span>
+          </div>
+          <div v-if="item.detail" class="tl-card-detail">{{ item.detail }}</div>
         </div>
       </div>
     </div>
@@ -57,6 +55,7 @@ interface TimelineItem {
   cost?: number
   detail?: string
   mode?: string
+  distance?: string
 }
 
 const props = defineProps<{
@@ -69,52 +68,71 @@ defineEmits<{
 
 const BASE_START_HOUR = 6
 
+function findRouteSegment(routeSegs: any[], from: string, to: string) {
+  return routeSegs.find(s => s.from_name === from && s.to_name === to)
+    || routeSegs.find(s =>
+      (s.from_name.includes(from) || from.includes(s.from_name)) &&
+      (s.to_name.includes(to) || to.includes(s.to_name))
+    )
+    || routeSegs.find(s => s.from_name.includes(from) || from.includes(s.from_name))
+}
+
 // 首先计算原始的时间线项目（不使用 timeRange）
 const rawTimelineItems = computed<TimelineItem[]>(() => {
   const items: TimelineItem[] = []
   const day = props.day
-  
-  // 防御性检查：确保 day 和必要属性存在
+
   if (!day) return items
-  
-  // 使用固定起始时间 8:00 (480分钟)
+
   let currentMinutes = 8 * 60
 
   const hotelName = day.hotel?.name || '酒店'
   const attractions = day.attractions || []
   const meals = day.meals || []
+  const routeSegs = day.route_segments || []
 
   const breakfast = meals.find(m => m.type === 'breakfast')
   if (breakfast) {
-    const travelToBreakfast = 15
-    items.push(makeItem('travel', `${hotelName} → 早餐`, currentMinutes, travelToBreakfast, undefined, '前往早餐地点'))
-    currentMinutes += travelToBreakfast
+    const route = findRouteSegment(routeSegs, hotelName, breakfast.name)
+    const travelMin = route ? parseDuration(route.duration) : 15
+    const detail = route?.detail || '前往早餐地点'
+    const mode = route?.mode
+    const distance = route?.distance
+    items.push(makeItem('travel', `${hotelName} → ${breakfast.name}`, currentMinutes, travelMin, undefined, detail, mode, distance))
+    currentMinutes += travelMin
 
     const dur = 45
     items.push(makeItem('meal', breakfast.name, currentMinutes, dur, breakfast.estimated_cost, breakfast.cuisine))
     currentMinutes += dur
   }
 
-  const routeSegs = day.route_segments || []
-
   for (let i = 0; i < attractions.length; i++) {
     const attr = attractions[i]
 
     if (i === 0 && breakfast) {
-      const travelMin = 20
-      items.push(makeItem('travel', `早餐地点 → ${attr.name}`, currentMinutes, travelMin, undefined, '前往第一个景点'))
+      const route = findRouteSegment(routeSegs, breakfast.name, attr.name)
+      const travelMin = route ? parseDuration(route.duration) : 20
+      const detail = route?.detail || `前往${attr.name}`
+      const mode = route?.mode
+      const distance = route?.distance
+      items.push(makeItem('travel', `${breakfast.name} → ${attr.name}`, currentMinutes, travelMin, undefined, detail, mode, distance))
       currentMinutes += travelMin
     } else if (i > 0) {
       const prevAttr = attractions[i - 1]
-      const route = routeSegs.find(s => s.from_name === prevAttr.name && s.to_name === attr.name)
+      const route = findRouteSegment(routeSegs, prevAttr.name, attr.name)
       const travelMin = route ? parseDuration(route.duration) : 25
       const detail = route?.detail || `从${prevAttr.name}前往${attr.name}`
       const mode = route?.mode
-      items.push(makeItem('travel', `${prevAttr.name} → ${attr.name}`, currentMinutes, travelMin, undefined, detail, mode))
+      const distance = route?.distance
+      items.push(makeItem('travel', `${prevAttr.name} → ${attr.name}`, currentMinutes, travelMin, undefined, detail, mode, distance))
       currentMinutes += travelMin
     } else {
-      const travelMin = 30
-      items.push(makeItem('travel', `${hotelName} → ${attr.name}`, currentMinutes, travelMin, undefined, '从酒店出发'))
+      const route = findRouteSegment(routeSegs, hotelName, attr.name)
+      const travelMin = route ? parseDuration(route.duration) : 30
+      const detail = route?.detail || '从酒店出发'
+      const mode = route?.mode
+      const distance = route?.distance
+      items.push(makeItem('travel', `${hotelName} → ${attr.name}`, currentMinutes, travelMin, undefined, detail, mode, distance))
       currentMinutes += travelMin
     }
 
@@ -138,8 +156,12 @@ const rawTimelineItems = computed<TimelineItem[]>(() => {
   const dinner = meals.find(m => m.type === 'dinner')
   if (dinner) {
     const lastAttr = attractions[attractions.length - 1]
-    const travelToDinner = 20
-    items.push(makeItem('travel', lastAttr ? `${lastAttr.name} → 晚餐` : '前往晚餐', currentMinutes, travelToDinner, undefined, '前往餐厅'))
+    const route = lastAttr ? findRouteSegment(routeSegs, lastAttr.name, dinner.name) : undefined
+    const travelToDinner = route ? parseDuration(route.duration) : 20
+    const detail = route?.detail || '前往餐厅'
+    const mode = route?.mode
+    const distance = route?.distance
+    items.push(makeItem('travel', lastAttr ? `${lastAttr.name} → ${dinner.name}` : '前往晚餐', currentMinutes, travelToDinner, undefined, detail, mode, distance))
     currentMinutes += travelToDinner
 
     const dur = 90
@@ -147,8 +169,13 @@ const rawTimelineItems = computed<TimelineItem[]>(() => {
     currentMinutes += dur
   }
 
-  const travelBack = 20
-  items.push(makeItem('travel', '返回酒店', currentMinutes, travelBack, undefined, '结束一天行程，返回酒店'))
+  const lastItem = attractions[attractions.length - 1]
+  const routeBack = findRouteSegment(routeSegs, lastItem?.name || '', hotelName)
+  const travelBack = routeBack ? parseDuration(routeBack.duration) : 20
+  const backDetail = routeBack?.detail || '结束一天行程，返回酒店'
+  const backMode = routeBack?.mode
+  const backDistance = routeBack?.distance
+  items.push(makeItem('travel', '返回酒店', currentMinutes, travelBack, undefined, backDetail, backMode, backDistance))
   currentMinutes += travelBack
 
   if (day.hotel) {
@@ -219,14 +246,7 @@ const formatTimeRange = computed(() => {
   return `${formatTime(r.start)} - ${formatTime(r.end)}`
 })
 
-const displayHours = computed(() => {
-  const r = timeRange.value
-  const hours = []
-  for (let h = r.startHour; h <= r.endHour; h++) hours.push(h)
-  return hours
-})
-
-function makeItem(type: TimelineItem['type'], name: string, startMin: number, dur: number, cost?: number, detail?: string, mode?: string): TimelineItem {
+function makeItem(type: TimelineItem['type'], name: string, startMin: number, dur: number, cost?: number, detail?: string, mode?: string, distance?: string): TimelineItem {
   return {
     type,
     name,
@@ -238,6 +258,7 @@ function makeItem(type: TimelineItem['type'], name: string, startMin: number, du
     cost,
     detail,
     mode,
+    distance,
   }
 }
 
@@ -247,35 +268,10 @@ function formatTime(minutes: number): string {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
 }
 
-function formatHourLabel(hour: number): string {
-  return `${hour}:00`
-}
-
 function parseDuration(durStr?: string): number {
   if (!durStr) return 25
   const match = durStr.match(/(\d+)/)
   return match ? Math.max(parseInt(match[1]), 10) : 25
-}
-
-function getHourPosition(hour: number): number {
-  const r = timeRange.value
-  return ((hour * 60 - r.start) / r.total) * 100
-}
-
-function getHourStyle(hour: number): Record<string, string> {
-  return {
-    top: `${getHourPosition(hour)}%`,
-  }
-}
-
-function getItemStyle(item: TimelineItem): Record<string, string> {
-  const r = timeRange.value
-  const top = ((item.startMinutes - r.start) / r.total) * 100
-  const height = Math.max(((item.duration) / r.total) * 100, 3)
-  return {
-    top: `${top}%`,
-    height: `${height}%`,
-  }
 }
 
 function getIcon(type: string): string {
@@ -287,179 +283,240 @@ function getIcon(type: string): string {
   }
   return map[type] || '📍'
 }
+
+function getModeIcon(mode: string): string {
+  const map: Record<string, string> = {
+    '地铁': '🚇', '公交': '🚌', '步行': '🚶', '驾车': '🚗', '出租车': '🚕', '骑行': '🚲',
+  }
+  return map[mode] || '🚗'
+}
 </script>
 
 <style scoped>
 .day-timeline {
-  background: #fafbfc;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
+  background: var(--color-bg-secondary, #fafbfc);
+  border-radius: var(--radius-md, 12px);
+  padding: var(--space-4, 16px);
 }
 
 .timeline-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4, 16px);
 }
 
 .timeline-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1a1a2e;
+  font-size: var(--font-size-md, 15px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #1a1a2e);
 }
 
 .timeline-summary {
-  font-size: 12px;
-  color: #999;
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary, #999);
 }
 
-.timeline-body {
-  position: relative;
-  height: 600px;
+.timeline-list {
   display: flex;
+  flex-direction: column;
 }
 
-.time-ruler {
-  width: 52px;
-  flex-shrink: 0;
-  position: relative;
-  height: 100%;
-}
-
-.ruler-mark {
-  position: absolute;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-}
-
-.ruler-label {
-  font-size: 11px;
-  color: #bbb;
-  width: 40px;
-  text-align: right;
-  padding-right: 8px;
-  flex-shrink: 0;
-}
-
-.ruler-line {
-  flex: 1;
-  height: 1px;
-  background: #eee;
-}
-
-.timeline-track {
-  flex: 1;
-  position: relative;
-  border-left: 2px solid #e8e8e8;
-  margin-left: 4px;
-  height: 100%;
-}
-
-.timeline-item {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  border-radius: 8px;
-  overflow: hidden;
+.tl-row {
+  display: grid;
+  grid-template-columns: 72px 24px 1fr;
+  gap: 0 var(--space-2, 8px);
   cursor: pointer;
-  transition: all 0.2s ease;
-  z-index: 2;
-  min-height: 20px;
 }
 
-.timeline-item:hover {
-  transform: scale(1.02);
-  z-index: 3;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.tl-row:hover .tl-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.timeline-item.attraction {
+/* Time column */
+.tl-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-top: 10px;
+  gap: 2px;
+}
+
+.tl-time-start {
+  font-size: var(--font-size-sm, 13px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #333);
+  line-height: 1;
+}
+
+.tl-time-end {
+  font-size: 11px;
+  color: var(--color-text-tertiary, #aaa);
+  line-height: 1;
+}
+
+.tl-row.travel .tl-time-start {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-tertiary, #aaa);
+}
+
+.tl-row.travel .tl-time-end {
+  font-size: 10px;
+}
+
+/* Connector column */
+.tl-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.tl-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 12px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px var(--color-primary, #667eea);
+  background: var(--color-primary, #667eea);
+  z-index: 1;
+}
+
+.tl-dot.attraction {
+  background: #1677ff;
+  box-shadow: 0 0 0 2px #1677ff;
+}
+
+.tl-dot.meal {
+  background: #fa8c16;
+  box-shadow: 0 0 0 2px #fa8c16;
+}
+
+.tl-dot.hotel {
+  background: #52c41a;
+  box-shadow: 0 0 0 2px #52c41a;
+}
+
+.tl-dot.travel {
+  width: 8px;
+  height: 8px;
+  background: var(--color-text-disabled, #ccc);
+  box-shadow: 0 0 0 2px var(--color-text-disabled, #ccc);
+}
+
+.tl-line {
+  width: 2px;
+  flex: 1;
+  background: var(--color-border-light, #e8e8e8);
+  min-height: 8px;
+}
+
+.tl-row.travel .tl-line {
+  border-left: 2px dashed var(--color-border-light, #ddd);
+  background: transparent;
+  width: 0;
+}
+
+/* Card column */
+.tl-card {
+  border-radius: var(--radius-sm, 8px);
+  padding: var(--space-3, 12px);
+  margin-bottom: var(--space-3, 12px);
+  transition: box-shadow 0.2s ease;
+}
+
+.tl-card.attraction {
   background: linear-gradient(135deg, #e6f4ff, #bae0ff);
   border-left: 3px solid #1677ff;
 }
 
-.timeline-item.meal {
+.tl-card.meal {
   background: linear-gradient(135deg, #fff7e6, #ffe7ba);
   border-left: 3px solid #fa8c16;
 }
 
-.timeline-item.hotel {
+.tl-card.hotel {
   background: linear-gradient(135deg, #f6ffed, #d9f7be);
   border-left: 3px solid #52c41a;
 }
 
-.timeline-item.travel {
+.tl-card.travel {
   background: transparent;
-  border-left: 2px dashed #ccc;
-  min-height: 16px;
+  border-left: 2px dashed var(--color-border, #ddd);
+  padding: var(--space-1, 4px) var(--space-2, 8px);
+  margin-bottom: var(--space-2, 8px);
 }
 
-.timeline-item.travel .item-bar {
-  padding: 2px 8px;
-  min-height: 16px;
-}
-
-.timeline-item.travel .item-name {
-  font-size: 11px;
-  color: #888;
-  font-weight: 500;
-}
-
-.timeline-item.travel .item-time {
-  font-size: 10px;
-  color: #aaa;
-}
-
-.item-bar {
+.tl-card-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  min-height: 24px;
+  gap: var(--space-2, 6px);
 }
 
-.item-icon {
+.tl-icon {
   font-size: 14px;
   flex-shrink: 0;
 }
 
-.item-info {
+.tl-name {
+  font-size: var(--font-size-sm, 13px);
+  font-weight: var(--font-weight-semibold, 600);
+  color: var(--color-text-primary, #333);
   flex: 1;
   min-width: 0;
-}
-
-.item-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #333;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
+  white-space: nowrap;
 }
 
-.item-time {
-  font-size: 11px;
-  color: #666;
-}
-
-.item-cost {
-  font-size: 12px;
-  font-weight: 600;
+.tl-cost {
+  font-size: var(--font-size-xs, 12px);
+  font-weight: var(--font-weight-semibold, 600);
   color: #fa8c16;
   flex-shrink: 0;
 }
 
-.item-detail {
-  padding: 0 10px 6px;
+.tl-card.travel .tl-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-tertiary, #888);
+}
+
+.tl-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+  margin-top: 4px;
   font-size: 11px;
-  color: #888;
-  white-space: nowrap;
+  color: var(--color-text-secondary, #666);
+}
+
+.tl-card.travel .tl-card-meta {
+  font-size: 10px;
+  color: var(--color-text-tertiary, #aaa);
+  margin-top: 2px;
+}
+
+.tl-card-detail {
+  margin-top: var(--space-2, 6px);
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-secondary, #666);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+  .tl-row {
+    grid-template-columns: 56px 20px 1fr;
+  }
+  .tl-time-start {
+    font-size: 12px;
+  }
 }
 </style>

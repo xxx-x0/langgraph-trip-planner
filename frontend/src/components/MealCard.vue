@@ -37,29 +37,31 @@ const getMealLabel = (type: string): string => {
 }
 </script>
 
-<style scoped>
+<style>
 .meal-card {
-  background: var(--color-bg-elevated);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  box-shadow: var(--shadow-card);
-  border: 1px solid var(--color-border-light);
-  transition: all var(--transition-normal);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: rgba(0, 0, 0, 0.02) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 6px, rgba(102, 126, 234, 0.06) 0px 4px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
 }
 
 .meal-card:hover {
-  box-shadow: var(--shadow-card-hover);
+  box-shadow: rgba(0, 0, 0, 0.02) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 4px 12px, rgba(102, 126, 234, 0.1) 0px 8px 24px;
   transform: translateY(-2px);
 }
 
 .meal-card.source-nearby {
-  border-left: 3px solid var(--color-meal-nearby);
+  border-left: 3px solid #67c23a;
 }
 
 .meal-card.source-popular {
-  border-left: 3px solid var(--color-meal-popular);
+  border-left: 3px solid #f56c6c;
 }
+</style>
 
+<style scoped>
 .meal-header {
   display: flex;
   align-items: center;
@@ -71,39 +73,39 @@ const getMealLabel = (type: string): string => {
 .meal-type-badge {
   display: inline-block;
   padding: 2px var(--space-2);
-  border-radius: var(--radius-pill);
+  border-radius: 9999px;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  color: var(--color-text-inverse);
-  background: var(--color-gradient);
+  color: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .meal-cuisine-tag {
   display: inline-block;
   padding: 2px var(--space-2);
-  border-radius: var(--radius-pill);
+  border-radius: 9999px;
   font-size: var(--font-size-xs);
-  color: var(--color-warning);
-  background: var(--color-warning-bg);
+  color: #faad14;
+  background: #fffbe6;
   border: 1px solid rgba(250, 173, 20, 0.2);
 }
 
 .source-badge {
   display: inline-block;
   padding: 1px var(--space-2);
-  border-radius: var(--radius-pill);
+  border-radius: 9999px;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
 }
 
 .source-badge.nearby {
-  color: var(--color-meal-nearby);
-  background: var(--color-success-bg);
+  color: #67c23a;
+  background: #f6ffed;
 }
 
 .source-badge.popular {
-  color: var(--color-meal-popular);
-  background: var(--color-error-bg);
+  color: #f56c6c;
+  background: #fff2f0;
 }
 
 .meal-name {
@@ -133,7 +135,7 @@ const getMealLabel = (type: string): string => {
 }
 
 .detail-item.price {
-  color: var(--color-warning);
+  color: #faad14;
   font-weight: var(--font-weight-medium);
 }
 
@@ -149,6 +151,6 @@ const getMealLabel = (type: string): string => {
 .meal-desc {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
-  line-height: var(--line-height-relaxed);
+  line-height: 1.7;
 }
 </style>

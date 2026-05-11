@@ -4,31 +4,34 @@
       <span class="progress-icon animate-spin">✨</span>
       <span>AI 正在为您规划行程...</span>
     </div>
+
     <div class="progress-steps">
-      <div
-        v-for="(step, index) in steps"
-        :key="step.key"
-        class="progress-step"
-        :class="{
-          completed: isCompleted(step.key),
-          active: isActive(step.key),
-          pending: isPending(step.key),
-        }"
-      >
-        <div class="step-indicator">
-          <span v-if="isCompleted(step.key)" class="step-check">✓</span>
-          <span v-else-if="isActive(step.key)" class="step-pulse"></span>
-          <span v-else class="step-dot"></span>
+      <template v-for="(step, index) in steps" :key="step.key">
+        <div
+          class="progress-step"
+          :class="{
+            completed: isCompleted(step.key),
+            active: isActive(step.key),
+            pending: isPending(step.key),
+          }"
+        >
+          <div class="step-indicator">
+            <span v-if="isCompleted(step.key)" class="step-check">✓</span>
+            <span v-else-if="isActive(step.key)" class="step-pulse"></span>
+            <span v-else class="step-dot"></span>
+          </div>
+          <div v-if="index < steps.length - 1" class="step-line" :class="{ filled: isCompleted(step.key) }"></div>
+          <div class="step-content">
+            <span class="step-label">{{ step.label }}</span>
+            <span v-if="isActive(step.key)" class="step-status">进行中...</span>
+            <span v-else-if="isCompleted(step.key)" class="step-status done">已完成</span>
+          </div>
         </div>
-        <div v-if="index < steps.length - 1" class="step-line" :class="{ filled: isCompleted(step.key) }"></div>
-        <div class="step-content">
-          <span class="step-label">{{ step.label }}</span>
-          <span v-if="isActive(step.key)" class="step-status">进行中...</span>
-          <span v-else-if="isCompleted(step.key)" class="step-status done">已完成</span>
-        </div>
-      </div>
+      </template>
     </div>
+
     <div v-if="currentMessage" class="progress-message">
+      <span class="message-dot"></span>
       {{ currentMessage }}
     </div>
   </div>
@@ -37,47 +40,73 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   currentNode: string
   currentMessage?: string
-}>()
+  completedNodes?: Set<string>
+  steps?: Array<{ key: string; label: string }>
+  nodeMapping?: Record<string, string>
+}>(), {
+  steps: () => [
+    { key: 'web_search_attractions', label: '🔍 搜索景点攻略' },
+    { key: 'search_hotel', label: '🏨 搜索酒店' },
+    { key: 'search_weather', label: '🌤️ 查询天气' },
+    { key: 'gather_search', label: '🔗 汇总搜索结果' },
+    { key: 'cluster_attractions', label: '📊 景点聚类分析' },
+    { key: 'search_food', label: '🍜 搜索美食' },
+    { key: 'plan_route', label: '🗺️ 规划路线' },
+    { key: 'macro_planner', label: '🏗️ 编排行程骨架' },
+    { key: 'day_plan_subgraph', label: '📝 生成每日行程' },
+    { key: 'reduce_assemble', label: '🔧 合并行程数据' },
+    { key: 'global_synthesizer', label: '💡 生成全局建议' },
+  ],
+  nodeMapping: () => ({
+    extract_attractions: 'web_search_attractions',
+    geocode_attractions: 'web_search_attractions',
+  }),
+})
 
-const steps = [
-  { key: 'search_attraction', label: '搜索景点' },
-  { key: 'search_hotel', label: '搜索酒店' },
-  { key: 'search_restaurant', label: '搜索餐厅' },
-  { key: 'search_weather', label: '查询天气' },
-  { key: 'generate_plan', label: '生成行程' },
-]
+const stepOrder = computed(() => props.steps.map((s) => s.key))
 
-const stepOrder = steps.map((s) => s.key)
+const nodeToStepKey = computed(() => props.nodeMapping)
 
-const currentIndex = computed(() => {
-  return stepOrder.indexOf(props.currentNode)
+const effectiveNode = computed(() => {
+  return nodeToStepKey.value[props.currentNode] || props.currentNode
 })
 
 const isCompleted = (key: string): boolean => {
-  const idx = stepOrder.indexOf(key)
-  return idx < currentIndex.value
+  if (props.completedNodes && props.completedNodes.size > 0) {
+    if (props.completedNodes.has(key)) return true
+    const mapped = Object.entries(nodeToStepKey.value)
+      .filter(([_, v]) => v === key)
+    if (mapped.some(([k]) => props.completedNodes!.has(k))) return true
+    return false
+  }
+  const idx = stepOrder.value.indexOf(effectiveNode.value)
+  if (idx <= 0) return false
+  return stepOrder.value.indexOf(key) < idx
 }
 
 const isActive = (key: string): boolean => {
-  return key === props.currentNode
+  if (key === effectiveNode.value) return true
+  const intermediates = Object.entries(nodeToStepKey.value)
+    .filter(([_, v]) => v === key)
+    .map(([k]) => k)
+  return intermediates.includes(props.currentNode)
 }
 
 const isPending = (key: string): boolean => {
-  const idx = stepOrder.indexOf(key)
-  return idx > currentIndex.value
+  return !isCompleted(key) && !isActive(key)
 }
 </script>
 
 <style scoped>
 .plan-progress {
-  background: var(--color-bg-elevated);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  box-shadow: var(--shadow-elevated);
-  border: 1px solid var(--color-border-light);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: rgba(0, 0, 0, 0.04) 0px 8px 24px, rgba(102, 126, 234, 0.08) 0px 16px 48px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
   max-width: 600px;
   margin: 0 auto;
 }
@@ -85,15 +114,15 @@ const isPending = (key: string): boolean => {
 .progress-title {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--space-6);
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 24px;
 }
 
 .progress-icon {
-  font-size: var(--font-size-2xl);
+  font-size: 20px;
 }
 
 .progress-steps {
@@ -105,7 +134,7 @@ const isPending = (key: string): boolean => {
 .progress-step {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-3);
+  gap: 12px;
   position: relative;
 }
 
@@ -126,19 +155,19 @@ const isPending = (key: string): boolean => {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-circle);
-  background: var(--color-success);
-  color: var(--color-text-inverse);
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-sm);
+  border-radius: 50%;
+  background: #52c41a;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
 }
 
 .step-pulse {
   display: block;
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-circle);
-  background: var(--color-primary);
+  border-radius: 50%;
+  background: #667eea;
   position: relative;
 }
 
@@ -146,8 +175,8 @@ const isPending = (key: string): boolean => {
   content: '';
   position: absolute;
   inset: -4px;
-  border-radius: var(--radius-circle);
-  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  border: 2px solid #667eea;
   animation: pulse 2s ease-in-out infinite;
 }
 
@@ -155,9 +184,9 @@ const isPending = (key: string): boolean => {
   display: block;
   width: 28px;
   height: 28px;
-  border-radius: var(--radius-circle);
-  background: var(--color-bg-tertiary);
-  border: 2px solid var(--color-border);
+  border-radius: 50%;
+  background: #eeeef5;
+  border: 2px solid rgba(0, 0, 0, 0.08);
 }
 
 .step-line {
@@ -166,12 +195,12 @@ const isPending = (key: string): boolean => {
   top: 28px;
   width: 2px;
   height: calc(100% - 12px);
-  background: var(--color-border);
+  background: rgba(0, 0, 0, 0.08);
   z-index: 0;
 }
 
 .step-line.filled {
-  background: var(--color-success);
+  background: #52c41a;
 }
 
 .progress-step:last-child .step-line {
@@ -179,48 +208,66 @@ const isPending = (key: string): boolean => {
 }
 
 .step-content {
-  padding: 4px 0 var(--space-4);
+  padding: 4px 0 16px;
   min-width: 0;
 }
 
 .step-label {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a2e;
 }
 
 .progress-step.pending .step-label {
-  color: var(--color-text-disabled);
+  color: #b8b8c8;
 }
 
 .step-status {
   display: block;
-  font-size: var(--font-size-xs);
-  color: var(--color-primary);
+  font-size: 11px;
+  color: #667eea;
   margin-top: 2px;
 }
 
 .step-status.done {
-  color: var(--color-success);
+  color: #52c41a;
 }
 
 .progress-message {
-  margin-top: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-primary-bg);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
-  line-height: var(--line-height-relaxed);
+  margin-top: 16px;
+  padding: 10px 16px;
+  background: #f0f3ff;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #667eea;
+  line-height: 1.6;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.message-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #667eea;
+  margin-top: 7px;
+  flex-shrink: 0;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 @media (max-width: 480px) {
   .plan-progress {
-    padding: var(--space-4);
+    padding: 16px;
   }
 
   .progress-title {
-    font-size: var(--font-size-lg);
+    font-size: 16px;
+  }
+
+  .step-label {
+    font-size: 13px;
   }
 }
 </style>

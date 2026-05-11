@@ -51,6 +51,10 @@
   --shadow-button: rgba(102, 126, 234, 0.2) 0px 4px 12px;
   --shadow-button-hover: rgba(102, 126, 234, 0.3) 0px 8px 20px;
   --shadow-float: rgba(0, 0, 0, 0.4) 0px 8px 30px;
+
+  --color-glass-bg: rgba(42, 42, 56, 0.7);
+  --color-glass-border: rgba(255, 255, 255, 0.06);
+  --blur-glass: 12px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -107,5 +111,9 @@
     --shadow-button: rgba(102, 126, 234, 0.2) 0px 4px 12px;
     --shadow-button-hover: rgba(102, 126, 234, 0.3) 0px 8px 20px;
     --shadow-float: rgba(0, 0, 0, 0.4) 0px 8px 30px;
+
+    --color-glass-bg: rgba(42, 42, 56, 0.7);
+    --color-glass-border: rgba(255, 255, 255, 0.06);
+    --blur-glass: 12px;
   }
 }

@@ -281,23 +281,13 @@
             <a-button
               type="primary"
               html-type="submit"
-              :loading="loading"
               size="large"
               block
               class="submit-button"
             >
-              <template v-if="!loading">
-                <span class="button-icon">🚀</span>
-                <span>开始规划我的旅行</span>
-              </template>
-              <template v-else>
-                <span>正在生成中...</span>
-              </template>
+              <span class="button-icon">🚀</span>
+              <span>开始探索景点</span>
             </a-button>
-          </a-form-item>
-
-          <a-form-item v-if="loading">
-            <PlanProgress :current-node="currentNode" :current-message="loadingStatus" />
           </a-form-item>
         </a-form>
       </a-card>
@@ -306,19 +296,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, onUnmounted } from 'vue'
+import { reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { generateTripPlanStream } from '@/services/api'
 import type { TripFormData } from '@/types'
 import type { Dayjs } from 'dayjs'
-import PlanProgress from '@/components/PlanProgress.vue'
 
 const router = useRouter()
-const loading = ref(false)
-const loadingStatus = ref('')
-const currentNode = ref('')
-const abortController = ref<AbortController | null>(null)
 
 const hotCities = [
   { name: '北京', emoji: '🏯' },
@@ -331,10 +315,22 @@ const hotCities = [
   { name: '丽江', emoji: '🏔️' },
 ]
 
-const formData = reactive<TripFormData & { start_date: Dayjs | null; end_date: Dayjs | null }>({
+const formData = reactive<{
+  city: string
+  start_date: Dayjs | undefined
+  end_date: Dayjs | undefined
+  travel_days: number
+  transportation: string
+  accommodation: string
+  food_preference: string
+  preferences: string[]
+  free_text_input: string
+  budget?: number
+  companions: { count: number; type: string }
+}>({
   city: '',
-  start_date: null,
-  end_date: null,
+  start_date: undefined,
+  end_date: undefined,
   travel_days: 1,
   transportation: '公共交通',
   accommodation: '经济型酒店',
@@ -356,90 +352,43 @@ watch([() => formData.start_date, () => formData.end_date], ([start, end]) => {
       formData.travel_days = days
     } else if (days > 30) {
       message.warning('旅行天数不能超过30天')
-      formData.end_date = null
+      formData.end_date = undefined
     } else {
       message.warning('结束日期不能早于开始日期')
-      formData.end_date = null
+      formData.end_date = undefined
     }
   }
 })
 
-const handleSubmit = async () => {
+const handleSubmit = () => {
   if (!formData.start_date || !formData.end_date) {
     message.error('请选择日期')
     return
   }
 
-  loading.value = true
-  loadingStatus.value = '正在初始化...'
-  currentNode.value = ''
-
-  abortController.value = new AbortController()
-
-  try {
-    const requestData: TripFormData = {
-      city: formData.city,
-      start_date: formData.start_date.format('YYYY-MM-DD'),
-      end_date: formData.end_date.format('YYYY-MM-DD'),
-      travel_days: formData.travel_days,
-      transportation: formData.transportation,
-      accommodation: formData.accommodation,
-      food_preference: formData.food_preference,
-      preferences: formData.preferences,
-      free_text_input: formData.free_text_input,
-      budget: formData.budget || undefined,
-      companions: formData.companions
-    }
-
-    await generateTripPlanStream(requestData, (event) => {
-      loadingStatus.value = event.message
-      if (event.current_node) {
-        currentNode.value = event.current_node
-      }
-
-      if (event.type === 'complete' && event.data) {
-        sessionStorage.setItem('tripPlan', JSON.stringify(event.data))
-        message.success('旅行计划生成成功!')
-        setTimeout(() => {
-          router.push('/result')
-        }, 500)
-      }
-
-      if (event.type === 'error') {
-        message.error(event.message)
-      }
-    }, {
-      signal: abortController.value.signal,
-      timeout: 180000
-    })
-  } catch (error: any) {
-    if (error.message === '请求已取消或超时') {
-      message.warning('请求已取消')
-    } else {
-      message.error(error.message || '生成旅行计划失败,请稍后重试')
-    }
-  } finally {
-    abortController.value = null
-    setTimeout(() => {
-      loading.value = false
-      loadingStatus.value = ''
-      currentNode.value = ''
-    }, 1000)
+  const requestData: TripFormData = {
+    city: formData.city,
+    start_date: formData.start_date.format('YYYY-MM-DD'),
+    end_date: formData.end_date.format('YYYY-MM-DD'),
+    travel_days: formData.travel_days,
+    transportation: formData.transportation,
+    accommodation: formData.accommodation,
+    food_preference: formData.food_preference,
+    preferences: formData.preferences,
+    free_text_input: formData.free_text_input,
+    budget: formData.budget || undefined,
+    companions: formData.companions,
   }
+
+  sessionStorage.setItem('tripFormData', JSON.stringify(requestData))
+  router.push('/discover')
 }
-
-onUnmounted(() => {
-  if (abortController.value) {
-    abortController.value.abort()
-    abortController.value = null
-  }
-})
 </script>
 
 <style scoped>
 .home-container {
   min-height: 100vh;
-  background: var(--color-bg-primary);
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
   transition: background var(--transition-normal);
 }
 
@@ -447,7 +396,6 @@ onUnmounted(() => {
   position: relative;
   padding: var(--space-16) var(--space-6) var(--space-10);
   overflow: hidden;
-  background: var(--color-bg-hero);
 }
 
 .hero-bg {
