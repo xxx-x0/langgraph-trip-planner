@@ -1,7 +1,7 @@
 """SQLAlchemy ORM 模型"""
 
 from datetime import datetime
-from sqlalchemy import String, Integer, Text, DateTime, Index
+from sqlalchemy import String, Integer, Float, Text, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from ..database import Base
 
@@ -31,4 +31,20 @@ class TripRecord(Base):
         Index("idx_trip_records_city", "city"),
         Index("idx_trip_records_status", "status"),
         Index("idx_trip_records_created_at", "created_at"),
+    )
+
+
+class UserPreferenceRecord(Base):
+    __tablename__ = "user_preferences"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    preference_data: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str] = mapped_column(String(20), default="inferred")
+    confidence: Mapped[float] = mapped_column(Float, default=0.5)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("idx_user_preferences_user_id", "user_id"),
     )

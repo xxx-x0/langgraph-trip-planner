@@ -2,6 +2,12 @@
 
 用于 LangGraph 工作流中的状态传递，使用 TypedDict 实现轻量级数据结构。
 与 schemas.py 中的 Pydantic 模型不同，这些模型用于中间处理而非 API 序列化。
+
+重构说明:
+- 所有列表字段添加 operator.add Reducer，消除并发写入竞态
+- 新增 poi_details 字段，避免 fetch_poi_details 覆写整个列表
+- 新增 quality_report 字段，支持条件路由
+- 移除 6 个冗余字符串字段，统一使用结构化数据 + 序列化辅助函数
 """
 
 from __future__ import annotations
@@ -14,8 +20,13 @@ import operator
 from .schemas import Location, TripRequest, TripPlan
 
 
+def _merge_poi_details(left: Dict[str, Dict[str, Any]], right: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    merged = dict(left)
+    merged.update(right)
+    return merged
+
+
 class POIInfo(TypedDict):
-    """POI信息 - 原始搜索数据"""
     id: str
     name: str
     address: str
@@ -25,7 +36,6 @@ class POIInfo(TypedDict):
 
 
 class WeatherData(TypedDict):
-    """天气数据 - 原始天气查询结果"""
     date: str
     day_weather: str
     night_weather: str
@@ -36,7 +46,6 @@ class WeatherData(TypedDict):
 
 
 class HotelData(TypedDict):
-    """酒店数据 - 原始搜索数据"""
     id: str
     name: str
     address: str
@@ -48,7 +57,6 @@ class HotelData(TypedDict):
 
 
 class FoodData(TypedDict):
-    """美食数据 - 原始搜索数据"""
     id: str
     name: str
     address: str
@@ -60,14 +68,12 @@ class FoodData(TypedDict):
 
 
 class ClusterGroup(TypedDict):
-    """聚类分组 - 景点聚类结果"""
     day_index: int
     attractions: List[Dict[str, Any]]
     center: Optional[Location]
 
 
 class RouteSegmentData(TypedDict):
-    """路线段数据 - 路线规划结果"""
     from_name: str
     to_name: str
     mode: str
@@ -77,27 +83,18 @@ class RouteSegmentData(TypedDict):
 
 
 class TripPlannerState(TypedDict):
-    """LangGraph 状态类：管理整个旅行规划流程中的数据流转"""
-    # 请求信息
     request: TripRequest
 
-    # 结构化搜索数据（替代原来的字符串）
-    attractions: List[POIInfo]
-    weather: List[WeatherData]
-    hotels: List[HotelData]
-    foods: List[FoodData]
-    clusters: List[ClusterGroup]
-    routes: List[RouteSegmentData]
+    attractions: Annotated[List[POIInfo], operator.add]
+    weather: Annotated[List[WeatherData], operator.add]
+    hotels: Annotated[List[HotelData], operator.add]
+    foods: Annotated[List[FoodData], operator.add]
+    clusters: Annotated[List[ClusterGroup], operator.add]
+    routes: Annotated[List[RouteSegmentData], operator.add]
 
-    # 保留原始字符串用于兼容和调试
-    attractions_info: str
-    weather_info: str
-    hotels_info: str
-    food_info: str
-    cluster_info: str
-    route_info: str
+    poi_details: Annotated[Dict[str, Dict[str, Any]], _merge_poi_details]
+    quality_report: Dict[str, Any]
 
-    # 最终结果
     trip_plan: Optional[TripPlan]
-    errors: List[str]
+    errors: Annotated[List[str], operator.add]
     messages: Annotated[List[BaseMessage], operator.add]

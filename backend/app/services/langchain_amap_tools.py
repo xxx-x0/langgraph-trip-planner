@@ -4,6 +4,12 @@
 使用 langchain-mcp-adapters 官方适配器替代 hello_agents.MCPTool，
 通过 SSE 传输连接高德官方 MCP 云服务（无需本地安装 uvx/Node.js），
 提供 LangChainAmapService 异步服务类，统一封装所有高德地图 MCP 工具调用。
+
+韧性增强:
+- SSE 断线自动重连机制
+- 单次工具调用超时控制
+- 连接异常自动重置客户端
+- 健康检查接口
 """
 
 import asyncio
@@ -21,12 +27,27 @@ _mcp_client: Optional[MultiServerMCPClient] = None
 _mcp_tools: Optional[List[BaseTool]] = None
 _mcp_async_lock: Optional[asyncio.Lock] = None
 
+_CONNECTION_ERROR_KEYWORDS = [
+    "connection", "connect", "timeout", "timed out",
+    "sse", "eof", "broken pipe", "reset", "refused",
+    "network", "unreachable", "host", "dns",
+]
+
 
 def _get_async_lock() -> asyncio.Lock:
     global _mcp_async_lock
     if _mcp_async_lock is None:
         _mcp_async_lock = asyncio.Lock()
     return _mcp_async_lock
+
+
+def _is_connection_error(e: Exception) -> bool:
+    if isinstance(e, (ConnectionError, ConnectionResetError, ConnectionAbortedError, OSError)):
+        return True
+    if isinstance(e, asyncio.TimeoutError):
+        return True
+    msg = str(e).lower()
+    return any(kw in msg for kw in _CONNECTION_ERROR_KEYWORDS)
 
 
 def _build_mcp_config() -> Dict[str, Any]:
@@ -41,6 +62,21 @@ def _build_mcp_config() -> Dict[str, Any]:
             "sse_read_timeout": 300
         }
     }
+
+
+async def _reset_mcp_client() -> None:
+    global _mcp_client, _mcp_tools
+    async_lock = _get_async_lock()
+    async with async_lock:
+        if _mcp_client is not None:
+            try:
+                if hasattr(_mcp_client, 'close'):
+                    await _mcp_client.close()
+            except Exception:
+                pass
+        _mcp_client = None
+        _mcp_tools = None
+        print("🔄 MCP 客户端已重置，将在下次调用时重新连接")
 
 
 async def _init_mcp_client() -> None:
@@ -97,18 +133,59 @@ class LangChainAmapService:
 
     使用 langchain-mcp-adapters 官方适配器，提供统一的异步服务接口。
     MCP 工具自动从服务器加载，无需手动定义 @tool 函数。
+
+    韧性增强:
+    - _call_tool 内置超时控制和断线重连
+    - health_check 方法用于探测连接状态
     """
 
     async def _ensure_initialized(self) -> None:
         await _init_mcp_client()
 
-    async def _call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
+    async def _call_tool(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+        timeout: float = 30.0,
+    ) -> Any:
         await self._ensure_initialized()
         tool = await get_mcp_tool_by_name(tool_name)
         if tool is None:
             raise ValueError(f"MCP 工具不存在: {tool_name}")
-        result = await tool.ainvoke(arguments)
-        return result
+
+        try:
+            result = await asyncio.wait_for(
+                tool.ainvoke(arguments), timeout=timeout
+            )
+            return result
+        except Exception as e:
+            if _is_connection_error(e):
+                print(f"🔄 MCP 连接异常 [{tool_name}]: {str(e)[:150]}")
+                print("   尝试重置客户端并重新连接...")
+                await _reset_mcp_client()
+                try:
+                    await self._ensure_initialized()
+                    tool = await get_mcp_tool_by_name(tool_name)
+                    if tool is None:
+                        raise ValueError(
+                            f"重连后 MCP 工具仍不存在: {tool_name}"
+                        )
+                    result = await asyncio.wait_for(
+                        tool.ainvoke(arguments), timeout=timeout
+                    )
+                    print(f"✅ MCP 重连后工具调用成功 [{tool_name}]")
+                    return result
+                except Exception as reconnect_err:
+                    print(f"❌ MCP 重连后调用仍失败 [{tool_name}]: {str(reconnect_err)[:150]}")
+                    raise
+            raise
+
+    async def health_check(self) -> bool:
+        try:
+            await self._ensure_initialized()
+            return _mcp_tools is not None and len(_mcp_tools) > 0
+        except Exception:
+            return False
 
     async def search_poi(self, keywords: str, city: str) -> Any:
         result = await self._call_tool("maps_text_search", {
@@ -147,7 +224,8 @@ class LangChainAmapService:
         tool_name_map = {
             "walking": "maps_direction_walking",
             "driving": "maps_direction_driving",
-            "transit": "maps_direction_transit_integrated"
+            "transit": "maps_direction_transit_integrated",
+            "bicycling": "maps_direction_bicycling",
         }
         tool_name = tool_name_map.get(route_type)
         if not tool_name:
@@ -181,6 +259,23 @@ class LangChainAmapService:
 
     async def get_poi_detail(self, poi_id: str) -> Any:
         result = await self._call_tool("maps_search_detail", {"id": poi_id})
+        return _parse_result(result)
+
+    async def measure_distance(
+        self,
+        origins: str,
+        destination: str,
+        distance_type: str = "3"
+    ) -> Any:
+        result = await self._call_tool("maps_distance", {
+            "origins": origins,
+            "destination": destination,
+            "type": distance_type
+        })
+        return _parse_result(result)
+
+    async def regeocode(self, location: str) -> Any:
+        result = await self._call_tool("maps_regeocode", {"location": location})
         return _parse_result(result)
 
     async def get_tools(self) -> List[BaseTool]:

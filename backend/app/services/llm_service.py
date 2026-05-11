@@ -39,7 +39,10 @@ def get_llm() -> BaseChatModel:
             model=model_name,
             api_key=api_key,
             base_url=base_url,
-            temperature=0.2
+            temperature=0.2,
+            request_timeout=120,
+            max_retries=2,
+            max_tokens=8192,
         )
 
         print(f"✅ LangChain LLM服务初始化成功")
@@ -47,6 +50,36 @@ def get_llm() -> BaseChatModel:
         print(f"   模型名称: {model_name}")
 
     return _llm_instance
+
+_STRUCTURED_OUTPUT_UNSUPPORTED_PATTERNS = [
+    "deepseek",
+    "qwen",
+    "doubao",
+    "yi",
+    "zhipu",
+    "glm",
+    "moonshot",
+    "minimax",
+    "baichuan",
+]
+
+
+def is_structured_output_supported() -> bool:
+    global _llm_instance
+    if _llm_instance is None:
+        get_llm()
+    model_name = (_llm_instance.model_name or "").lower()
+    base_url = ""
+    if hasattr(_llm_instance, 'openai_api_base') and _llm_instance.openai_api_base:
+        base_url = _llm_instance.openai_api_base.lower()
+    elif hasattr(_llm_instance, 'base_url') and _llm_instance.base_url:
+        base_url = str(_llm_instance.base_url).lower()
+    combined = model_name + " " + base_url
+    for pattern in _STRUCTURED_OUTPUT_UNSUPPORTED_PATTERNS:
+        if pattern in combined:
+            return False
+    return True
+
 
 def reset_llm():
     """重置LLM实例(用于测试或重新配置)"""

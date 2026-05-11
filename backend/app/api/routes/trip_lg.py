@@ -1,24 +1,51 @@
 """旅行规划API路由 (LangGraph版本)
 
 重构说明:
-- 原始路由(trip.py)使用 trip_planner_agent (旧HelloAgents框架Agent)
-- 本路由使用 langgraph_agent (LangGraph工作流Agent)
+- 使用 langgraph_agent (LangGraph工作流Agent)
 - LangGraph Agent通过并行节点搜索景点/天气/酒店，再规划路线，最后生成计划
 - 所有服务调用均为异步
-- 新增 SSE 流式端点 /plan/stream，实时推送节点执行进度
+- SSE 流式端点 /plan/stream，实时推送节点执行进度
+- 景点发现端点 /discover/stream，流式返回景点供用户选择
+- 基于选择的规划端点 /plan/from-selections/stream
+- 偏好管理端点 /preferences，支持跨会话偏好记忆
+
+韧性增强:
+- 结构化错误响应（区分 MCP/LLM/解析错误）
+- 降级方案标记（is_fallback + warnings）
+- SSE 心跳保活
+- 健康检查含 MCP 连接状态
 """
 
 import json
+import asyncio
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from ...models.schemas import (
     TripRequest,
     TripPlanResponse,
-    ErrorResponse
+    ErrorResponse,
+    UserPreferenceResponse,
+    UserPreference,
+    ManualSearchRequest,
+    PlanFromSelectionsRequest,
 )
-from ...agents.langgraph_agent import get_trip_planner_agent
+from ...agents.langgraph_agent import get_trip_planner_agent, NonRetryableError
+from ...services.langchain_amap_tools import get_langchain_amap_service
+from ...services.preferences_service import load_preferences, save_preferences, delete_preferences
 
 router = APIRouter(prefix="/trip", tags=["旅行规划"])
+
+
+def _classify_http_error(e: Exception) -> int:
+    if isinstance(e, NonRetryableError):
+        msg = str(e).lower()
+        if "authentication" in msg or "api key" in msg or "401" in msg or "403" in msg:
+            return 401
+        if "400" in msg or "参数" in msg:
+            return 400
+        if "404" in msg or "not found" in msg:
+            return 404
+    return 500
 
 
 @router.post(
@@ -48,12 +75,28 @@ async def plan_trip(request: TripRequest):
 
         print("✅ LangGraph旅行计划生成成功，准备返回响应\n")
 
+        is_fallback = trip_plan is not None and "数据来源受限" in (
+            trip_plan.overall_suggestions or ""
+        )
+        warnings = []
+        if is_fallback:
+            warnings.append("部分数据获取受限，已使用降级方案生成计划")
+
         return TripPlanResponse(
             success=True,
             message="旅行计划生成成功",
-            data=trip_plan
+            data=trip_plan,
+            is_fallback=is_fallback,
+            warnings=warnings,
         )
 
+    except NonRetryableError as e:
+        status_code = _classify_http_error(e)
+        print(f"❌ 生成旅行计划失败(不可重试): {str(e)}")
+        raise HTTPException(
+            status_code=status_code,
+            detail=f"生成旅行计划失败: {str(e)}"
+        )
     except Exception as e:
         print(f"❌ 生成旅行计划失败: {str(e)}")
         import traceback
@@ -84,8 +127,170 @@ async def plan_trip_stream(request: TripRequest):
             }, ensure_ascii=False)
             yield f"data: {error_event}\n\n"
 
+    async def heartbeat_wrapper():
+        async def inner():
+            async for chunk in event_generator():
+                yield chunk
+        async for chunk in inner():
+            yield chunk
+        while True:
+            await asyncio.sleep(15)
+            yield ": heartbeat\n\n"
+
     return StreamingResponse(
-        event_generator(),
+        heartbeat_wrapper(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+@router.post(
+    "/discover/stream",
+    summary="流式景点发现",
+    description="搜索并流式返回大量景点供用户选择，同时返回天气和酒店信息"
+)
+async def discover_attractions_stream(request: TripRequest):
+    async def event_generator():
+        agent = get_trip_planner_agent()
+        try:
+            async for event in agent.discover_attractions_stream(request):
+                data = json.dumps(event, ensure_ascii=False, default=str)
+                yield f"data: {data}\n\n"
+        except Exception as e:
+            error_event = json.dumps({
+                "type": "error",
+                "message": f"景点发现失败: {str(e)}",
+                "progress": 0
+            }, ensure_ascii=False)
+            yield f"data: {error_event}\n\n"
+
+    async def heartbeat_wrapper():
+        async for chunk in event_generator():
+            yield chunk
+        while True:
+            await asyncio.sleep(15)
+            yield ": heartbeat\n\n"
+
+    return StreamingResponse(
+        heartbeat_wrapper(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+@router.post(
+    "/discover/search",
+    summary="手动搜索景点",
+    description="在目标城市范围内搜索景点，用于用户手动添加"
+)
+async def search_attraction_manual(req: ManualSearchRequest):
+    try:
+        from ...agents.langgraph_agent.utils.parsing import _extract_poi_names
+        service = get_langchain_amap_service()
+        search_tool = await service.get_tool("maps_text_search")
+        if not search_tool:
+            raise HTTPException(status_code=503, detail="高德搜索服务不可用")
+
+        from ...agents.langgraph_agent.exceptions import _invoke_tool_with_retry
+        search_result = await _invoke_tool_with_retry(
+            search_tool,
+            {"keywords": req.keywords, "city": req.city},
+            max_retries=2,
+            per_attempt_timeout=15.0,
+        )
+        result_str = str(search_result)
+        poi_list = _extract_poi_names(result_str)
+
+        attractions = []
+        for poi in poi_list[:10]:
+            attr = {
+                "name": poi.get("name", ""),
+                "description": poi.get("type", ""),
+                "address": poi.get("address", ""),
+                "category": "景点",
+                "rating": None,
+                "ticket_price": None,
+                "image_url": None,
+                "location": None,
+                "poi_id": poi.get("id"),
+            }
+            if poi.get("location"):
+                loc = poi["location"]
+                if isinstance(loc, str) and "," in loc:
+                    lng, lat = loc.split(",")
+                    try:
+                        attr["location"] = {"longitude": float(lng), "latitude": float(lat)}
+                    except ValueError:
+                        pass
+                elif isinstance(loc, dict):
+                    attr["location"] = loc
+            if poi.get("rating"):
+                try:
+                    attr["rating"] = float(poi["rating"])
+                except (ValueError, TypeError):
+                    pass
+            if poi.get("cost"):
+                attr["ticket_price"] = str(poi["cost"])
+            if poi.get("photo"):
+                attr["image_url"] = poi["photo"]
+            attractions.append(attr)
+
+        return {"success": True, "data": attractions}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ 手动搜索景点失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"搜索失败: {str(e)}")
+
+
+@router.post(
+    "/plan/from-selections/stream",
+    summary="基于用户选择的景点流式规划",
+    description="接收用户选中的景点和可选的日程分配，流式生成完整行程计划"
+)
+async def plan_from_selections_stream(req: PlanFromSelectionsRequest):
+    async def event_generator():
+        agent = get_trip_planner_agent()
+        try:
+            selected = [a.model_dump() for a in req.selected_attractions]
+            day_assign = None
+            if req.day_assignments:
+                day_assign = [[a.model_dump() for a in day] for day in req.day_assignments]
+
+            async for event in agent.plan_from_selections_stream(
+                request=req.request,
+                selected_attractions=selected,
+                day_assignments=day_assign,
+                weather_info=req.weather_info,
+                user_id=req.user_id,
+            ):
+                data = json.dumps(event, ensure_ascii=False, default=str)
+                yield f"data: {data}\n\n"
+        except Exception as e:
+            error_event = json.dumps({
+                "type": "error",
+                "message": f"规划失败: {str(e)}",
+                "progress": 0
+            }, ensure_ascii=False)
+            yield f"data: {error_event}\n\n"
+
+    async def heartbeat_wrapper():
+        async for chunk in event_generator():
+            yield chunk
+        while True:
+            await asyncio.sleep(15)
+            yield ": heartbeat\n\n"
+
+    return StreamingResponse(
+        heartbeat_wrapper(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -96,6 +301,75 @@ async def plan_trip_stream(request: TripRequest):
 
 
 @router.get(
+    "/preferences/{user_id}",
+    response_model=UserPreferenceResponse,
+    summary="获取用户偏好",
+    description="获取指定用户的旅行偏好数据"
+)
+async def get_user_preferences(user_id: str):
+    try:
+        preferences = await load_preferences(user_id)
+        if not preferences:
+            return UserPreferenceResponse(
+                success=True,
+                message="暂无偏好数据",
+                data=None,
+            )
+        return UserPreferenceResponse(
+            success=True,
+            message="偏好数据获取成功",
+            data=preferences,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"获取偏好失败: {str(e)}"
+        )
+
+
+@router.put(
+    "/preferences/{user_id}",
+    response_model=UserPreferenceResponse,
+    summary="更新用户偏好",
+    description="更新指定用户的旅行偏好数据"
+)
+async def update_user_preferences(user_id: str, preferences: UserPreference):
+    try:
+        preferences.user_id = user_id
+        await save_preferences(user_id, preferences, source="explicit", confidence=1.0)
+        return UserPreferenceResponse(
+            success=True,
+            message="偏好更新成功",
+            data=preferences,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"更新偏好失败: {str(e)}"
+        )
+
+
+@router.delete(
+    "/preferences/{user_id}",
+    summary="删除用户偏好",
+    description="删除指定用户的旅行偏好数据"
+)
+async def delete_user_preferences(user_id: str):
+    try:
+        deleted = await delete_preferences(user_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="偏好数据不存在")
+        return {"success": True, "message": "偏好删除成功"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"删除偏好失败: {str(e)}"
+        )
+
+
+@router.get(
     "/health",
     summary="健康检查",
     description="检查LangGraph旅行规划服务是否正常"
@@ -103,22 +377,34 @@ async def plan_trip_stream(request: TripRequest):
 async def health_check():
     try:
         agent = get_trip_planner_agent()
+        mcp_service = get_langchain_amap_service()
+        mcp_healthy = await mcp_service.health_check()
 
         return {
-            "status": "healthy",
+            "status": "healthy" if mcp_healthy else "degraded",
             "service": "trip-planner-langgraph",
             "agent_type": "LangGraphTripPlanner",
             "mcp_adapter": "langchain-mcp-adapters",
+            "mcp_connected": mcp_healthy,
             "graph_nodes": [
-                "search_poi",
+                "web_search_attractions",
                 "search_weather",
                 "search_hotel",
                 "gather_search",
                 "cluster_attractions",
                 "search_food",
                 "plan_route",
-                "generate_plan"
-            ]
+                "macro_planner",
+                "day_plan_subgraph",
+                "reduce_assemble",
+                "global_synthesizer",
+                "extract_preferences",
+                "save_preferences",
+            ],
+            "features": {
+                "discovery_flow": True,
+                "preference_memory": True,
+            }
         }
     except Exception as e:
         raise HTTPException(

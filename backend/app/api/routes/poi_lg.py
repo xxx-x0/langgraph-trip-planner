@@ -72,11 +72,15 @@ async def search_poi(
     summary="获取景点图片",
     description="根据景点名称从Unsplash获取图片"
 )
-async def get_attraction_photo(name: str = Query(..., description="景点名称")):
+async def get_attraction_photo(
+    name: str = Query(..., description="景点名称"),
+    city: str = Query(default="", description="所在城市"),
+):
     try:
         unsplash_service = get_unsplash_service()
 
-        photo_url = unsplash_service.get_photo_url(f"{name} China landmark")
+        query = f"{name} {city} scenic" if city else f"{name} China landmark"
+        photo_url = unsplash_service.get_photo_url(query)
 
         if not photo_url:
             photo_url = unsplash_service.get_photo_url(name)

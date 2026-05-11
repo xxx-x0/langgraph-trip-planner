@@ -27,6 +27,25 @@ class TripRequest(BaseModel):
     budget: Optional[int] = Field(default=None, description="总预算上限(元)，为空表示不限预算", example=5000)
     companions: Optional[CompanionInfo] = Field(default=None, description="出行同伴信息")
 
+    @field_validator("travel_days", mode="before")
+    @classmethod
+    def validate_travel_days(cls, v, info):
+        values = info.data
+        start = values.get("start_date")
+        end = values.get("end_date")
+        if start and end:
+            from datetime import datetime
+            try:
+                start_dt = datetime.strptime(start, "%Y-%m-%d")
+                end_dt = datetime.strptime(end, "%Y-%m-%d")
+                expected_days = (end_dt - start_dt).days + 1
+                if v != expected_days:
+                    print(f"⚠️ travel_days校验: 传入{v}天，根据日期范围计算应为{expected_days}天，已自动修正")
+                    return expected_days
+            except Exception:
+                pass
+        return v
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -116,6 +135,17 @@ class Hotel(BaseModel):
     distance: str = Field(default="", description="距离景点距离")
     type: str = Field(default="", description="酒店类型")
     estimated_cost: int = Field(default=0, description="预估费用(元/晚)")
+    # === AIGoHotel 新增字段 ===
+    star_rating: Optional[float] = Field(default=None, description="星级(0-5)")
+    price: Optional[float] = Field(default=None, description="实际价格")
+    original_price: Optional[float] = Field(default=None, description="原价")
+    currency: str = Field(default="CNY", description="币种")
+    hotel_amenities: List[str] = Field(default_factory=list, description="酒店设施列表")
+    room_amenities: List[str] = Field(default_factory=list, description="房间设施列表")
+    description: str = Field(default="", description="酒店详细描述")
+    image_url: Optional[str] = Field(default=None, description="酒店主图URL")
+    detail_url: Optional[str] = Field(default=None, description="酒店详情页链接")
+    distance_in_meters: Optional[int] = Field(default=None, description="距中心点距离(米)")
 
 
 class RouteSegment(BaseModel):
@@ -176,6 +206,21 @@ class Budget(BaseModel):
     is_within_budget: Optional[bool] = Field(default=None, description="是否在预算范围内")
 
 
+class DaySkeleton(BaseModel):
+    day_index: int = Field(..., description="第几天(从0开始)")
+    date: str = Field(..., description="日期 YYYY-MM-DD")
+    attraction_names: List[str] = Field(..., description="当日核心景点名称列表")
+    hotel_name: str = Field(default="", description="入住酒店标识")
+
+
+class MacroPlan(BaseModel):
+    city: str = Field(..., description="城市")
+    total_days: int = Field(..., description="总天数")
+    days: List[DaySkeleton] = Field(..., description="每日骨架列表")
+    transportation: str = Field(default="公共交通", description="交通方式")
+    accommodation: str = Field(default="经济型酒店", description="住宿偏好")
+
+
 class TripPlan(BaseModel):
     """旅行计划"""
     city: str = Field(..., description="目的地城市")
@@ -186,6 +231,8 @@ class TripPlan(BaseModel):
     overall_suggestions: str = Field(..., description="总体建议")
     budget: Optional[Budget] = Field(default=None, description="预算信息")
     companions: Optional[CompanionInfo] = Field(default=None, description="出行同伴信息")
+    trip_tagline: str = Field(default="", description="行程标语")
+    weather_summary: str = Field(default="", description="天气一句话摘要")
 
 
 class TripPlanResponse(BaseModel):
@@ -193,6 +240,9 @@ class TripPlanResponse(BaseModel):
     success: bool = Field(..., description="是否成功")
     message: str = Field(default="", description="消息")
     data: Optional[TripPlan] = Field(default=None, description="旅行计划数据")
+    warnings: List[str] = Field(default=[], description="降级警告信息")
+    is_fallback: bool = Field(default=False, description="是否为降级方案")
+    errors: List[str] = Field(default=[], description="错误详情列表")
 
 
 class POIInfo(BaseModel):
@@ -251,6 +301,58 @@ class WeatherResponse(BaseModel):
     success: bool = Field(..., description="是否成功")
     message: str = Field(default="", description="消息")
     data: List[WeatherInfo] = Field(default=[], description="天气信息")
+
+
+class DiscoveredAttraction(BaseModel):
+    """景点发现结果 — 用于发现阶段展示给用户选择"""
+    name: str = Field(..., description="景点名称")
+    description: str = Field(default="", description="景点简介")
+    address: str = Field(default="", description="地址")
+    category: str = Field(default="景点", description="类别: 自然风光/历史文化/购物/美食/亲子等")
+    rating: Optional[float] = Field(default=None, description="评分")
+    ticket_price: Optional[str] = Field(default=None, description="门票价格描述")
+    image_url: Optional[str] = Field(default=None, description="图片URL")
+    location: Optional[Location] = Field(default=None, description="经纬度坐标")
+    poi_id: Optional[str] = Field(default=None, description="高德POI ID")
+
+
+class ManualSearchRequest(BaseModel):
+    """手动搜索景点请求"""
+    keywords: str = Field(..., description="搜索关键词")
+    city: str = Field(..., description="城市名称")
+
+
+class PlanFromSelectionsRequest(BaseModel):
+    """基于用户选择的景点进行规划的请求"""
+    request: TripRequest = Field(..., description="旅行基本请求")
+    selected_attractions: List[DiscoveredAttraction] = Field(..., description="用户选中的景点列表")
+    day_assignments: Optional[List[List[DiscoveredAttraction]]] = Field(default=None, description="用户自定义的日程分配")
+    weather_info: str = Field(default="", description="发现阶段获取的天气信息")
+    user_id: str = Field(default="default", description="用户标识")
+
+
+class UserPreference(BaseModel):
+    """用户偏好模型"""
+    user_id: str = Field(default="default", description="用户标识")
+    preferred_hotel_types: List[str] = Field(default_factory=list, description="偏好酒店类型")
+    preferred_cuisines: List[str] = Field(default_factory=list, description="偏好菜系")
+    preferred_transportation: List[str] = Field(default_factory=list, description="偏好交通方式")
+    budget_range: Optional[List[int]] = Field(default=None, description="预算范围[min,max]")
+    preferred_attraction_categories: List[str] = Field(default_factory=list, description="偏好景点类型")
+    preferred_visit_duration: int = Field(default=120, description="平均游览时长(分钟)")
+    preferred_attractions_per_day: int = Field(default=3, description="每天偏好景点数")
+    preferred_meal_price_range: List[int] = Field(default_factory=lambda: [50, 100], description="人均餐饮消费范围[min,max]")
+    preferred_hotel_price_range: List[int] = Field(default_factory=lambda: [200, 500], description="酒店价格区间[min,max]")
+    total_trips: int = Field(default=0, description="历史出行次数")
+    cities_visited: List[str] = Field(default_factory=list, description="去过的城市")
+    last_updated: str = Field(default="", description="最后更新时间")
+
+
+class UserPreferenceResponse(BaseModel):
+    """用户偏好响应"""
+    success: bool = Field(default=True, description="是否成功")
+    message: str = Field(default="", description="消息")
+    data: Optional[UserPreference] = Field(default=None, description="偏好数据")
 
 
 # ============ 错误响应 ============
