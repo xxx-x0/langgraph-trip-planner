@@ -39,7 +39,13 @@ const router = createRouter({
       name: 'trip-detail',
       component: Result,
       props: true
-    }
+    },
+    {
+      path: '/draft/:id',
+      name: 'Draft',
+      component: () => import('@/views/DraftView.vue'),
+      props: true,
+    },
   ]
 })
 
