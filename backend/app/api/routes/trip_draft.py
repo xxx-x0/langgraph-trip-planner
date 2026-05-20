@@ -199,3 +199,46 @@ async def assemble_day(
     )
     await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
+
+
+@router.post("/{draft_id}/day/{day_index}/recompute", response_model=DayDetailResponse,
+             summary="重算某天：规则装配 + amap 路线（无 LLM）")
+async def recompute_day(draft_id: str, day_index: int, edit: DayEditRequest):
+    record = await trip_draft_service.get_draft(draft_id)
+    _ensure_editable(record)
+    ctx = _get_day_context_from_record(record, day_index)
+
+    # 取当前 day_detail 作为"保留意图"的源
+    existing_days = json.loads(record.days_detail_json)
+    current = (DayDetail.model_validate(existing_days[day_index])
+               if existing_days[day_index] else None)
+
+    # 合并 overrides：未传字段沿用当前 day_detail
+    final_order = edit.attractions_order
+    if final_order is None and current:
+        final_order = [a.name for a in current.attractions]
+    final_meals = edit.meals
+    if final_meals is None and current:
+        final_meals = [m.model_dump(mode="json") for m in current.meals]
+        # 默认把每个 meal 锚回中点景点之后，避免位置漂移
+        if final_meals and final_order:
+            mid = max(len(final_order) // 2 - 1, 0)
+            for m in final_meals:
+                m.setdefault("insert_after", final_order[mid] if final_order else "")
+
+    overrides_dict = {}
+    if final_order is not None:
+        overrides_dict["attractions_order"] = final_order
+    if final_meals is not None:
+        overrides_dict["meals"] = final_meals
+
+    request = TripRequest.model_validate_json(record.request_json)
+    detail = rule_assemble_day_timeline(ctx, overrides=overrides_dict or None)
+    detail.route_segments = await compute_day_route(
+        detail, request.city, request.transportation
+    )
+    detail.day_budget = compute_day_budget(detail)
+    # 保留当前 description（recompute 不写 LLM）
+    detail.description = current.description if current else ""
+    await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
+    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
