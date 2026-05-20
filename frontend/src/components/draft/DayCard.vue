@@ -58,6 +58,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
+import { marked } from 'marked'
 import AddDiningPopover from './AddDiningPopover.vue'
 
 interface Props {
@@ -85,7 +86,9 @@ function onExpand() {
 }
 
 function onAIRearrange() {
-  emit('ai-rearrange', '')
+  const hint = window.prompt('AI 重排提示（可选，比如"我想吃辣的"）：', '')
+  if (hint === null) return
+  emit('ai-rearrange', hint || '')
 }
 
 const orderedAttractions = ref<any[]>([])
@@ -131,8 +134,7 @@ function onRemoveMeal(meal: any) {
 }
 
 const renderedDescription = computed(() => {
-  // 简易 markdown 渲染（T21 升级为 marked）
-  return (props.detail?.description || '').replace(/\n/g, '<br>')
+  return marked.parse(props.detail?.description || '') as string
 })
 </script>
 
