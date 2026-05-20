@@ -255,3 +255,51 @@ async def test_ai_rearrange_replaces_day_detail(client):
     assert resp.status_code == 200
     body = resp.json()
     assert "AI 推荐" in [m["name"] for m in body["day_detail"]["meals"]]
+
+
+@pytest.mark.asyncio
+async def test_finalize_sse_returns_trip_id(client):
+    draft_id = await _seed_draft()
+
+    fake_trip_record = type("Rec", (), {"id": 555})()
+    from app.models.schemas import TripPlan, Budget
+    fake_trip_plan = TripPlan(
+        city="北京", start_date="2026-06-01", end_date="2026-06-02",
+        days=[], weather_info=[], overall_suggestions="",
+        budget=Budget(),
+    )
+
+    with patch(
+        "app.api.routes.trip_draft.finalize_draft",
+        new=AsyncMock(return_value=(fake_trip_plan, 555)),
+    ):
+        async with client.stream(
+            "POST", f"/api/trip/draft/{draft_id}/finalize"
+        ) as resp:
+            chunks = [c async for c in resp.aiter_text()]
+            body = "".join(chunks)
+
+    assert "data: " in body
+    events = [
+        json.loads(line.removeprefix("data: ").strip())
+        for line in body.splitlines() if line.startswith("data: ")
+    ]
+    types = [e["type"] for e in events]
+    assert "complete" in types
+    complete_evt = next(e for e in events if e["type"] == "complete")
+    assert complete_evt["trip_id"] == 555
+
+
+@pytest.mark.asyncio
+async def test_finalize_already_finalized_returns_409(client):
+    draft_id = await _seed_draft()
+    await trip_draft_service.mark_finalized(draft_id, trip_id=1)
+    async with client.stream(
+        "POST", f"/api/trip/draft/{draft_id}/finalize"
+    ) as resp:
+        body = "".join([c async for c in resp.aiter_text()])
+    events = [
+        json.loads(line.removeprefix("data: ").strip())
+        for line in body.splitlines() if line.startswith("data: ")
+    ]
+    assert any(e["type"] == "error" for e in events)

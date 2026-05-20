@@ -15,6 +15,7 @@ from ...agents.langgraph_agent.assemble.route import compute_day_route
 from ...agents.langgraph_agent.assemble.budget import compute_day_budget
 from ...agents.langgraph_agent.assemble.narrative import write_day_narrative_llm
 from ...agents.langgraph_agent.exceptions import _invoke_llm_with_retry
+from ...agents.langgraph_agent.finalize.pipeline import finalize_draft
 from ...services import trip_draft_service
 from ...services.llm_service import get_llm
 from ...models.schemas import PlanFromSelectionsRequest
@@ -334,3 +335,38 @@ async def ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReques
         detail.description = existing_days[day_index].get("description", "")
     await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
+
+
+@router.post("/{draft_id}/finalize", summary="定稿草稿 → 写 trip_history (SSE)")
+async def finalize_draft_endpoint(draft_id: str):
+    async def event_generator():
+        try:
+            yield f"data: {json.dumps({'type':'progress','step':'preparing','message':'整理行程...'}, ensure_ascii=False)}\n\n"
+            record = await trip_draft_service.get_draft(draft_id)
+            if record is None:
+                yield f"data: {json.dumps({'type':'error','message':'draft 不存在'}, ensure_ascii=False)}\n\n"
+                return
+            if record.status == "finalized":
+                yield f"data: {json.dumps({'type':'error','message':'draft 已 finalized'}, ensure_ascii=False)}\n\n"
+                return
+
+            yield f"data: {json.dumps({'type':'progress','step':'synthesizer','message':'生成总体建议...'}, ensure_ascii=False)}\n\n"
+            trip_plan, trip_id = await finalize_draft(draft_id, user_id=record.user_id)
+            yield f"data: {json.dumps({'type':'progress','step':'saving','message':'写入历史...'}, ensure_ascii=False)}\n\n"
+
+            payload = {
+                "type": "complete",
+                "trip_id": trip_id,
+                "trip_plan": trip_plan.model_dump(mode="json"),
+            }
+            yield f"data: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
+        except Exception as e:
+            err = {"type": "error", "message": f"finalize 失败: {str(e)}"}
+            yield f"data: {json.dumps(err, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
+                 "X-Accel-Buffering": "no"},
+    )
