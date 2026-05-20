@@ -151,6 +151,7 @@ def _validate_plan_coordinates(trip_plan: TripPlan) -> TripPlan:
 
 
 def _parse_response(response_text: str, request: TripRequest) -> TripPlan:
+    data = None
     try:
         if "```json" in response_text:
             json_start = response_text.find("```json") + 7
