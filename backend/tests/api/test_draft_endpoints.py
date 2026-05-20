@@ -84,3 +84,67 @@ async def test_delete_draft_removes_it(client):
 async def test_delete_draft_404(client):
     resp = await client.delete("/api/trip/draft/does-not-exist")
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_assemble_returns_day_detail_and_writes_back(client):
+    draft_id = await _seed_draft()
+    with patch(
+        "app.api.routes.trip_draft.compute_day_route",
+        new=AsyncMock(return_value=[]),
+    ), patch(
+        "app.api.routes.trip_draft.write_day_narrative_llm",
+        new=AsyncMock(return_value="今天是晴天，多带水。"),
+    ):
+        resp = await client.post(f"/api/trip/draft/{draft_id}/day/0/assemble", json={})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["day_index"] == 0
+    assert body["day_detail"]["is_assembled"] is True
+    assert body["day_detail"]["description"] == "今天是晴天，多带水。"
+    # 服务端已 patch 进去
+    record = await trip_draft_service.get_draft(draft_id)
+    days = json.loads(record.days_detail_json)
+    assert days[0] is not None
+    assert days[1] is None
+
+
+@pytest.mark.asyncio
+async def test_assemble_idempotent_returns_cached(client):
+    """已 assembled 的天再调一次不重新跑 LLM；force=true 才重跑"""
+    draft_id = await _seed_draft()
+    narrative_mock = AsyncMock(return_value="V1 文案")
+    with patch(
+        "app.api.routes.trip_draft.compute_day_route",
+        new=AsyncMock(return_value=[]),
+    ), patch(
+        "app.api.routes.trip_draft.write_day_narrative_llm",
+        new=narrative_mock,
+    ):
+        r1 = await client.post(f"/api/trip/draft/{draft_id}/day/0/assemble", json={})
+        assert narrative_mock.await_count == 1
+        # 再调一次（不带 force）：不该重跑 LLM
+        r2 = await client.post(f"/api/trip/draft/{draft_id}/day/0/assemble", json={})
+        assert narrative_mock.await_count == 1
+        # 带 force：重跑
+        narrative_mock.return_value = "V2 文案"
+        r3 = await client.post(
+            f"/api/trip/draft/{draft_id}/day/0/assemble?force=true", json={}
+        )
+        assert narrative_mock.await_count == 2
+        assert r3.json()["day_detail"]["description"] == "V2 文案"
+
+
+@pytest.mark.asyncio
+async def test_assemble_day_out_of_range(client):
+    draft_id = await _seed_draft()
+    resp = await client.post(f"/api/trip/draft/{draft_id}/day/99/assemble", json={})
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_assemble_rejects_finalized_draft(client):
+    draft_id = await _seed_draft()
+    await trip_draft_service.mark_finalized(draft_id, trip_id=1)
+    resp = await client.post(f"/api/trip/draft/{draft_id}/day/0/assemble", json={})
+    assert resp.status_code == 409

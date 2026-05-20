@@ -3,10 +3,15 @@ import asyncio
 import json
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from ...agents.langgraph_agent.graph import get_trip_planner_agent
+from ...agents.langgraph_agent.assemble.timeline import rule_assemble_day_timeline
+from ...agents.langgraph_agent.assemble.route import compute_day_route
+from ...agents.langgraph_agent.assemble.budget import compute_day_budget
+from ...agents.langgraph_agent.assemble.narrative import write_day_narrative_llm
 from ...services import trip_draft_service
 from ...models.schemas import PlanFromSelectionsRequest
 
@@ -59,6 +64,7 @@ async def create_draft_from_selections(req: PlanFromSelectionsRequest):
 from ...models.schemas import (
     TripDraftPayload, TripRequest, MacroPlan, DraftDayContext,
     DayDetail, DiningPoolDay, WeatherInfo, Attraction, Hotel, Location,
+    DayEditRequest,
 )
 
 
@@ -141,3 +147,55 @@ async def delete_draft(draft_id: str):
     if not ok:
         raise HTTPException(404, detail="draft 不存在")
     return {"success": True}
+
+
+class DayDetailResponse(BaseModel):
+    draft_id: str
+    day_index: int
+    day_detail: DayDetail
+
+
+def _ensure_editable(record):
+    if record is None:
+        raise HTTPException(404, detail="draft 不存在")
+    if record.status == "finalized":
+        raise HTTPException(409, detail="draft 已 finalized 不可修改")
+
+
+def _get_day_context_from_record(record, day_index: int) -> DraftDayContext:
+    payload = _load_payload(record)
+    if day_index < 0 or day_index >= len(payload.days):
+        raise HTTPException(409, detail=f"day_index 越界 (max={len(payload.days) - 1})")
+    return payload.days[day_index]
+
+
+@router.post("/{draft_id}/day/{day_index}/assemble", response_model=DayDetailResponse,
+             summary="展开某天：规则装配 + 路线 + LLM 叙述")
+async def assemble_day(
+    draft_id: str, day_index: int,
+    overrides: DayEditRequest, force: bool = Query(False),
+):
+    record = await trip_draft_service.get_draft(draft_id)
+    _ensure_editable(record)
+    ctx = _get_day_context_from_record(record, day_index)
+
+    existing_days = json.loads(record.days_detail_json)
+    if (not force) and existing_days[day_index] is not None and \
+       existing_days[day_index].get("is_assembled"):
+        cached = DayDetail.model_validate(existing_days[day_index])
+        return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=cached)
+
+    request = TripRequest.model_validate_json(record.request_json)
+    override_dict = overrides.model_dump(exclude_none=True)
+    detail = rule_assemble_day_timeline(ctx, overrides=override_dict or None)
+    detail.route_segments = await compute_day_route(
+        detail, request.city, request.transportation
+    )
+    detail.day_budget = compute_day_budget(detail)
+    detail.description = await write_day_narrative_llm(
+        detail, weather=ctx.weather,
+        free_text_input=request.free_text_input or "",
+        city=request.city,
+    )
+    await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
+    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
