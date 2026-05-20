@@ -6,6 +6,8 @@
 - 旧路由代码保留在routes目录中，但不再注册到FastAPI应用
 """
 
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from ..config import get_settings, validate_config, print_config
@@ -17,6 +19,7 @@ from ..logger import setup_logging, log_print, LOG_FILE
 # 新路由导入 (LangGraph + LangChain MCP)
 from .routes import trip_lg, poi_lg, map_lg, trip_history, admin, trip_draft
 from ..database import init_db
+from ..services import trip_draft_service
 
 # 获取配置
 settings = get_settings()
@@ -84,6 +87,18 @@ async def startup_event():
     log_print("🔧 框架: LangGraph + LangChain MCP Tools")
     log_print("="*60 + "\n")
 
+    # 启动草稿 TTL 清理后台任务（每 24h 跑一次）
+    async def _draft_ttl_loop():
+        while True:
+            try:
+                await trip_draft_service.delete_expired(days=30)
+            except Exception as e:
+                log_print(f"⚠️ draft TTL 清理失败: {e}", level="warning")
+            await asyncio.sleep(24 * 3600)
+
+    app.state.draft_ttl_task = asyncio.create_task(_draft_ttl_loop())
+    log_print("✅ 草稿 TTL 清理任务已启动 (30 天保留)")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -91,6 +106,13 @@ async def shutdown_event():
     print("\n" + "="*60)
     print("👋 应用正在关闭...")
     print("="*60 + "\n")
+    task = getattr(app.state, "draft_ttl_task", None)
+    if task and not task.done():
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 @app.get("/")
