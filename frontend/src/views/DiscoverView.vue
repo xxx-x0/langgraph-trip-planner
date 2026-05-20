@@ -162,8 +162,11 @@ import { message } from 'ant-design-vue'
 import SelectableAttractionCard from '@/components/SelectableAttractionCard.vue'
 import DiscoveryMap from '@/components/DiscoveryMap.vue'
 import PlanProgress from '@/components/PlanProgress.vue'
-import { discoverAttractionsStream, searchAttractionManual, planFromSelectionsStream } from '@/services/api'
-import type { StreamEvent } from '@/services/api'
+import {
+  discoverAttractionsStream, searchAttractionManual,
+  createDraftFromSelectionsStream,
+} from '@/services/api'
+import type { DraftStreamEvent } from '@/services/api'
 import type { DiscoveredAttraction, TripFormData, DiscoveryStreamEvent } from '@/types'
 
 const router = useRouter()
@@ -327,10 +330,21 @@ async function confirmAndPlan() {
   const selected = attractions.filter(a => a.selected)
 
   try {
-    await planFromSelectionsStream(
-      {
-        request: formData.value,
-        selected_attractions: selected.map(a => ({
+    await createDraftFromSelectionsStream(
+      formData.value,
+      selected.map(a => ({
+        name: a.name,
+        description: a.description,
+        address: a.address,
+        category: a.category,
+        rating: a.rating,
+        ticket_price: a.ticket_price,
+        image_url: a.image_url,
+        location: a.location,
+        poi_id: a.poi_id,
+      })),
+      dayAssignments.value.map(day =>
+        day.map(a => ({
           name: a.name,
           description: a.description,
           address: a.address,
@@ -340,33 +354,19 @@ async function confirmAndPlan() {
           image_url: a.image_url,
           location: a.location,
           poi_id: a.poi_id,
-        })),
-        day_assignments: dayAssignments.value.map(day =>
-          day.map(a => ({
-            name: a.name,
-            description: a.description,
-            address: a.address,
-            category: a.category,
-            rating: a.rating,
-            ticket_price: a.ticket_price,
-            image_url: a.image_url,
-            location: a.location,
-            poi_id: a.poi_id,
-          }))
-        ),
-        weather_info: weatherInfo.value,
-      },
-      (event: StreamEvent) => {
+        }))
+      ),
+      weatherInfo.value,
+      (event: DraftStreamEvent) => {
         if (event.type === 'node_complete' && event.node) {
           planningCompletedNodes.value = new Set([...planningCompletedNodes.value, event.node])
           planningCurrentNode.value = event.node
-          planningMessage.value = event.message
-        } else if (event.type === 'complete' && event.data) {
-          sessionStorage.setItem('tripPlan', JSON.stringify(event.data))
-          message.success('行程计划生成完成!')
-          setTimeout(() => router.push('/result'), 500)
+          planningMessage.value = event.message || ''
+        } else if (event.type === 'complete' && event.draft_id) {
+          message.success('骨架生成完成!')
+          setTimeout(() => router.push(`/draft/${event.draft_id}`), 500)
         } else if (event.type === 'error') {
-          message.error(event.message || '规划失败')
+          message.error(event.message || '骨架生成失败')
           phase.value = 'assign'
         }
       }
