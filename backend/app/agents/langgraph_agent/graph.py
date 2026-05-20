@@ -7,13 +7,13 @@ from langgraph.types import Send
 from .exceptions import RetryableError
 from .state import TripPlannerState, DiscoveryState
 from .nodes import (
-    web_search_attractions_node,
-    extract_attractions_node,
-    geocode_attractions_node,
+    search_attractions_node,
     search_weather_node,
     search_hotel_node,
+    search_hotels_by_day_node,
     gather_search_node,
     search_food_node,
+    search_dining_pool_node,
     cluster_attractions_node,
     cluster_from_selections_node,
     plan_route_node,
@@ -25,10 +25,9 @@ from .nodes import (
     load_user_preferences_node,
     extract_preferences_node,
     save_preferences_node,
-    extract_attractions_expanded_node,
-    geocode_dispatch_node,
-    geocode_batch_node,
+    search_attractions_discovery_node,
     gather_discovery_node,
+    save_draft_node,
 )
 from .utils.parsing import _create_fallback_plan
 from ...services.llm_service import get_llm
@@ -47,7 +46,7 @@ async def error_handler_node(state: TripPlannerState) -> Dict[str, Any]:
 def _route_after_gather(state: TripPlannerState) -> str:
     errors = state.get("errors", [])
     attractions = state.get("attractions_info", "")
-    critical_errors = [e for e in errors if ("web_search_attractions" in e or "extract_attractions" in e or "geocode_attractions" in e) and "不可重试" in e]
+    critical_errors = [e for e in errors if "search_attractions" in e and "不可重试" in e]
     if critical_errors and not attractions:
         print("🚨 景点搜索完全失败且不可重试，路由到错误处理器")
         return "error_handler"
@@ -63,11 +62,59 @@ def _route_to_day_plans(state: TripPlannerState) -> List[Send]:
     sends = []
     request = state.get("request")
     food_pref = request.food_preference if request else "本地特色"
+    hotels_by_day: List[List[dict]] = state.get("hotels_by_day") or []
+    clusters_data: List[List[dict]] = state.get("clusters_data") or []
+
+    def _lookup_hotel_location(day_idx: int, hotel_name: str) -> Optional[dict]:
+        if day_idx >= len(hotels_by_day):
+            return None
+        day_hotels = hotels_by_day[day_idx] or []
+        if not day_hotels:
+            return None
+        target = (hotel_name or "").strip()
+        if target:
+            for h in day_hotels:
+                hname = (h.get("name") or "").strip()
+                if hname == target or hname in target or target in hname:
+                    loc = h.get("location")
+                    if isinstance(loc, dict) and loc.get("longitude") and loc.get("latitude"):
+                        return {"longitude": loc["longitude"], "latitude": loc["latitude"]}
+        for h in day_hotels:
+            loc = h.get("location")
+            if isinstance(loc, dict) and loc.get("longitude") and loc.get("latitude"):
+                return {"longitude": loc["longitude"], "latitude": loc["latitude"]}
+        return None
+
+    def _format_day_hotels(day_idx: int) -> str:
+        if day_idx >= len(hotels_by_day):
+            return ""
+        day_hotels = hotels_by_day[day_idx] or []
+        if not day_hotels:
+            return ""
+        lines = []
+        for j, h in enumerate(day_hotels, 1):
+            parts = [f"{j}. {h.get('name', '')}"]
+            if h.get("star_rating") is not None:
+                parts.append(f"{h['star_rating']}星")
+            if h.get("price") is not None:
+                parts.append(f"¥{int(h['price'])}")
+            if h.get("distance"):
+                parts.append(h["distance"])
+            if h.get("address"):
+                parts.append(h["address"])
+            loc = h.get("location")
+            if isinstance(loc, dict) and loc.get("longitude"):
+                parts.append(f"坐标({loc['longitude']:.5f},{loc['latitude']:.5f})")
+            lines.append(" | ".join(parts))
+        return "\n".join(lines)
+
     for day_skeleton in macro_plan.days:
+        idx = day_skeleton.day_index
+        day_cluster = clusters_data[idx] if idx < len(clusters_data) else []
         sends.append(Send(
             "day_plan_subgraph",
             {
-                "day_index": day_skeleton.day_index,
+                "day_index": idx,
                 "date": day_skeleton.date,
                 "attraction_names": day_skeleton.attraction_names,
                 "hotel_name": day_skeleton.hotel_name,
@@ -88,6 +135,9 @@ def _route_to_day_plans(state: TripPlannerState) -> List[Send]:
                 "day_plans": [],
                 "day_food_info": "",
                 "food_preference": food_pref,
+                "day_hotels_info": _format_day_hotels(idx),
+                "day_hotel_location": _lookup_hotel_location(idx, day_skeleton.hotel_name),
+                "day_cluster": day_cluster,
             }
         ))
     print(f"📤 Send API 派发 {len(sends)} 个单日子图")
@@ -107,14 +157,12 @@ def create_trip_planner_graph():
     )
 
     workflow.add_node("load_user_preferences", load_user_preferences_node)
-    workflow.add_node("web_search_attractions", web_search_attractions_node, retry=search_retry)
-    workflow.add_node("extract_attractions", extract_attractions_node, retry=search_retry)
-    workflow.add_node("geocode_attractions", geocode_attractions_node, retry=search_retry)
+    workflow.add_node("search_attractions", search_attractions_node, retry=search_retry)
     workflow.add_node("search_weather", search_weather_node, retry=search_retry)
-    workflow.add_node("search_hotel", search_hotel_node, retry=search_retry)
     workflow.add_node("gather_search", gather_search_node)
     workflow.add_node("error_handler", error_handler_node)
     workflow.add_node("cluster_attractions", cluster_attractions_node)
+    workflow.add_node("search_hotels_by_day", search_hotels_by_day_node, retry=search_retry)
     workflow.add_node("search_food", search_food_node)
     workflow.add_node("plan_route", plan_route_node)
     workflow.add_node("macro_planner", macro_planner_node)
@@ -124,14 +172,10 @@ def create_trip_planner_graph():
     workflow.add_node("save_preferences", save_preferences_node)
     workflow.add_node("day_plan_subgraph", day_plan_subgraph_node)
 
-    workflow.add_edge(START, "web_search_attractions")
+    workflow.add_edge(START, "search_attractions")
     workflow.add_edge(START, "search_weather")
-    workflow.add_edge(START, "search_hotel")
 
-    workflow.add_edge("web_search_attractions", "extract_attractions")
-    workflow.add_edge("extract_attractions", "geocode_attractions")
-
-    workflow.add_edge(["geocode_attractions", "search_weather", "search_hotel"], "gather_search")
+    workflow.add_edge(["search_attractions", "search_weather"], "gather_search")
 
     workflow.add_conditional_edges(
         "gather_search",
@@ -143,8 +187,9 @@ def create_trip_planner_graph():
     )
     workflow.add_edge("error_handler", "cluster_attractions")
 
+    workflow.add_edge("cluster_attractions", "search_hotels_by_day")
     workflow.add_edge("cluster_attractions", "search_food")
-    workflow.add_edge("search_food", "plan_route")
+    workflow.add_edge(["search_hotels_by_day", "search_food"], "plan_route")
     workflow.add_edge("plan_route", "macro_planner")
     workflow.add_conditional_edges(
         "macro_planner",
@@ -162,12 +207,6 @@ def create_trip_planner_graph():
     return app
 
 
-def _route_after_geocode_batch(state) -> str:
-    if state.get("_geocode_batches"):
-        return "geocode_batch"
-    return "gather_discovery"
-
-
 def create_discovery_graph():
     """创建景点发现 Graph — 大量搜索景点并返回结构化数据供用户选择，分批流式输出"""
     from langgraph.types import RetryPolicy
@@ -181,38 +220,28 @@ def create_discovery_graph():
         retry_on=lambda e: isinstance(e, RetryableError),
     )
 
-    workflow.add_node("web_search_attractions", web_search_attractions_node, retry=search_retry)
-    workflow.add_node("extract_attractions_expanded", extract_attractions_expanded_node, retry=search_retry)
-    workflow.add_node("geocode_dispatch", geocode_dispatch_node)
-    workflow.add_node("geocode_batch", geocode_batch_node, retry=search_retry)
+    workflow.add_node("search_attractions_discovery", search_attractions_discovery_node, retry=search_retry)
     workflow.add_node("search_weather", search_weather_node, retry=search_retry)
     workflow.add_node("gather_discovery", gather_discovery_node)
 
-    workflow.add_edge(START, "web_search_attractions")
+    workflow.add_edge(START, "search_attractions_discovery")
     workflow.add_edge(START, "search_weather")
 
-    workflow.add_edge("web_search_attractions", "extract_attractions_expanded")
-    workflow.add_edge("extract_attractions_expanded", "geocode_dispatch")
-    workflow.add_edge("geocode_dispatch", "geocode_batch")
-
-    workflow.add_conditional_edges(
-        "geocode_batch",
-        _route_after_geocode_batch,
-        {
-            "geocode_batch": "geocode_batch",
-            "gather_discovery": "gather_discovery",
-        },
-    )
-
-    workflow.add_edge("search_weather", "gather_discovery")
+    workflow.add_edge(["search_attractions_discovery", "search_weather"], "gather_discovery")
     workflow.add_edge("gather_discovery", END)
 
     return workflow.compile()
 
 
 def create_planning_graph():
-    """创建基于用户选择的行程规划 Graph — 接收选中景点和日程分配，生成完整行程"""
+    """骨架图：cluster_from_selections → 候选池/酒店搜索 → macro_planner → save_draft
+
+    详细阶段（day_plan_subgraph、reduce_assemble、global_synthesizer、
+    extract_preferences）不再在此图中执行，改由 API 端点和 finalize 流程触发。
+    """
     from langgraph.types import RetryPolicy
+
+    workflow = StateGraph(TripPlannerState)
 
     search_retry = RetryPolicy(
         max_attempts=2,
@@ -221,37 +250,20 @@ def create_planning_graph():
         retry_on=lambda e: isinstance(e, RetryableError),
     )
 
-    workflow = StateGraph(TripPlannerState)
-
+    workflow.add_node("load_user_preferences", load_user_preferences_node)
     workflow.add_node("cluster_from_selections", cluster_from_selections_node)
-    workflow.add_node("search_food", search_food_node)
-    workflow.add_node("search_hotel", search_hotel_node, retry=search_retry)
-    workflow.add_node("plan_route", plan_route_node)
+    workflow.add_node("search_dining_pool", search_dining_pool_node)
+    workflow.add_node("search_hotels_by_day", search_hotels_by_day_node, retry=search_retry)
     workflow.add_node("macro_planner", macro_planner_node)
-    workflow.add_node("reduce_assemble", reduce_assemble_node)
-    workflow.add_node("global_synthesizer", global_synthesizer_node)
-    workflow.add_node("extract_preferences", extract_preferences_node)
-    workflow.add_node("save_preferences", save_preferences_node)
-    workflow.add_node("day_plan_subgraph", day_plan_subgraph_node)
+    workflow.add_node("save_draft", save_draft_node)
 
-    workflow.add_edge(START, "cluster_from_selections")
-
-    workflow.add_edge("cluster_from_selections", "search_food")
-    workflow.add_edge("cluster_from_selections", "search_hotel")
-    workflow.add_edge("cluster_from_selections", "plan_route")
-
-    workflow.add_edge(["search_food", "search_hotel", "plan_route"], "macro_planner")
-
-    workflow.add_conditional_edges(
-        "macro_planner",
-        _route_to_day_plans,
-        ["day_plan_subgraph"]
-    )
-    workflow.add_edge("day_plan_subgraph", "reduce_assemble")
-    workflow.add_edge("reduce_assemble", "global_synthesizer")
-    workflow.add_edge("global_synthesizer", "extract_preferences")
-    workflow.add_edge("extract_preferences", "save_preferences")
-    workflow.add_edge("save_preferences", END)
+    workflow.add_edge(START, "load_user_preferences")
+    workflow.add_edge("load_user_preferences", "cluster_from_selections")
+    workflow.add_edge("cluster_from_selections", "search_dining_pool")
+    workflow.add_edge("cluster_from_selections", "search_hotels_by_day")
+    workflow.add_edge(["search_dining_pool", "search_hotels_by_day"], "macro_planner")
+    workflow.add_edge("macro_planner", "save_draft")
+    workflow.add_edge("save_draft", END)
 
     return workflow.compile()
 
@@ -278,7 +290,6 @@ class LangGraphTripPlanner:
         return {
             "request": request,
             "attractions_info": "",
-            "raw_search_results": "",
             "selected_pois": [],
             "weather_info": "",
             "hotels_info": "",
@@ -298,19 +309,20 @@ class LangGraphTripPlanner:
             "global_narrative": None,
             "user_selected_attractions": [],
             "user_day_assignments": None,
+            "clusters_data": [],
+            "hotels_by_day": [],
+            "dining_pool": [],
+            "draft_id": None,
         }
 
     def _build_discovery_state(self, request, user_id: str = "default"):
         return {
             "request": request,
-            "raw_search_results": "",
-            "extracted_pois": [],
             "discovered_attractions": [],
             "weather_info": "",
             "errors": [],
             "messages": [],
             "user_id": user_id,
-            "_geocode_batches": [],
         }
 
     def _build_planning_state(self, request, selected_attractions, day_assignments=None,
@@ -335,11 +347,8 @@ class LangGraphTripPlanner:
         initial_state = self._build_discovery_state(request, user_id)
 
         DISCOVERY_NODE_INFO = {
-            "web_search_attractions": {"message": "🔍 正在搜索景点攻略...", "progress": 10, "done_msg": "✅ 景点攻略搜索完成"},
+            "search_attractions_discovery": {"message": "🔍 正在查询景点库...", "progress": 70, "done_msg": "✅ 景点发现完成"},
             "search_weather": {"message": "🌤️ 正在查询天气...", "progress": 10, "done_msg": "✅ 天气查询完成"},
-            "extract_attractions_expanded": {"message": "🧠 正在提取景点...", "progress": 30, "done_msg": "✅ 景点提取完成"},
-            "geocode_dispatch": {"message": "📍 准备获取景点详情...", "progress": 35, "done_msg": "✅ 景点分批准备完成"},
-            "geocode_batch": {"message": "📍 正在获取景点详情...", "progress": 70, "done_msg": "✅ 一批景点详情获取完成"},
             "gather_discovery": {"message": "🔗 汇总发现结果...", "progress": 90, "done_msg": "✅ 发现阶段完成"},
         }
 
@@ -416,7 +425,7 @@ class LangGraphTripPlanner:
         PLANNING_NODE_INFO = {
             "cluster_from_selections": {"message": "📊 正在聚类分析景点...", "progress": 15, "done_msg": "✅ 景点聚类完成"},
             "search_food": {"message": "🍜 正在搜索美食...", "progress": 30, "done_msg": "✅ 美食搜索完成"},
-            "search_hotel": {"message": "🏨 正在搜索酒店...", "progress": 30, "done_msg": "✅ 酒店搜索完成"},
+            "search_hotels_by_day": {"message": "🏨 正在搜索行程区域酒店...", "progress": 30, "done_msg": "✅ 酒店搜索完成"},
             "plan_route": {"message": "🗺️ 正在规划路线...", "progress": 40, "done_msg": "✅ 路线规划完成"},
             "macro_planner": {"message": "🏗️ 正在编排行程骨架...", "progress": 55, "done_msg": "✅ 行程骨架编排完成"},
             "day_plan_subgraph": {"message": "📝 正在生成每日行程...", "progress": 70, "done_msg": "✅ 每日行程生成完成"},
@@ -518,15 +527,13 @@ class LangGraphTripPlanner:
 
         NODE_INFO = {
             "load_user_preferences": {"message": "📋 加载用户偏好...", "progress": 5, "done_msg": "✅ 用户偏好加载完成"},
-            "web_search_attractions": {"message": "🔍 正在搜索景点攻略...", "progress": 8, "done_msg": "✅ 景点攻略搜索完成"},
-            "extract_attractions": {"message": "🧠 正在提取核心景点...", "progress": 12, "done_msg": "✅ 核心景点提取完成"},
-            "geocode_attractions": {"message": "📍 正在查询景点坐标...", "progress": 15, "done_msg": "✅ 景点坐标查询完成"},
+            "search_attractions": {"message": "🔍 正在查询景点库...", "progress": 15, "done_msg": "✅ 景点查询完成"},
             "search_weather": {"message": "🌤️ 正在查询天气...", "progress": 10, "done_msg": "✅ 天气查询完成"},
-            "search_hotel": {"message": "🏨 正在推荐酒店...", "progress": 10, "done_msg": "✅ 酒店推荐完成"},
-            "gather_search": {"message": "🔗 汇总搜索结果...", "progress": 15, "done_msg": "✅ 搜索结果汇总完成"},
-            "error_handler": {"message": "🚨 处理错误...", "progress": 18, "done_msg": "⚠️ 错误已记录，继续处理"},
+            "gather_search": {"message": "🔗 汇总搜索结果...", "progress": 18, "done_msg": "✅ 搜索结果汇总完成"},
+            "error_handler": {"message": "🚨 处理错误...", "progress": 20, "done_msg": "⚠️ 错误已记录，继续处理"},
             "cluster_attractions": {"message": "📊 正在聚类分析景点...", "progress": 30, "done_msg": "✅ 景点聚类完成"},
-            "search_food": {"message": "🍜 正在搜索美食...", "progress": 45, "done_msg": "✅ 美食搜索完成"},
+            "search_hotels_by_day": {"message": "🏨 正在搜索行程区域酒店...", "progress": 42, "done_msg": "✅ 酒店搜索完成"},
+            "search_food": {"message": "🍜 正在搜索美食...", "progress": 48, "done_msg": "✅ 美食搜索完成"},
             "plan_route": {"message": "🗺️ 正在规划路线...", "progress": 55, "done_msg": "✅ 路线规划完成"},
             "macro_planner": {"message": "🏗️ 正在宏观编排行程骨架...", "progress": 65, "done_msg": "✅ 行程骨架编排完成"},
             "day_plan_subgraph": {"message": "📝 正在并行生成每日行程...", "progress": 75, "done_msg": "✅ 每日行程生成完成"},

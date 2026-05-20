@@ -1,4 +1,4 @@
-from typing import TypedDict, Annotated, List, Optional, Any
+from typing import TypedDict, Annotated, List, Optional, Any, Dict
 import operator
 
 from langchain_core.messages import BaseMessage
@@ -9,21 +9,17 @@ from ...models.schemas import TripRequest, TripPlan, UserPreference, MacroPlan
 class DiscoveryState(TypedDict):
     """景点发现阶段的状态"""
     request: TripRequest
-    raw_search_results: str
-    extracted_pois: List[dict]
     discovered_attractions: Annotated[List[dict], operator.add]
     weather_info: str
     errors: List[str]
     messages: Annotated[List[BaseMessage], operator.add]
     user_id: str
-    _geocode_batches: List[List[dict]]
 
 
 class TripPlannerState(TypedDict):
     """LangGraph 状态类：管理整个旅行规划流程中的数据流转"""
     request: TripRequest
     attractions_info: str
-    raw_search_results: str
     selected_pois: List[dict]
     weather_info: str
     hotels_info: str
@@ -43,6 +39,10 @@ class TripPlannerState(TypedDict):
     global_narrative: Optional[str]
     user_selected_attractions: List[dict]
     user_day_assignments: Optional[List[List[dict]]]
+    clusters_data: List[List[dict]]
+    hotels_by_day: List[List[dict]]
+    dining_pool: List[Dict[str, Any]]   # 每日 DiningPoolDay-shape dict 列表（骨架阶段产物）
+    draft_id: Optional[str]              # save_draft_node 写入的草稿 ID
 
 
 class DayPlanLocalState(TypedDict):
@@ -67,3 +67,6 @@ class DayPlanLocalState(TypedDict):
     day_plans: List[dict]
     day_food_info: str
     food_preference: str
+    day_hotels_info: str
+    day_hotel_location: Optional[dict]
+    day_cluster: List[dict]
