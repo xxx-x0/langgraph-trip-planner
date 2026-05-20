@@ -462,14 +462,22 @@ class LangGraphTripPlanner:
                             "progress": info["progress"],
                         }
 
-            trip_plan = final_state.get("trip_plan")
-
-            if not trip_plan:
-                print("⚠️ 警告：生成的计划为空，使用备用方案")
-                trip_plan = _create_fallback_plan(request, final_state)
-
-            plan_dict = trip_plan.model_dump() if hasattr(trip_plan, 'model_dump') else trip_plan.dict()
-            yield {"type": "complete", "message": "✅ 旅行计划生成完成!", "progress": 100, "data": plan_dict}
+            draft_id = final_state.get("draft_id")
+            if draft_id:
+                yield {
+                    "type": "complete",
+                    "message": "✅ 骨架已生成，可进入装配",
+                    "progress": 100,
+                    "draft_id": draft_id,
+                }
+            else:
+                # 骨架图未写入 draft_id（异常情况）— 退回到旧 trip_plan 行为
+                trip_plan = final_state.get("trip_plan")
+                if not trip_plan:
+                    trip_plan = _create_fallback_plan(request, final_state)
+                plan_dict = trip_plan.model_dump() if hasattr(trip_plan, 'model_dump') else trip_plan.dict()
+                yield {"type": "complete", "message": "✅ 旅行计划生成完成!",
+                       "progress": 100, "data": plan_dict}
 
             print(f"{'='*60}")
             print(f"✅ 基于选择的行程规划完成!")

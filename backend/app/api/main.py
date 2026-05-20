@@ -15,7 +15,7 @@ from ..logger import setup_logging, log_print, LOG_FILE
 # from .routes import trip, poi, map as map_routes
 
 # 新路由导入 (LangGraph + LangChain MCP)
-from .routes import trip_lg, poi_lg, map_lg, trip_history
+from .routes import trip_lg, poi_lg, map_lg, trip_history, admin, trip_draft
 from ..database import init_db
 
 # 获取配置
@@ -47,6 +47,8 @@ app.include_router(trip_lg.router, prefix="/api")
 app.include_router(poi_lg.router, prefix="/api")
 app.include_router(map_lg.router, prefix="/api")
 app.include_router(trip_history.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
+app.include_router(trip_draft.router, prefix="/api")
 
 # 旧路由注册 (已弃用)
 # app.include_router(trip.router, prefix="/api")
