@@ -343,5 +343,186 @@ export async function planFromSelectionsStream(
 }
 
 
+// ============ 草稿（骨架/详细分离）API ============
+
+export interface DraftStreamEvent {
+  type: 'init' | 'node_start' | 'node_complete' | 'progress' | 'complete' | 'error'
+  message?: string
+  progress?: number
+  node?: string
+  draft_id?: string
+  data?: any
+}
+
+export async function createDraftFromSelectionsStream(
+  formData: TripFormData,
+  selectedAttractions: any[],
+  dayAssignments: any[][] | null,
+  weatherInfo: string,
+  onEvent: (event: DraftStreamEvent) => void,
+  options?: StreamOptions,
+): Promise<void> {
+  const timeout = options?.timeout || 240000
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+  const signal = options?.signal
+    ? AbortSignal.any([options.signal, controller.signal])
+    : controller.signal
+
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}/api/trip/draft/from-selections/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        request: formData,
+        selected_attractions: selectedAttractions,
+        day_assignments: dayAssignments,
+        weather_info: weatherInfo,
+        user_id: 'default',
+      }),
+      signal,
+    })
+  } catch (error: any) {
+    clearTimeout(timeoutId)
+    if (error.name === 'AbortError') throw new Error('请求已取消或超时')
+    throw error
+  }
+  clearTimeout(timeoutId)
+  if (!response.ok) throw new Error(`请求失败: ${response.status}`)
+
+  const reader = response.body?.getReader()
+  if (!reader) throw new Error('无法获取响应流')
+  const decoder = new TextDecoder()
+  let buffer = ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (trimmed.startsWith('data: ')) {
+          try {
+            const event = JSON.parse(trimmed.slice(6)) as DraftStreamEvent
+            onEvent(event)
+            if (event.type === 'complete' || event.type === 'error') return
+          } catch (e) {
+            console.warn('解析 SSE 事件失败:', trimmed, e)
+          }
+        }
+      }
+    }
+  } finally {
+    reader.cancel().catch(() => {})
+  }
+}
+
+export async function getDraft(draftId: string) {
+  const resp = await apiClient.get(`/api/trip/draft/${draftId}`)
+  return resp.data
+}
+
+export async function deleteDraft(draftId: string) {
+  const resp = await apiClient.delete(`/api/trip/draft/${draftId}`)
+  return resp.data
+}
+
+export interface DayEditBody {
+  attractions_order?: string[]
+  meals?: Array<Record<string, any>>
+}
+
+export async function assembleDay(
+  draftId: string, dayIndex: number, body: DayEditBody = {}, force = false,
+) {
+  const resp = await apiClient.post(
+    `/api/trip/draft/${draftId}/day/${dayIndex}/assemble${force ? '?force=true' : ''}`,
+    body,
+  )
+  return resp.data
+}
+
+export async function recomputeDay(
+  draftId: string, dayIndex: number, body: DayEditBody,
+) {
+  const resp = await apiClient.post(
+    `/api/trip/draft/${draftId}/day/${dayIndex}/recompute`, body,
+  )
+  return resp.data
+}
+
+export async function aiRearrangeDay(
+  draftId: string, dayIndex: number, hint?: string,
+) {
+  const resp = await apiClient.post(
+    `/api/trip/draft/${draftId}/day/${dayIndex}/ai-rearrange`,
+    { hint: hint || null },
+  )
+  return resp.data
+}
+
+export async function rewriteNarrative(draftId: string, dayIndex: number) {
+  const resp = await apiClient.post(
+    `/api/trip/draft/${draftId}/day/${dayIndex}/narrative`, {},
+  )
+  return resp.data
+}
+
+export async function finalizeDraftStream(
+  draftId: string,
+  onEvent: (event: DraftStreamEvent) => void,
+  options?: StreamOptions,
+): Promise<void> {
+  const timeout = options?.timeout || 180000
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+  const signal = options?.signal
+    ? AbortSignal.any([options.signal, controller.signal])
+    : controller.signal
+
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE_URL}/api/trip/draft/${draftId}/finalize`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
+    })
+  } catch (error: any) {
+    clearTimeout(timeoutId)
+    if (error.name === 'AbortError') throw new Error('请求已取消或超时')
+    throw error
+  }
+  clearTimeout(timeoutId)
+  if (!response.ok) throw new Error(`请求失败: ${response.status}`)
+
+  const reader = response.body?.getReader()
+  if (!reader) throw new Error('无法获取响应流')
+  const decoder = new TextDecoder()
+  let buffer = ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (trimmed.startsWith('data: ')) {
+          try {
+            const event = JSON.parse(trimmed.slice(6)) as DraftStreamEvent
+            onEvent(event)
+            if (event.type === 'complete' || event.type === 'error') return
+          } catch {}
+        }
+      }
+    }
+  } finally {
+    reader.cancel().catch(() => {})
+  }
+}
+
+
 export default apiClient
 
