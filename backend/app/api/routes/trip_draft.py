@@ -7,12 +7,16 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from langchain_core.messages import SystemMessage, HumanMessage
+
 from ...agents.langgraph_agent.graph import get_trip_planner_agent
 from ...agents.langgraph_agent.assemble.timeline import rule_assemble_day_timeline
 from ...agents.langgraph_agent.assemble.route import compute_day_route
 from ...agents.langgraph_agent.assemble.budget import compute_day_budget
 from ...agents.langgraph_agent.assemble.narrative import write_day_narrative_llm
+from ...agents.langgraph_agent.exceptions import _invoke_llm_with_retry
 from ...services import trip_draft_service
+from ...services.llm_service import get_llm
 from ...models.schemas import PlanFromSelectionsRequest
 
 router = APIRouter(prefix="/trip/draft", tags=["trip_draft"])
@@ -64,7 +68,7 @@ async def create_draft_from_selections(req: PlanFromSelectionsRequest):
 from ...models.schemas import (
     TripDraftPayload, TripRequest, MacroPlan, DraftDayContext,
     DayDetail, DiningPoolDay, WeatherInfo, Attraction, Hotel, Location,
-    DayEditRequest,
+    DayEditRequest, AIRearrangeRequest,
 )
 
 
@@ -240,5 +244,93 @@ async def recompute_day(draft_id: str, day_index: int, edit: DayEditRequest):
     detail.day_budget = compute_day_budget(detail)
     # 保留当前 description（recompute 不写 LLM）
     detail.description = current.description if current else ""
+    await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
+    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
+
+
+@router.post("/{draft_id}/day/{day_index}/narrative", response_model=DayDetailResponse,
+             summary="重写当日叙述文案（仅刷新 description）")
+async def rewrite_narrative(draft_id: str, day_index: int):
+    record = await trip_draft_service.get_draft(draft_id)
+    _ensure_editable(record)
+    ctx = _get_day_context_from_record(record, day_index)
+    request = TripRequest.model_validate_json(record.request_json)
+    existing_days = json.loads(record.days_detail_json)
+    if existing_days[day_index] is None:
+        raise HTTPException(409, detail="该天尚未 assemble，无法重写文案")
+    detail = DayDetail.model_validate(existing_days[day_index])
+    detail.description = await write_day_narrative_llm(
+        detail, weather=ctx.weather,
+        free_text_input=request.free_text_input or "",
+        city=request.city,
+    )
+    await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
+    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
+
+
+_AI_REARRANGE_SYSTEM = """你是单日行程优化专家。请从给定的餐饮候选池中给出一份当日最优组合。
+
+严格约束：
+1. 只能从候选池中挑餐厅，禁止编造名字
+2. 输出 JSON，含 attractions_order (景点名顺序) 和 meals (含 category, name, insert_after, estimated_cost)
+3. category 必须是 main/snack/dessert/cafe/late_night 之一
+4. insert_after 必须是 attractions_order 里的景点名（或 hotel_start / hotel_end）
+5. 不要输出其他字段、不要 markdown、纯 JSON"""
+
+
+@router.post("/{draft_id}/day/{day_index}/ai-rearrange", response_model=DayDetailResponse,
+             summary="AI 重新安排某天")
+async def ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeRequest):
+    record = await trip_draft_service.get_draft(draft_id)
+    _ensure_editable(record)
+    ctx = _get_day_context_from_record(record, day_index)
+    request = TripRequest.model_validate_json(record.request_json)
+
+    pool_summary = []
+    for cat, items in ctx.dining_pool.model_dump().items():
+        if items:
+            names = "、".join(it["name"] for it in items[:5])
+            pool_summary.append(f"  {cat}: {names}")
+    pool_text = "\n".join(pool_summary) or "（候选池为空）"
+
+    attr_names = "、".join(a.name for a in ctx.attractions) or "（无）"
+    hint = req.hint or ""
+
+    prompt = f"""城市: {request.city}, 第 {day_index + 1} 天 ({ctx.date})
+
+景点（可重排）: {attr_names}
+餐饮候选池:
+{pool_text}
+
+用户提示: {hint or '无'}
+
+请输出 JSON。"""
+
+    llm = get_llm()
+    try:
+        resp = await _invoke_llm_with_retry(
+            llm, [SystemMessage(content=_AI_REARRANGE_SYSTEM),
+                  HumanMessage(content=prompt)],
+        )
+        raw = (resp.content or "").strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        parsed = json.loads(raw)
+    except Exception as e:
+        raise HTTPException(422, detail=f"AI 暂不可用: {str(e)[:120]}")
+
+    overrides = {
+        "attractions_order": parsed.get("attractions_order") or [a.name for a in ctx.attractions],
+        "meals": parsed.get("meals") or [],
+    }
+    detail = rule_assemble_day_timeline(ctx, overrides=overrides)
+    detail.route_segments = await compute_day_route(
+        detail, request.city, request.transportation
+    )
+    detail.day_budget = compute_day_budget(detail)
+    # description 保留当前（用户可手动 narrative 刷新）
+    existing_days = json.loads(record.days_detail_json)
+    if existing_days[day_index]:
+        detail.description = existing_days[day_index].get("description", "")
     await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
