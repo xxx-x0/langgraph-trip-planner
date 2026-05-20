@@ -110,3 +110,41 @@ def test_hotel_appears_at_start_and_end_of_timeline():
     timeline = detail.timeline_order
     assert timeline[0]["kind"] == "hotel"
     assert timeline[-1]["kind"] == "hotel"
+
+
+from unittest.mock import patch, AsyncMock
+
+from app.agents.langgraph_agent.assemble.narrative import write_day_narrative_llm
+from app.models.schemas import DayDetail, WeatherInfo
+
+
+@pytest.mark.asyncio
+async def test_narrative_returns_stripped_text():
+    detail = DayDetail(
+        day_index=0, date="2026-06-01",
+        attractions=[_attr("A")],
+    )
+    fake_response = type("Resp", (), {"content": "  ## Day 1\n\n好天气，多带水。  "})
+
+    with patch(
+        "app.agents.langgraph_agent.assemble.narrative._invoke_llm_with_retry",
+        new=AsyncMock(return_value=fake_response),
+    ), patch("app.agents.langgraph_agent.assemble.narrative.get_llm",
+             return_value=object()):
+        text = await write_day_narrative_llm(
+            detail, weather=None, free_text_input=None, city="北京"
+        )
+    assert "Day 1" in text
+    assert not text.startswith(" ")
+
+
+@pytest.mark.asyncio
+async def test_narrative_returns_empty_on_failure():
+    detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
+    with patch(
+        "app.agents.langgraph_agent.assemble.narrative._invoke_llm_with_retry",
+        side_effect=RuntimeError("LLM down"),
+    ), patch("app.agents.langgraph_agent.assemble.narrative.get_llm",
+             return_value=object()):
+        text = await write_day_narrative_llm(detail, None, None, "北京")
+    assert text == ""
