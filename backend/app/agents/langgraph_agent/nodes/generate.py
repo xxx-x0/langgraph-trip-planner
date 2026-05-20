@@ -1,6 +1,7 @@
 import json
 import re
 import random
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -15,6 +16,7 @@ from ....models.schemas import (
     MacroPlan, DaySkeleton, Budget, WeatherInfo,
 )
 from ....services.llm_service import get_llm, is_structured_output_supported
+from ....services.open_meteo_service import fetch_open_meteo_weather
 
 
 def _truncate_info(text: str, max_chars: int = 3000) -> str:
@@ -183,7 +185,6 @@ DEFAULT_SEASON_WEATHER = {
 
 
 def _get_seasonal_weather(city: str, date_str: str) -> Dict[str, Any]:
-    from datetime import datetime
     dt = datetime.strptime(date_str, "%Y-%m-%d")
     month = dt.month
     city_data = CITY_SEASON_WEATHER.get(city, DEFAULT_SEASON_WEATHER)
@@ -202,6 +203,205 @@ def _get_seasonal_weather(city: str, date_str: str) -> Dict[str, Any]:
         "wind_direction": month_data["wind"],
         "wind_power": month_data["power"],
     }
+
+
+def _trip_dates(start_date: str, travel_days: int) -> list[str]:
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    return [
+        (start_dt + timedelta(days=i)).strftime("%Y-%m-%d")
+        for i in range(travel_days)
+    ]
+
+
+def _coerce_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return 0
+
+
+def _weather_from_mapping(data: dict[str, Any], date_key: str = "date") -> Optional[WeatherInfo]:
+    w_date = str(data.get(date_key, ""))
+    if not w_date:
+        return None
+    return WeatherInfo(
+        date=w_date,
+        day_weather=str(data.get("dayweather", data.get("day_weather", ""))),
+        night_weather=str(data.get("nightweather", data.get("night_weather", ""))),
+        day_temp=_coerce_int(data.get("daytemp", data.get("day_temp", 0))),
+        night_temp=_coerce_int(data.get("nighttemp", data.get("night_temp", 0))),
+        wind_direction=str(data.get("daywind", data.get("wind_direction", ""))),
+        wind_power=str(data.get("daypower", data.get("wind_power", ""))),
+    )
+
+
+def _parse_weather_payload(weather_data: Any, trip_start: str, trip_end: str) -> list[WeatherInfo]:
+    weather_list: list[WeatherInfo] = []
+    if not weather_data:
+        return weather_list
+
+    print(f"🌤️ 开始解析天气数据，原始长度: {len(str(weather_data))}")
+    print(f"  行程日期范围: {trip_start} 至 {trip_end}")
+
+    try:
+        if isinstance(weather_data, str):
+            import ast
+            raw_chunks = [
+                chunk.strip()
+                for chunk in weather_data.split("\n")
+                if chunk.strip() and not chunk.startswith("[工具调用失败")
+            ]
+
+            for chunk in raw_chunks:
+                try:
+                    parsed: Any = chunk
+                    for _ in range(2):
+                        try:
+                            parsed = json.loads(parsed)
+                            break
+                        except (json.JSONDecodeError, TypeError):
+                            try:
+                                parsed = ast.literal_eval(parsed)
+                                break
+                            except (ValueError, SyntaxError):
+                                pass
+
+                    if isinstance(parsed, list) and parsed:
+                        first = parsed[0]
+                        if isinstance(first, dict) and "text" in first:
+                            inner = first["text"]
+                            if isinstance(inner, str):
+                                try:
+                                    parsed = json.loads(inner)
+                                except (json.JSONDecodeError, TypeError):
+                                    try:
+                                        parsed = ast.literal_eval(inner)
+                                    except (ValueError, SyntaxError):
+                                        pass
+
+                    forecasts: list[Any] = []
+                    if isinstance(parsed, dict):
+                        forecasts = parsed.get("forecasts", [])
+                        if not forecasts:
+                            for val in parsed.values():
+                                if isinstance(val, list) and val and isinstance(val[0], dict):
+                                    forecasts = val
+                                    break
+                    elif isinstance(parsed, list):
+                        if parsed and isinstance(parsed[0], dict) and "forecasts" in parsed[0]:
+                            forecasts = parsed[0]["forecasts"]
+                        else:
+                            forecasts = parsed
+
+                    for forecast in forecasts:
+                        if not isinstance(forecast, dict):
+                            continue
+                        casts = forecast.get("casts", [])
+                        if casts:
+                            for cast in casts:
+                                try:
+                                    weather = _weather_from_mapping(cast)
+                                    if weather and trip_start <= weather.date <= trip_end:
+                                        weather_list.append(weather)
+                                except Exception as ce:
+                                    print(f"  ⚠️ 天气cast解析失败: {str(ce)[:80]}")
+                        else:
+                            try:
+                                weather = _weather_from_mapping(forecast)
+                                if weather and trip_start <= weather.date <= trip_end:
+                                    weather_list.append(weather)
+                                elif weather:
+                                    print(f"  ℹ️ 天气forecast日期{weather.date}不在行程范围内，跳过")
+                            except Exception as fe:
+                                print(f"  ⚠️ 天气forecast解析失败: {str(fe)[:80]}")
+                except Exception as chunk_e:
+                    print(f"  ⚠️ 天气数据块解析失败: {str(chunk_e)[:80]}")
+
+        elif isinstance(weather_data, list):
+            for item in weather_data:
+                if isinstance(item, WeatherInfo):
+                    if item.date and trip_start <= item.date <= trip_end:
+                        weather_list.append(item)
+                elif isinstance(item, dict):
+                    try:
+                        weather = _weather_from_mapping(item)
+                        if weather and trip_start <= weather.date <= trip_end:
+                            weather_list.append(weather)
+                    except Exception:
+                        pass
+    except Exception as e:
+        print(f"⚠️ 天气数据解析失败: {str(e)[:100]}")
+
+    if weather_list:
+        print(f"🌤️ 从天气数据解析到 {len(weather_list)} 天匹配行程日期的天气: {[w.date for w in weather_list]}")
+    else:
+        print(f"⚠️ 天气数据解析后无匹配行程日期的天气，行程: {trip_start} 至 {trip_end}")
+        print(f"  原始数据前200字符: {str(weather_data)[:200]}")
+    return weather_list
+
+
+def _missing_date_ranges(dates: list[str]) -> list[tuple[str, str]]:
+    if not dates:
+        return []
+    sorted_dates = sorted(dates)
+    ranges: list[tuple[str, str]] = []
+    start = prev = datetime.strptime(sorted_dates[0], "%Y-%m-%d")
+    for date_str in sorted_dates[1:]:
+        current = datetime.strptime(date_str, "%Y-%m-%d")
+        if current == prev + timedelta(days=1):
+            prev = current
+            continue
+        ranges.append((start.strftime("%Y-%m-%d"), prev.strftime("%Y-%m-%d")))
+        start = prev = current
+    ranges.append((start.strftime("%Y-%m-%d"), prev.strftime("%Y-%m-%d")))
+    return ranges
+
+
+async def _build_weather_list(request, weather_data: Any) -> list[WeatherInfo]:
+    trip_start = request.start_date
+    trip_end = request.end_date
+    expected_dates = _trip_dates(trip_start, request.travel_days)
+    weather_list = _parse_weather_payload(weather_data, trip_start, trip_end)
+
+    by_date: dict[str, WeatherInfo] = {}
+    for weather in weather_list:
+        if weather.date in expected_dates and weather.date not in by_date:
+            by_date[weather.date] = weather
+
+    missing_dates = [date for date in expected_dates if date not in by_date]
+    if missing_dates:
+        print(f"🌤️ 高德天气缺少 {len(missing_dates)} 天，尝试使用 Open-Meteo 补全: {missing_dates}")
+        for start_date, end_date in _missing_date_ranges(missing_dates):
+            try:
+                open_meteo_weather = await fetch_open_meteo_weather(
+                    request.city,
+                    start_date,
+                    end_date,
+                )
+                for weather in open_meteo_weather:
+                    if weather.date in missing_dates and weather.date not in by_date:
+                        by_date[weather.date] = weather
+            except Exception as e:
+                print(f"⚠️ Open-Meteo 天气补全失败: {str(e)[:120]}")
+
+    remaining_missing = [date for date in expected_dates if date not in by_date]
+    if remaining_missing:
+        print(f"🌤️ 仍缺少 {len(remaining_missing)} 天天气，根据{request.city}季节气候补全...")
+        for date_str in remaining_missing:
+            seasonal = _get_seasonal_weather(request.city, date_str)
+            by_date[date_str] = WeatherInfo(
+                date=date_str,
+                day_weather=seasonal["day_weather"],
+                night_weather=seasonal["night_weather"],
+                day_temp=seasonal["day_temp"],
+                night_temp=seasonal["night_temp"],
+                wind_direction=seasonal["wind_direction"],
+                wind_power=seasonal["wind_power"],
+            )
+
+    completed = [by_date[date] for date in expected_dates if date in by_date]
+    print(f"✅ 天气数据准备完成: {[(w.date, f'{w.day_temp}°C', w.day_weather) for w in completed]}")
+    return completed
 
 
 MACRO_PLANNER_PROMPT = """你是旅行宏观编排专家。你的唯一任务是根据景点聚类分组和酒店信息，输出一个极浅的行程骨架。
@@ -325,10 +525,10 @@ DAY_PLAN_GENERATOR_PROMPT = """你是单日行程规划专家。你的任务是�
 4. **route_segments由系统自动生成，你无需生成此字段**，即使你输出了也会被系统覆盖
 5. **每天必须包含早中晚三餐(meals)**，source字段：breakfast/lunch用nearby，dinner用popular
 6. **每个景点和餐厅的location必须包含经纬度坐标**，从搜索数据中提取
-7. **hotel必须是距离当天景点最近的酒店**，优先选择距离第一个景点3公里内的酒店
+7. **hotel 必须严格来自输入的"当日酒店候选"列表**，优先选第 1 个（已按距离/星级排序）。把候选中的 name/address/location/star_rating/price/hotel_amenities/room_amenities/image_url/detail_url/distance_in_meters 字段照搬，不要编造 URL/设施列表。
 8. **结合天气信息安排行程**：根据当天天气情况，在description中给出穿衣和出行建议（如雨天带伞、晴天防晒等）
 9. **JSON必须严格合法且完整**：属性名用双引号，不要有尾随逗号，不要有注释
-10. **meals中的餐厅名称必须来自搜索结果中的真实餐厅**，不要编造餐厅名称和地址
+10. **meals 中每一餐必须严格来自输入的"当日餐厅候选"对应分组**（breakfast 取自 breakfast 列表, lunch 取自 lunch, dinner 取自 dinner）。直接照搬候选的 name/address/location/rating/avg_cost/open_hours/cuisine/source/tel 字段，**禁止跨组挪用或编造**。
 11. **提供实用的旅行建议**，如最佳游览时间、注意事项等
 12. **hotel的AIGoHotel字段必须从酒店搜索数据中提取**：star_rating, price, original_price, hotel_amenities, room_amenities, description, image_url, detail_url, distance_in_meters 这些字段如果搜索数据中有，必须原样填入，不要编造URL或设施列表"""
 
@@ -473,14 +673,14 @@ async def macro_planner_node(state: TripPlannerState) -> Dict[str, Any]:
 **景点聚类分组:**
 {cluster}
 
-**可选酒店:**
+**可选酒店(行程级候选，已按到行程质心距离排序，每天显示同一份候选):**
 {hotels}
 
 **要求:**
 1. 严格按照聚类分组安排每日景点，同一组的景点必须在同一天
 2. 每天的attraction_names必须来自聚类分组中的真实景点名称
 3. 每天安排2-3个景点
-4. hotel_name从可选酒店中选择**距离当天景点最近**的酒店，优先选择距离第一个景点3公里内的酒店
+4. hotel_name **必须从"候选酒店"列表中挑选一个真实酒店名称**（优先选第 1 个，已按距离/星级排序）。**同一城市的多天行程默认每天选同一家酒店**（不需要每天换酒店），除非聚类明显远离同一商圈。
 5. 不要输出任何坐标、路线、餐饮细节，仅输出骨架
 6. **每天的date字段必须严格等于用户要求的日期**：第{request.start_date}天到第{request.end_date}天，不要编造日期
 7. **必须生成{request.travel_days}天的行程骨架，不能减少天数**。如果聚类景点不够分配，可以某些天安排2个景点或适当放松，但days数组长度必须等于{request.travel_days}"""
@@ -801,7 +1001,8 @@ async def day_plan_generator_node(state: DayPlanLocalState) -> Dict[str, Any]:
     print(f"📝 单日生成器: 第{day_index + 1}天 ({date}), 景点: {attraction_names}, 重试: {retry_count}")
 
     attractions_info = _truncate_info(state.get("attractions_info", ""), 3000)
-    hotels_info = _truncate_info(state.get("hotels_info", ""), 3000)
+    day_hotels_info = state.get("day_hotels_info", "")
+    hotels_info = _truncate_info(day_hotels_info if day_hotels_info else state.get("hotels_info", ""), 3000)
     day_food_info = state.get("day_food_info", "")
     food_info = _truncate_info(day_food_info if day_food_info else state.get("food_info", ""), 2500)
     weather_info = _truncate_info(state.get("weather_info", ""), 800)
@@ -829,8 +1030,8 @@ async def day_plan_generator_node(state: DayPlanLocalState) -> Dict[str, Any]:
 
 **搜索数据:**
 [景点详情]: {attractions_info}
-[酒店信息]: {hotels_info}
-[美食信息]: {food_info}
+[当日酒店候选(已按当日活动中心距离排好序，请从中挑选)]: {hotels_info}
+[当日餐厅候选(JSON格式，按早午晚分组，已按评分+距离排序)]: {food_info}
 [天气信息]: {weather_info}
 [聚类分组]: {cluster_info}
 {error_hint}
@@ -838,9 +1039,10 @@ async def day_plan_generator_node(state: DayPlanLocalState) -> Dict[str, Any]:
 1. 景点名称必须来自: {', '.join(attraction_names)}
 2. 每个景点的location必须包含经纬度坐标(从搜索数据提取)
 3. 必须包含早中晚三餐(meals)
-4. route_segments由系统自动生成，你不需要生成
-5. JSON必须严格合法且完整
-6. **酒店必须选择距离当天景点最近的酒店**，优先选择距离第一个景点3公里内的酒店，不要选择远离景点的酒店"""
+4. **meals 中的餐厅必须严格来自[当日餐厅候选]中的对应分组**（breakfast 从 breakfast 列表挑, lunch 从 lunch, dinner 从 dinner），不要编造餐厅，不要跨组挪用。直接复制 name/address/location/rating/avg_cost/open_hours/cuisine/source 字段。
+5. **hotel 必须严格来自[当日酒店候选]列表**，优先选第 1 个（已按距离/星级排序）。把候选中的 name/address/location/star_rating/price/hotel_amenities/room_amenities/image_url/detail_url/distance_in_meters 字段照搬，不要编造。
+6. route_segments由系统自动生成，你不需要生成
+7. JSON必须严格合法且完整"""
 
     llm = get_llm()
     messages = [SystemMessage(content=DAY_PLAN_GENERATOR_PROMPT), HumanMessage(content=prompt)]
@@ -981,10 +1183,11 @@ def _should_retry_or_fallback(state: DayPlanLocalState) -> str:
 
 
 def _extract_meals_from_food_info(day_food_info: str, city: str) -> List:
-    """从 day_food_search_node 的搜索结果中解析真实餐厅，分配到早中晚三餐"""
-    nearby_restaurants = []
-    popular_restaurants = []
+    """从 day_food_search_node 的搜索结果中解析真实餐厅，分配到早中晚三餐。
 
+    优先识别新版结构化 JSON（{breakfast:[...], lunch:[...], dinner:[...]}）；
+    若不是 JSON 则回退到旧版高德文本解析。
+    """
     if not day_food_info:
         return [
             Meal(type="breakfast", name="当地特色早餐", description="当地特色早餐", cuisine="本地菜", source="nearby", estimated_cost=30),
@@ -992,6 +1195,50 @@ def _extract_meals_from_food_info(day_food_info: str, city: str) -> List:
             Meal(type="dinner", name="晚餐推荐", description="晚餐推荐", cuisine="本地菜", source="popular", estimated_cost=80),
         ]
 
+    # 新版：JSON 结构（食物 search node 输出）
+    try:
+        parsed = json.loads(day_food_info)
+        if isinstance(parsed, dict) and any(k in parsed for k in ("breakfast", "lunch", "dinner")):
+            meals: List[Meal] = []
+            default_cost = {"breakfast": 30, "lunch": 50, "dinner": 80}
+            for meal_type in ("breakfast", "lunch", "dinner"):
+                candidates = parsed.get(meal_type) or []
+                if candidates and isinstance(candidates[0], dict):
+                    cand = candidates[0]
+                    loc = None
+                    cand_loc = cand.get("location")
+                    if isinstance(cand_loc, dict) and cand_loc.get("longitude") and cand_loc.get("latitude"):
+                        loc = Location(longitude=cand_loc["longitude"], latitude=cand_loc["latitude"])
+                    meals.append(Meal(
+                        type=meal_type,
+                        name=cand.get("name") or f"{city}{'早餐' if meal_type == 'breakfast' else '午餐' if meal_type == 'lunch' else '晚餐'}",
+                        address=cand.get("address"),
+                        location=loc,
+                        cuisine=cand.get("cuisine") or "本地菜",
+                        rating=cand.get("rating"),
+                        avg_cost=cand.get("avg_cost"),
+                        distance=cand.get("distance"),
+                        source=cand.get("source") or ("popular" if meal_type == "dinner" else "nearby"),
+                        estimated_cost=cand.get("avg_cost") or default_cost[meal_type],
+                        open_hours=cand.get("open_hours"),
+                        tel=cand.get("tel"),
+                    ))
+                else:
+                    meals.append(Meal(
+                        type=meal_type,
+                        name=f"{city}{'早餐' if meal_type == 'breakfast' else '午餐' if meal_type == 'lunch' else '晚餐'}推荐",
+                        description="推荐餐厅",
+                        cuisine="本地菜",
+                        source="popular" if meal_type == "dinner" else "nearby",
+                        estimated_cost=default_cost[meal_type],
+                    ))
+            return meals
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    # 旧版：高德文本格式
+    nearby_restaurants = []
+    popular_restaurants = []
     for line in day_food_info.split("\n"):
         if not line.strip():
             continue
@@ -1224,180 +1471,7 @@ async def reduce_assemble_node(state: TripPlannerState) -> Dict[str, Any]:
         total=total,
     )
 
-    weather_data = state.get("weather_info", "")
-    weather_list = []
-    trip_start = request.start_date
-    trip_end = request.end_date
-
-    if weather_data:
-        print(f"🌤️ 开始解析天气数据，原始长度: {len(str(weather_data))}")
-        print(f"  行程日期范围: {trip_start} 至 {trip_end}")
-        try:
-            if isinstance(weather_data, str):
-                import ast
-                raw_chunks = [chunk.strip() for chunk in weather_data.split("\n") if chunk.strip() and not chunk.startswith("[工具调用失败")]
-
-                for chunk in raw_chunks:
-                    try:
-                        parsed = chunk
-                        for _ in range(2):
-                            try:
-                                parsed = json.loads(parsed)
-                                break
-                            except (json.JSONDecodeError, TypeError):
-                                try:
-                                    parsed = ast.literal_eval(parsed)
-                                    break
-                                except (ValueError, SyntaxError):
-                                    pass
-
-                        if isinstance(parsed, list) and len(parsed) > 0:
-                            first = parsed[0]
-                            if isinstance(first, dict) and "text" in first:
-                                inner = first["text"]
-                                if isinstance(inner, str):
-                                    try:
-                                        parsed = json.loads(inner)
-                                    except (json.JSONDecodeError, TypeError):
-                                        try:
-                                            parsed = ast.literal_eval(inner)
-                                        except (ValueError, SyntaxError):
-                                            pass
-
-                        forecasts = []
-                        if isinstance(parsed, dict):
-                            forecasts = parsed.get("forecasts", [])
-                            if not forecasts:
-                                for key in parsed:
-                                    val = parsed[key]
-                                    if isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
-                                        forecasts = val
-                                        break
-                        elif isinstance(parsed, list):
-                            if len(parsed) > 0 and isinstance(parsed[0], dict) and "forecasts" in parsed[0]:
-                                forecasts = parsed[0]["forecasts"]
-                            else:
-                                forecasts = parsed
-
-                        for forecast in forecasts:
-                            if not isinstance(forecast, dict):
-                                continue
-                            casts = forecast.get("casts", [])
-                            if casts:
-                                for cast in casts:
-                                    try:
-                                        cast_date = str(cast.get("date", ""))
-                                        if cast_date >= trip_start and cast_date <= trip_end:
-                                            day_temp_val = cast.get("daytemp", cast.get("day_temp", 0))
-                                            night_temp_val = cast.get("nighttemp", cast.get("night_temp", 0))
-                                            try:
-                                                day_temp_val = int(day_temp_val)
-                                            except (ValueError, TypeError):
-                                                day_temp_val = 0
-                                            try:
-                                                night_temp_val = int(night_temp_val)
-                                            except (ValueError, TypeError):
-                                                night_temp_val = 0
-
-                                            weather_list.append(WeatherInfo(
-                                                date=cast_date,
-                                                day_weather=str(cast.get("dayweather", cast.get("day_weather", ""))),
-                                                night_weather=str(cast.get("nightweather", cast.get("night_weather", ""))),
-                                                day_temp=day_temp_val,
-                                                night_temp=night_temp_val,
-                                                wind_direction=str(cast.get("daywind", cast.get("wind_direction", ""))),
-                                                wind_power=str(cast.get("daypower", cast.get("wind_power", ""))),
-                                            ))
-                                    except Exception as ce:
-                                        print(f"  ⚠️ 天气cast解析失败: {str(ce)[:80]}")
-                            else:
-                                try:
-                                    w_date = str(forecast.get("date", ""))
-                                    if w_date and w_date >= trip_start and w_date <= trip_end:
-                                        day_temp_val = forecast.get("daytemp", forecast.get("day_temp", 0))
-                                        night_temp_val = forecast.get("nighttemp", forecast.get("night_temp", 0))
-                                        try:
-                                            day_temp_val = int(day_temp_val)
-                                        except (ValueError, TypeError):
-                                            day_temp_val = 0
-                                        try:
-                                            night_temp_val = int(night_temp_val)
-                                        except (ValueError, TypeError):
-                                            night_temp_val = 0
-                                        weather_list.append(WeatherInfo(
-                                            date=w_date,
-                                            day_weather=str(forecast.get("dayweather", forecast.get("day_weather", ""))),
-                                            night_weather=str(forecast.get("nightweather", forecast.get("night_weather", ""))),
-                                            day_temp=day_temp_val,
-                                            night_temp=night_temp_val,
-                                            wind_direction=str(forecast.get("daywind", forecast.get("wind_direction", ""))),
-                                            wind_power=str(forecast.get("daypower", forecast.get("wind_power", ""))),
-                                        ))
-                                    else:
-                                        print(f"  ℹ️ 天气forecast日期{w_date}不在行程范围内，跳过")
-                                except Exception as fe:
-                                    print(f"  ⚠️ 天气forecast解析失败: {str(fe)[:80]}")
-                    except Exception as chunk_e:
-                        print(f"  ⚠️ 天气数据块解析失败: {str(chunk_e)[:80]}")
-
-                if weather_list:
-                    print(f"🌤️ 从天气数据解析到 {len(weather_list)} 天匹配行程日期的天气: {[w.date for w in weather_list]}")
-                else:
-                    print(f"⚠️ 天气数据解析后无匹配行程日期的天气，行程: {trip_start} 至 {trip_end}")
-                    print(f"  原始数据前200字符: {str(weather_data)[:200]}")
-            elif isinstance(weather_data, list):
-                for w in weather_data:
-                    if isinstance(w, dict):
-                        try:
-                            w_date = str(w.get("date", ""))
-                            if w_date and w_date >= trip_start and w_date <= trip_end:
-                                day_temp_val = w.get("daytemp", w.get("day_temp", 0))
-                                night_temp_val = w.get("nighttemp", w.get("night_temp", 0))
-                                try:
-                                    day_temp_val = int(day_temp_val)
-                                except (ValueError, TypeError):
-                                    day_temp_val = 0
-                                try:
-                                    night_temp_val = int(night_temp_val)
-                                except (ValueError, TypeError):
-                                    night_temp_val = 0
-                                weather_list.append(WeatherInfo(
-                                    date=w_date,
-                                    day_weather=str(w.get("dayweather", w.get("day_weather", ""))),
-                                    night_weather=str(w.get("nightweather", w.get("night_weather", ""))),
-                                    day_temp=day_temp_val,
-                                    night_temp=night_temp_val,
-                                    wind_direction=str(w.get("daywind", w.get("wind_direction", ""))),
-                                    wind_power=str(w.get("daypower", w.get("wind_power", ""))),
-                                ))
-                        except Exception:
-                            pass
-                    elif isinstance(w, WeatherInfo):
-                        if w.date and w.date >= trip_start and w.date <= trip_end:
-                            weather_list.append(w)
-        except Exception as e:
-            print(f"⚠️ 天气数据解析失败: {str(e)[:100]}")
-
-    weather_list = [w for w in weather_list if w.date and trip_start <= w.date <= trip_end]
-
-    if not weather_list:
-        print(f"🌤️ 无有效天气数据（行程日期{trip_start}至{trip_end}无匹配），根据{request.city}季节气候生成天气...")
-        from datetime import datetime, timedelta
-        start_dt = datetime.strptime(trip_start, "%Y-%m-%d")
-        for i in range(request.travel_days):
-            current_dt = start_dt + timedelta(days=i)
-            date_str = current_dt.strftime("%Y-%m-%d")
-            seasonal = _get_seasonal_weather(request.city, date_str)
-            weather_list.append(WeatherInfo(
-                date=date_str,
-                day_weather=seasonal["day_weather"],
-                night_weather=seasonal["night_weather"],
-                day_temp=seasonal["day_temp"],
-                night_temp=seasonal["night_temp"],
-                wind_direction=seasonal["wind_direction"],
-                wind_power=seasonal["wind_power"],
-            ))
-        print(f"✅ 已生成 {len(weather_list)} 天季节性天气: {[(w.date, f'{w.day_temp}°C', w.day_weather) for w in weather_list]}")
+    weather_list = await _build_weather_list(request, state.get("weather_info", ""))
 
     trip_plan = TripPlan(
         city=request.city,

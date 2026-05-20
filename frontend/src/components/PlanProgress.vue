@@ -48,7 +48,7 @@ const props = withDefaults(defineProps<{
   nodeMapping?: Record<string, string>
 }>(), {
   steps: () => [
-    { key: 'web_search_attractions', label: '🔍 搜索景点攻略' },
+    { key: 'search_attractions', label: '🔍 查询景点库' },
     { key: 'search_hotel', label: '🏨 搜索酒店' },
     { key: 'search_weather', label: '🌤️ 查询天气' },
     { key: 'gather_search', label: '🔗 汇总搜索结果' },
@@ -60,10 +60,7 @@ const props = withDefaults(defineProps<{
     { key: 'reduce_assemble', label: '🔧 合并行程数据' },
     { key: 'global_synthesizer', label: '💡 生成全局建议' },
   ],
-  nodeMapping: () => ({
-    extract_attractions: 'web_search_attractions',
-    geocode_attractions: 'web_search_attractions',
-  }),
+  nodeMapping: () => ({}),
 })
 
 const stepOrder = computed(() => props.steps.map((s) => s.key))

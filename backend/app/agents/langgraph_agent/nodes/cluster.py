@@ -135,7 +135,7 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
 
     if not valid_attractions:
         print("⚠️ 未能提取有效景点坐标，跳过聚类")
-        return {"cluster_info": "景点坐标提取失败，请根据景点信息自行合理分配每日行程。"}
+        return {"cluster_info": "景点坐标提取失败，请根据景点信息自行合理分配每日行程。", "clusters_data": []}
 
     print(f"📊 成功提取 {len(valid_attractions)} 个景点坐标")
 
@@ -361,7 +361,7 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
     final_count = sum(len(c) for c in clusters)
     print(f"✅ 景点聚类完成: {len(valid_attractions)} 个景点 → 筛选后 {final_count} 个，分为 {len(clusters)} 组")
 
-    return {"cluster_info": cluster_info}
+    return {"cluster_info": cluster_info, "clusters_data": clusters}
 
 
 async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any]:
@@ -373,7 +373,7 @@ async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any
     request = state["request"]
 
     if not selected_attractions:
-        return {"cluster_info": "未选择任何景点，无法生成行程。"}
+        return {"cluster_info": "未选择任何景点，无法生成行程。", "clusters_data": []}
 
     if day_assignments:
         print(f"📊 使用用户自定义日程分配: {len(day_assignments)} 天")
@@ -405,7 +405,7 @@ async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any
         if not valid_attractions:
             names = [a["name"] for a in selected_attractions]
             simple_info = "\n".join([f"第{i+1}天: {name}" for i, name in enumerate(names)])
-            return {"cluster_info": f"景点坐标缺失，按选择顺序分配:\n{simple_info}"}
+            return {"cluster_info": f"景点坐标缺失，按选择顺序分配:\n{simple_info}", "clusters_data": []}
 
         n = len(valid_attractions)
         dist_matrix = [[0.0] * n for _ in range(n)]
@@ -465,4 +465,4 @@ async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any
     final_count = sum(len(c) for c in clusters)
     print(f"✅ 用户选择景点聚类完成: {len(selected_attractions)} 个选中 → {final_count} 个分为 {len(clusters)} 组")
 
-    return {"cluster_info": cluster_info, "attractions_info": attractions_info}
+    return {"cluster_info": cluster_info, "attractions_info": attractions_info, "clusters_data": clusters}

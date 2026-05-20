@@ -8,7 +8,7 @@ from sqlalchemy.orm import DeclarativeBase
 DATA_DIR = Path(__file__).parent.parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite+aiosqlite:///{DATA_DIR / 'trips.db'}")
+DATABASE_URL = os.getenv("DATABASE_URL") or f"sqlite+aiosqlite:///{DATA_DIR / 'trips.db'}"
 
 engine = create_async_engine(
     DATABASE_URL,

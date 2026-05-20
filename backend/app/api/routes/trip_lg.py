@@ -387,7 +387,7 @@ async def health_check():
             "mcp_adapter": "langchain-mcp-adapters",
             "mcp_connected": mcp_healthy,
             "graph_nodes": [
-                "web_search_attractions",
+                "search_attractions",
                 "search_weather",
                 "search_hotel",
                 "gather_search",

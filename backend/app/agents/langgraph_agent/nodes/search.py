@@ -1,31 +1,17 @@
-import re
 import json
-from typing import Dict, Any, List, Optional
+import re
+from typing import Any, Dict, List
 
+from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
-from langchain_core.messages import SystemMessage, HumanMessage
 
-from ..exceptions import _invoke_llm_with_retry, _invoke_tool_with_retry, NonRetryableError
-from ..prompts import WEB_SEARCH_ATTRACTION_PROMPT, EXTRACT_ATTRACTIONS_PROMPT, WEATHER_AGENT_PROMPT, HOTEL_AGENT_PROMPT
+from ..exceptions import NonRetryableError, _invoke_llm_with_retry, _invoke_tool_with_retry
+from ..prompts import WEATHER_AGENT_PROMPT, HOTEL_AGENT_PROMPT
 from ..state import TripPlannerState
-from ..utils.parsing import _extract_poi_names
+from ....services.attractions_cache_service import CachedAttraction, get_attractions_cache_service
 from ....services.langchain_amap_tools import get_langchain_amap_service
 from ....services.llm_service import get_llm
 from ....services.preferences_service import format_preference_hint
-
-_DDG_AVAILABLE = False
-try:
-    from langchain_community.tools import DuckDuckGoSearchResults
-    _DDG_AVAILABLE = True
-except ImportError:
-    print("⚠️ duckduckgo-search 未安装，景点搜索将降级使用高德API。请运行: pip install duckduckgo-search")
-
-_BING_AVAILABLE = False
-try:
-    from ....services.bing_mcp_service import get_bing_service
-    _BING_AVAILABLE = True
-except ImportError as e:
-    print(f"⚠️ 必应 MCP 服务导入失败: {e}")
 
 
 class FreeTextAnalysis(BaseModel):
@@ -120,19 +106,19 @@ def _extract_must_visit_attractions(free_text: str) -> List[str]:
         return []
     names = set()
     trigger_patterns = [
-        r'想去(.+)',
-        r'一定要去(.+)',
-        r'必须去(.+)',
-        r'特别想去(.+)',
-        r'希望去(.+)',
-        r'想要去(.+)',
+        r"想去(.+)",
+        r"一定要去(.+)",
+        r"必须去(.+)",
+        r"特别想去(.+)",
+        r"希望去(.+)",
+        r"想要去(.+)",
     ]
     for pattern in trigger_patterns:
         matches = re.findall(pattern, free_text)
         for match in matches:
-            parts = re.split(r'[，,、；;和还有以及\s]+', match)
+            parts = re.split(r"[，,、；;和还有以及\s]+", match)
             for name in parts:
-                name = name.strip().rstrip('。.！!？?')
+                name = name.strip().rstrip("。.！!？?")
                 if name and 2 <= len(name) <= 20:
                     names.add(name)
     known_landmarks = [
@@ -159,401 +145,119 @@ def _get_preference_hint(state: TripPlannerState) -> str:
     return ""
 
 
-async def web_search_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("🔍 执行节点: web_search_attractions_node")
-    request = state["request"]
-    city = request.city
-    preferences = request.preferences or []
-    companions = request.companions
-    budget = request.budget
+def _preferences_to_categories(preferences: List[str]) -> List[str] | None:
+    rules = [
+        (("历史", "文化", "博物馆", "古迹", "人文", "艺术", "美术"), "历史文化"),
+        (("自然", "户外", "公园", "山", "湖", "海", "徒步"), "自然风光"),
+        (("都市", "地标", "城市", "建筑"), "现代都市"),
+        (("休闲", "娱乐", "游乐", "夜生活"), "休闲娱乐"),
+        (("购物", "商场", "买"), "购物"),
+        (("美食", "小吃", "夜市", "餐饮"), "美食街区"),
+        (("亲子", "儿童", "家庭", "动物园", "乐园"), "亲子"),
+        (("宗教", "寺", "庙", "教堂", "祈福", "朝圣"), "宗教"),
+    ]
+    categories: list[str] = []
+    for preference in preferences or []:
+        for keywords, category in rules:
+            if any(keyword in preference for keyword in keywords) and category not in categories:
+                categories.append(category)
+    return categories or None
 
-    if not _DDG_AVAILABLE:
-        print("⚠️ DuckDuckGo不可用，降级使用高德搜索景点")
-        try:
-            service = get_langchain_amap_service()
-            search_tool = await service.get_tool("maps_text_search")
-            if search_tool:
-                keywords = preferences[0] if preferences else "景点"
-                fallback_result = await _invoke_tool_with_retry(
-                    search_tool,
-                    {"keywords": keywords, "city": city},
-                    max_retries=2,
-                    per_attempt_timeout=15.0,
-                )
-                return {
-                    "raw_search_results": "",
-                    "attractions_info": str(fallback_result),
-                }
-        except Exception as e:
-            print(f"⚠️ 降级高德搜索也失败: {e}")
-        return {
-            "raw_search_results": "",
-            "errors": ["web_search_attractions: DuckDuckGo不可用且降级搜索失败"],
-        }
+
+def _poi_location(poi: CachedAttraction) -> str:
+    if poi.longitude is None or poi.latitude is None:
+        return ""
+    return f"{poi.longitude},{poi.latitude}"
+
+
+def _format_pois_as_attractions_info(pois: List[CachedAttraction]) -> str:
+    payload = {
+        "pois": [
+            {
+                "id": poi.poi_id or "",
+                "name": poi.name,
+                "address": poi.address or "",
+                "location": _poi_location(poi),
+                "type": poi.amap_type or poi.category or "",
+                "biz_ext": {
+                    "rating": "" if poi.rating is None else str(poi.rating),
+                    "cost": poi.ticket_price or "",
+                },
+                "photos": [{"url": poi.image_url}] if poi.image_url else [],
+            }
+            for poi in pois
+        ]
+    }
+    return json.dumps(payload, ensure_ascii=False)
+
+
+def _poi_to_selected(poi: CachedAttraction) -> dict[str, Any]:
+    return {
+        "name": poi.name,
+        "description": poi.description or poi.category or poi.address or "",
+        "category": poi.category or "其他",
+    }
+
+
+async def search_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
+    print("🔍 执行节点: search_attractions_node")
+    request = state["request"]
+    service = get_attractions_cache_service()
+    categories = _preferences_to_categories(request.preferences or [])
+    min_count = max(request.travel_days * 3, 15)
 
     try:
-        travel_days = request.travel_days
-        search_queries = []
-
-        search_queries.extend([
-            f"{city} 必去景点 top10",
-            f"{city} 旅游攻略 必去",
-            f"{city} 最值得去的景点",
-        ])
-
-        if travel_days >= 3:
-            search_queries.extend([
-                f"{city} 十大景点",
-                f"{city} 旅游景点推荐",
-            ])
-
-        if travel_days >= 5:
-            search_queries.extend([
-                f"{city} 冷门景点 小众",
-                f"{city} 周边景点推荐",
-            ])
-
-        if preferences:
-            companion_label = ""
-            if companions:
-                companion_map = {
-                    "solo": "一个人",
-                    "couple": "情侣",
-                    "family": "亲子",
-                    "friends": "朋友",
-                    "elderly": "老人",
-                    "group": "团队",
-                }
-                companion_label = companion_map.get(companions.type, "")
-
-            for pref in preferences[:3]:
-                if companion_label:
-                    search_queries.append(f"{city} {pref} {companion_label} 景点推荐")
-                search_queries.append(f"{city} {pref} 必去景点")
-                search_queries.append(f"{city} {pref} 旅游攻略")
-
-        if budget is not None and budget < 3000:
-            search_queries.append(f"{city} 免费景点")
-            search_queries.append(f"{city} 低价景点推荐")
+        pool = await service.get_attractions(city=request.city, min_count=min_count, categories=categories)
 
         analysis = await analyze_free_text(request.free_text_input or "")
-        must_visit = analysis.get("attractions", [])
-        if must_visit:
-            for name in must_visit[:3]:
-                search_queries.append(f"{name} {city} 旅游攻略")
+        must_visit_names = analysis.get("attractions", []) or _extract_must_visit_attractions(request.free_text_input or "")
 
-        all_results = []
+        must_visit_pois: list[CachedAttraction] = []
+        remaining_pool = list(pool)
+        for name in must_visit_names:
+            existing = next((poi for poi in remaining_pool if poi.name == name or name in poi.name), None)
+            if existing:
+                must_visit_pois.append(existing)
+                remaining_pool = [poi for poi in remaining_pool if poi.name != existing.name]
+                continue
 
-        # 1. 必应 MCP 搜索 (优先)
-        bing_service = get_bing_service() if _BING_AVAILABLE else None
-        bing_success_count = 0
-        if bing_service:
-            print("  🔍 尝试使用必应 MCP 搜索...")
-            for query in search_queries[:6]:
-                try:
-                    result = await bing_service.search(query=query, count=5)
-                    result_str = str(result) if not isinstance(result, str) else result
-                    if result_str and len(result_str) > 20:
-                        all_results.append(f"=== [必应] 搜索词: {query} ===\n{result_str}")
-                        bing_success_count += 1
-                        print(f"  ✅ 必应搜索成功: {query}")
-                except Exception as e:
-                    print(f"  ⚠️ 必应搜索失败({query}): {e}")
-            if bing_success_count > 0:
-                print(f"  ✅ 必应 MCP 共获取 {bing_success_count} 条结果")
-        else:
-            print("  ⚠️ 必应 MCP 未配置或导入失败，跳过")
+            found = await service.find_by_name(request.city, name)
+            if found:
+                must_visit_pois.append(found)
 
-        # 2. DuckDuckGo 搜索 (补充)
-        ddg_success_count = 0
-        if _DDG_AVAILABLE:
-            print("  🔍 尝试使用 DuckDuckGo 搜索补充...")
-            ddg_tool = DuckDuckGoSearchResults(max_results=5)
-            for query in search_queries[:6]:
-                try:
-                    result = await _invoke_tool_with_retry(
-                        ddg_tool,
-                        {"query": query},
-                        max_retries=1,
-                        per_attempt_timeout=15.0,
-                    )
-                    result_str = str(result)
-                    if result_str and len(result_str) > 20:
-                        all_results.append(f"=== [DuckDuckGo] 搜索词: {query} ===\n{result_str}")
-                        ddg_success_count += 1
-                        print(f"  ✅ DuckDuckGo搜索成功: {query}")
-                except Exception as e:
-                    print(f"  ⚠️ DuckDuckGo搜索失败({query}): {e}")
-            print(f"  ✅ DuckDuckGo 共获取 {ddg_success_count} 条结果")
-        else:
-            print("  ⚠️ DuckDuckGo 未安装，跳过")
+        combined: list[CachedAttraction] = []
+        seen: set[str] = set()
+        for poi in must_visit_pois + remaining_pool:
+            if poi.name in seen:
+                continue
+            combined.append(poi)
+            seen.add(poi.name)
 
-        if not all_results:
+        if not combined:
             return {
-                "raw_search_results": "",
-                "errors": ["web_search_attractions: 所有搜索引擎均无结果"],
-            }
-
-        raw_results = "\n\n".join(all_results)
-        print(f"🔍 搜索完成: 必应{bing_success_count}条, DuckDuckGo{ddg_success_count}条, 共{len(all_results)}条结果")
-        return {"raw_search_results": raw_results}
-    except NonRetryableError as e:
-        print(f"❌ web_search_attractions_node 不可重试错误: {e}")
-        return {
-            "raw_search_results": "",
-            "errors": [f"web_search_attractions: 不可重试错误 - {str(e)[:200]}"],
-        }
-    except Exception as e:
-        print(f"❌ web_search_attractions_node 异常: {e}")
-        return {
-            "raw_search_results": "",
-            "errors": [f"web_search_attractions: 搜索失败 - {str(e)[:200]}"],
-        }
-
-
-async def extract_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("🧠 执行节点: extract_attractions_node")
-    raw_results = state.get("raw_search_results", "")
-    request = state["request"]
-
-    if not raw_results:
-        print("⚠️ extract_attractions: 搜索结果为空，降级到高德搜索")
-        try:
-            service = get_langchain_amap_service()
-            search_tool = await service.get_tool("maps_text_search")
-            if search_tool:
-                keywords = request.preferences[0] if request.preferences else "景点"
-                fallback_result = await _invoke_tool_with_retry(
-                    search_tool,
-                    {"keywords": keywords, "city": request.city},
-                    max_retries=2,
-                    per_attempt_timeout=15.0,
-                )
-                return {
-                    "selected_pois": [],
-                    "attractions_info": str(fallback_result),
-                }
-        except Exception as e:
-            print(f"⚠️ 降级高德搜索也失败: {e}")
-        return {
-            "selected_pois": [],
-            "errors": ["extract_attractions: 搜索结果为空且降级搜索失败"],
-        }
-
-    try:
-        llm = get_llm()
-        travel_days = request.travel_days
-        max_count = travel_days * 3
-        preferences = request.preferences or []
-        pref_hint = f"\n用户偏好: {', '.join(preferences)}" if preferences else "\n用户无特殊偏好（按通用景点提取）"
-
-        prompt = f"旅行天数: {travel_days}天，最多提取{max_count}个景点（但只提取搜索结果中明确提到的，不要凑数）。{pref_hint}\n\n以下是搜索结果:\n{raw_results[:15000]}"
-        response = await _invoke_llm_with_retry(
-            llm,
-            [SystemMessage(content=EXTRACT_ATTRACTIONS_PROMPT), HumanMessage(content=prompt)],
-            max_retries=2,
-            per_attempt_timeout=30.0,
-        )
-
-        content = response.content.strip()
-        pois = []
-
-        if "```json" in content:
-            json_start = content.find("```json") + 7
-            json_end = content.find("```", json_start)
-            json_str = content[json_start:json_end].strip()
-        elif "```" in content:
-            json_start = content.find("```") + 3
-            json_end = content.find("```", json_start)
-            json_str = content[json_start:json_end].strip()
-        elif "[" in content:
-            json_start = content.find("[")
-            json_end = content.rfind("]") + 1
-            json_str = content[json_start:json_end]
-        else:
-            raise ValueError("响应中未找到JSON")
-
-        pois = json.loads(json_str)
-        if not isinstance(pois, list):
-            pois = []
-
-        valid_pois = []
-        for poi in pois:
-            if isinstance(poi, dict) and poi.get("name"):
-                valid_pois.append({
-                    "name": poi["name"],
-                    "description": poi.get("description", ""),
-                })
-
-        if not valid_pois:
-            print("⚠️ extract_attractions: LLM未提取到有效景点，降级到高德搜索")
-            try:
-                service = get_langchain_amap_service()
-                search_tool = await service.get_tool("maps_text_search")
-                if search_tool:
-                    keywords = request.preferences[0] if request.preferences else "景点"
-                    fallback_result = await _invoke_tool_with_retry(
-                        search_tool,
-                        {"keywords": keywords, "city": request.city},
-                        max_retries=2,
-                        per_attempt_timeout=15.0,
-                    )
-                    return {
-                        "selected_pois": [],
-                        "attractions_info": str(fallback_result),
-                    }
-            except Exception as e:
-                print(f"⚠️ 降级高德搜索也失败: {e}")
-
-        print(f"🧠 LLM提取到 {len(valid_pois)} 个核心景点: {[p['name'] for p in valid_pois]}")
-
-        # 自动补充：如果提取到的景点数量不足，用高德搜索补充
-        min_attractions = travel_days * 2
-        if len(valid_pois) < min_attractions:
-            print(f"⚠️ 景点数量不足({len(valid_pois)} < {min_attractions})，尝试用高德搜索补充...")
-            try:
-                service = get_langchain_amap_service()
-                search_tool = await service.get_tool("maps_text_search")
-                if search_tool:
-                    keywords = request.preferences[0] if request.preferences else "景点"
-                    fallback_result = await _invoke_tool_with_retry(
-                        search_tool,
-                        {"keywords": keywords, "city": request.city},
-                        max_retries=2,
-                        per_attempt_timeout=15.0,
-                    )
-                    fallback_str = str(fallback_result)
-                    from ..utils.parsing import _extract_poi_names
-                    extra_pois = _extract_poi_names(fallback_str)
-                    existing_names = {p["name"] for p in valid_pois}
-                    added = 0
-                    for poi in extra_pois:
-                        if poi.get("name") and poi["name"] not in existing_names:
-                            valid_pois.append({
-                                "name": poi["name"],
-                                "description": poi.get("address", "") or "高德推荐景点",
-                            })
-                            existing_names.add(poi["name"])
-                            added += 1
-                            if len(valid_pois) >= min_attractions:
-                                break
-                    if added > 0:
-                        print(f"  ✅ 高德补充了 {added} 个景点，现在共 {len(valid_pois)} 个")
-            except Exception as e:
-                print(f"  ⚠️ 高德补充搜索失败: {e}")
-
-        return {"selected_pois": valid_pois}
-    except NonRetryableError as e:
-        print(f"❌ extract_attractions_node 不可重试错误: {e}")
-        return {
-            "selected_pois": [],
-            "errors": [f"extract_attractions: 不可重试错误 - {str(e)[:200]}"],
-        }
-    except Exception as e:
-        print(f"❌ extract_attractions_node 异常: {e}")
-        return {
-            "selected_pois": [],
-            "errors": [f"extract_attractions: 提取失败 - {str(e)[:200]}"],
-        }
-
-
-async def geocode_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("📍 执行节点: geocode_attractions_node")
-    selected_pois = state.get("selected_pois", [])
-    request = state["request"]
-
-    if state.get("attractions_info"):
-        print("  ⏭️ 已有attractions_info（降级搜索结果），跳过地理编码")
-        return {}
-
-    if not selected_pois:
-        return {
-            "attractions_info": "",
-            "errors": ["geocode_attractions: 无景点需要地理编码"],
-        }
-
-    try:
-        service = get_langchain_amap_service()
-        search_tool = await service.get_tool("maps_text_search")
-        detail_tool = await service.get_tool("maps_search_detail")
-
-        results = []
-        failed_pois = []
-
-        for poi in selected_pois:
-            name = poi["name"]
-            found = False
-
-            for attempt_name in [name, re.sub(r'(风景名胜区|风景区|景区|旅游区|度假区|步行街|商业街)$', '', name)]:
-                if not attempt_name or (attempt_name == name and found):
-                    continue
-                try:
-                    search_result = await _invoke_tool_with_retry(
-                        search_tool,
-                        {"keywords": attempt_name, "city": request.city},
-                        max_retries=2,
-                        per_attempt_timeout=15.0,
-                    )
-                    result_str = str(search_result)
-                    poi_list = _extract_poi_names(result_str)
-
-                    if poi_list:
-                        best_poi = poi_list[0]
-                        if detail_tool and best_poi.get("id"):
-                            try:
-                                detail_result = await _invoke_tool_with_retry(
-                                    detail_tool,
-                                    {"id": best_poi["id"]},
-                                    max_retries=1,
-                                    per_attempt_timeout=10.0,
-                                )
-                                detail_str = str(detail_result)
-                                if len(detail_str) > 20:
-                                    results.append(detail_str)
-                                    print(f"  ✅ maps_search_detail获取坐标: {name} (id={best_poi['id']})")
-                                    found = True
-                                    break
-                            except Exception as e:
-                                print(f"  ⚠️ maps_search_detail失败({name}): {e}")
-
-                        results.append(result_str)
-                        print(f"  ✅ 高德搜索到景点: {name}")
-                        found = True
-                        break
-                    elif len(result_str) > 20 and "没有找到" not in result_str:
-                        results.append(result_str)
-                        print(f"  ✅ 高德搜索到景点(未解析POI): {name}")
-                        found = True
-                        break
-                except Exception as e:
-                    print(f"  ⚠️ 搜索景点{attempt_name}失败: {e}")
-
-            if not found:
-                failed_pois.append(name)
-
-        if failed_pois:
-            print(f"⚠️ 以下景点未在高德中找到: {failed_pois}")
-
-        if not results:
-            return {
+                "selected_pois": [],
                 "attractions_info": "",
-                "errors": ["geocode_attractions: 所有景点高德搜索失败"],
+                "errors": ["search_attractions: 未找到可用景点"],
             }
 
-        attractions_info = "\n".join(results)
-        print(f"📍 高德搜索完成: {len(results)}/{len(selected_pois)} 个景点成功搜索到")
-        return {"attractions_info": attractions_info}
-    except NonRetryableError as e:
-        print(f"❌ geocode_attractions_node 不可重试错误: {e}")
+        print(f"🔍 景点查询完成: {len(combined)} 个景点")
         return {
+            "selected_pois": [_poi_to_selected(poi) for poi in combined],
+            "attractions_info": _format_pois_as_attractions_info(combined),
+        }
+    except NonRetryableError as e:
+        print(f"❌ search_attractions_node 不可重试错误: {e}")
+        return {
+            "selected_pois": [],
             "attractions_info": "",
-            "errors": [f"geocode_attractions: 不可重试错误 - {str(e)[:200]}"],
+            "errors": [f"search_attractions: 不可重试错误 - {str(e)[:200]}"],
         }
     except Exception as e:
-        print(f"❌ geocode_attractions_node 异常: {e}")
+        print(f"❌ search_attractions_node 异常: {e}")
         return {
+            "selected_pois": [],
             "attractions_info": "",
-            "errors": [f"geocode_attractions: 地理编码失败 - {str(e)[:200]}"],
+            "errors": [f"search_attractions: 查询失败 - {str(e)[:200]}"],
         }
 
 
@@ -601,7 +305,7 @@ async def search_weather_node(state: TripPlannerState) -> Dict[str, Any]:
                     per_attempt_timeout=15.0,
                 )
                 results.append(str(direct_result))
-                print(f"  ✅ 直接查询天气成功")
+                print("  ✅ 直接查询天气成功")
             except Exception as e:
                 print(f"⚠️ search_weather 直接查询也失败: {e}")
                 return {
@@ -804,3 +508,419 @@ async def gather_search_node(state: TripPlannerState) -> Dict[str, Any]:
             print(f"   - {err[:200]}")
 
     return {}
+
+
+def _unwrap_mcp_payload(raw: Any) -> Any:
+    """剥离 MCP 工具返回的多层包裹（text wrapper → JSON 字符串 → dict）。"""
+    import ast
+    data = raw
+    for _ in range(4):
+        if isinstance(data, str):
+            stripped = data.strip()
+            if not stripped:
+                return data
+            try:
+                data = json.loads(stripped)
+                continue
+            except (json.JSONDecodeError, TypeError):
+                try:
+                    data = ast.literal_eval(stripped)
+                    continue
+                except (ValueError, SyntaxError):
+                    return data
+        if isinstance(data, list) and data and isinstance(data[0], dict) and "text" in data[0]:
+            inner = data[0]["text"]
+            if isinstance(inner, str):
+                data = inner
+                continue
+            data = inner
+            continue
+        break
+    return data
+
+
+def _parse_aigohotel_hotels(raw: Any) -> List[Dict[str, Any]]:
+    """从 AIGoHotel SearchHotels 返回中尽力提取酒店字段，输出 Hotel 兼容 dict 列表。"""
+    data = _unwrap_mcp_payload(raw)
+    hotels_raw: List[Any] = []
+    if isinstance(data, dict):
+        for key in ("hotels", "data", "result", "results", "items"):
+            val = data.get(key)
+            if isinstance(val, list) and val:
+                hotels_raw = val
+                break
+            if isinstance(val, dict):
+                inner = val.get("hotels") or val.get("items") or val.get("list")
+                if isinstance(inner, list):
+                    hotels_raw = inner
+                    break
+        if not hotels_raw:
+            for v in data.values():
+                if isinstance(v, list) and v and isinstance(v[0], dict):
+                    hotels_raw = v
+                    break
+    elif isinstance(data, list):
+        hotels_raw = data
+
+    parsed: List[Dict[str, Any]] = []
+    for h in hotels_raw:
+        if not isinstance(h, dict):
+            continue
+        name = h.get("name") or h.get("hotelName") or h.get("title") or h.get("hotel_name")
+        if not name:
+            continue
+        item: Dict[str, Any] = {"name": str(name)}
+
+        address = h.get("address") or h.get("addr") or h.get("location_desc")
+        if address:
+            item["address"] = str(address)
+
+        lon = lat = None
+        loc = h.get("location") or h.get("position") or h.get("coordinate") or h.get("coordinates")
+        if isinstance(loc, dict):
+            lon = loc.get("longitude") or loc.get("lng") or loc.get("lon")
+            lat = loc.get("latitude") or loc.get("lat")
+        elif isinstance(loc, str) and "," in loc:
+            parts = loc.split(",")
+            if len(parts) >= 2:
+                lon, lat = parts[0], parts[1]
+        if lon is None:
+            lon = h.get("longitude") or h.get("lng") or h.get("lon")
+            lat = h.get("latitude") or h.get("lat")
+        if lon is not None and lat is not None:
+            try:
+                lon_f = float(lon)
+                lat_f = float(lat)
+                if 73 < lon_f < 136 and 3 < lat_f < 54:
+                    item["location"] = {"longitude": lon_f, "latitude": lat_f}
+            except (TypeError, ValueError):
+                pass
+
+        star = h.get("starRating") or h.get("star") or h.get("stars") or h.get("star_rating")
+        if star is not None:
+            try:
+                item["star_rating"] = float(star)
+            except (TypeError, ValueError):
+                pass
+
+        for src_key, dst_key in (("price", "price"), ("totalPrice", "price"), ("originalPrice", "original_price")):
+            v = h.get(src_key)
+            if v is not None and dst_key not in item:
+                try:
+                    item[dst_key] = float(v)
+                except (TypeError, ValueError):
+                    pass
+
+        currency = h.get("currency") or "CNY"
+        item["currency"] = str(currency)
+
+        ham = h.get("hotelAmenities") or h.get("hotel_amenities") or h.get("amenities")
+        if isinstance(ham, list):
+            item["hotel_amenities"] = [str(a) for a in ham if a]
+        ram = h.get("roomAmenities") or h.get("room_amenities")
+        if isinstance(ram, list):
+            item["room_amenities"] = [str(a) for a in ram if a]
+
+        desc = h.get("description") or h.get("intro") or h.get("summary")
+        if desc:
+            item["description"] = str(desc)[:500]
+
+        img = h.get("imageUrl") or h.get("image") or h.get("photo") or h.get("mainImage")
+        if img:
+            item["image_url"] = str(img)
+        durl = h.get("detailUrl") or h.get("url") or h.get("link")
+        if durl:
+            item["detail_url"] = str(durl)
+
+        dim = h.get("distanceInMeter") or h.get("distanceInMeters") or h.get("distance_in_meters")
+        if dim is not None:
+            try:
+                item["distance_in_meters"] = int(float(dim))
+            except (TypeError, ValueError):
+                pass
+
+        rating = h.get("rating") or h.get("score") or h.get("commentScore") or h.get("comment_score")
+        if rating is not None:
+            item["rating"] = str(rating)
+
+        hotel_type = h.get("type") or h.get("hotelType") or h.get("category")
+        if hotel_type:
+            item["type"] = str(hotel_type)
+
+        parsed.append(item)
+    return parsed
+
+
+def _cluster_centroid(cluster: List[Dict[str, Any]]) -> tuple[float, float] | None:
+    """计算聚类质心 (lon, lat)，无坐标返回 None。"""
+    coords = [(c.get("longitude"), c.get("latitude")) for c in cluster if c.get("longitude") and c.get("latitude")]
+    if not coords:
+        return None
+    avg_lon = sum(lon for lon, _ in coords) / len(coords)
+    avg_lat = sum(lat for _, lat in coords) / len(coords)
+    return avg_lon, avg_lat
+
+
+def _cluster_outer_radius_km(cluster: List[Dict[str, Any]], centroid: tuple[float, float]) -> float:
+    from ..utils.geo import _haversine_distance
+    lon_c, lat_c = centroid
+    max_d = 0.0
+    for c in cluster:
+        if c.get("longitude") and c.get("latitude"):
+            d = _haversine_distance(lat_c, lon_c, c["latitude"], c["longitude"])
+            max_d = max(max_d, d)
+    return max_d
+
+
+def _enrich_hotels_with_distance(hotels: List[Dict[str, Any]], centroid: tuple[float, float]) -> None:
+    """给每家酒店补上"到当日质心"的真实距离（如果有坐标）。"""
+    from ..utils.geo import _haversine_distance
+    lon_c, lat_c = centroid
+    for h in hotels:
+        loc = h.get("location")
+        if isinstance(loc, dict) and loc.get("longitude") and loc.get("latitude"):
+            d_km = _haversine_distance(lat_c, lon_c, loc["latitude"], loc["longitude"])
+            h["_centroid_distance_km"] = d_km
+            h["distance_in_meters"] = int(d_km * 1000)
+            h["distance"] = f"距当日中心 {d_km:.1f} 公里"
+
+
+def _rank_day_hotels(hotels: List[Dict[str, Any]], top_n: int = 3) -> List[Dict[str, Any]]:
+    """按 (有星级, 星级 desc, 距离 asc) 排序，去重保留 top_n。"""
+    def sort_key(h: Dict[str, Any]):
+        star = h.get("star_rating")
+        dist = h.get("_centroid_distance_km", 999.0)
+        return (
+            0 if star is not None else 1,
+            -(star or 0),
+            dist,
+        )
+    seen_names: set[str] = set()
+    deduped = []
+    for h in sorted(hotels, key=sort_key):
+        name = h.get("name", "").strip()
+        if name and name not in seen_names:
+            seen_names.add(name)
+            deduped.append(h)
+    return deduped[:top_n]
+
+
+def _format_hotels_by_day_text(hotels_by_day: List[List[Dict[str, Any]]]) -> str:
+    """把酒店候选格式化为给 macro_planner 看的文本。
+
+    所有天共享同一份候选时（行程级搜索的常态），只打印一次，避免重复噪声。
+    """
+    if not hotels_by_day:
+        return ""
+
+    def _names_sig(day_hotels: List[Dict[str, Any]]) -> tuple:
+        return tuple(h.get("name", "") for h in day_hotels)
+
+    sigs = {_names_sig(d) for d in hotels_by_day}
+    shared = len(sigs) == 1 and hotels_by_day[0]
+
+    lines: List[str] = []
+
+    def _format_one_block(day_hotels: List[Dict[str, Any]], header: str) -> None:
+        lines.append(header)
+        if not day_hotels:
+            lines.append("  （无候选）")
+            return
+        for j, h in enumerate(day_hotels, 1):
+            star = h.get("star_rating")
+            price = h.get("price")
+            dist = h.get("distance") or ""
+            addr = h.get("address") or ""
+            loc = h.get("location") or {}
+            loc_str = ""
+            if isinstance(loc, dict) and loc.get("longitude"):
+                loc_str = f" 坐标({loc['longitude']:.5f},{loc['latitude']:.5f})"
+            parts = [f"  {j}. {h['name']}"]
+            if star is not None:
+                parts.append(f"{star}星")
+            if price is not None:
+                parts.append(f"¥{int(price)}")
+            if dist:
+                parts.append(dist)
+            if addr:
+                parts.append(addr)
+            lines.append(" | ".join(parts) + loc_str)
+
+    if shared:
+        _format_one_block(hotels_by_day[0], f"=== 候选酒店（全程 {len(hotels_by_day)} 天共用同一份候选） ===")
+    else:
+        for i, day_hotels in enumerate(hotels_by_day):
+            _format_one_block(day_hotels, f"=== 第{i + 1}天候选酒店 ===")
+    return "\n".join(lines)
+
+
+async def _aigohotel_search_for_day(
+    search_tool: Any,
+    rep_name: str,
+    city: str,
+    accommodation: str,
+    centroid: tuple[float, float],
+    radius_km: float,
+    star_ratings: List[int],
+    check_in: str | None,
+) -> List[Dict[str, Any]]:
+    """对单日聚类调一次 AIGoHotel SearchHotels（景点级），返回已解析+距离增强的酒店列表。"""
+    distance_m = int(max(radius_km + 2.0, 2.0) * 1000)
+    distance_m = min(distance_m, 20000)
+    args: Dict[str, Any] = {
+        "place": rep_name,
+        "placeType": "景点",
+        "originQuery": f"搜索{city}{rep_name}附近的{accommodation or ''}酒店".strip(),
+        "distanceInMeter": distance_m,
+        "size": 8,
+        "withHotelAmenities": True,
+        "withRoomAmenities": True,
+    }
+    if star_ratings:
+        args["starRatings"] = star_ratings
+    if check_in:
+        args["checkIn"] = check_in
+        args["stayNights"] = 1
+
+    try:
+        raw = await _invoke_tool_with_retry(search_tool, args, max_retries=1, per_attempt_timeout=30.0)
+    except Exception as e:
+        print(f"  ⚠️ AIGoHotel 景点搜索失败 [{rep_name}]: {str(e)[:120]}")
+        return []
+
+    hotels = _parse_aigohotel_hotels(raw)
+    _enrich_hotels_with_distance(hotels, centroid)
+    return hotels
+
+
+async def _aigohotel_city_fallback(
+    search_tool: Any,
+    city: str,
+    accommodation: str,
+    star_ratings: List[int],
+    check_in: str | None,
+    stay_nights: int,
+) -> List[Dict[str, Any]]:
+    """城市级兜底搜索，用于当日聚类无坐标或景点搜索失败时。"""
+    args: Dict[str, Any] = {
+        "place": city,
+        "placeType": "城市",
+        "originQuery": f"搜索{city}{accommodation or ''}酒店".strip(),
+        "size": 8,
+        "withHotelAmenities": True,
+        "withRoomAmenities": True,
+    }
+    if star_ratings:
+        args["starRatings"] = star_ratings
+    if check_in:
+        args["checkIn"] = check_in
+        args["stayNights"] = stay_nights
+
+    try:
+        raw = await _invoke_tool_with_retry(search_tool, args, max_retries=2, per_attempt_timeout=30.0)
+    except Exception as e:
+        print(f"  ⚠️ AIGoHotel 城市级兜底失败 [{city}]: {str(e)[:120]}")
+        return []
+    return _parse_aigohotel_hotels(raw)
+
+
+
+async def search_hotels_by_day_node(state: TripPlannerState) -> Dict[str, Any]:
+    """为整段行程搜索一次酒店，写入 hotels_by_day + hotels_info。
+
+    同一城市多天行程通常入住同一家酒店，因此：
+    1. 计算所有聚类的"行程质心"
+    2. 以行程质心附近代表景点调一次 AIGoHotel（placeType=景点）
+    3. 城市级兜底（placeType=城市）
+    4. 同一份候选列表分发给所有天，让 macro_planner 自然选同一家
+    """
+    print("🏨 执行节点: search_hotels_by_day_node (行程级)")
+    request = state["request"]
+    clusters: List[List[Dict[str, Any]]] = state.get("clusters_data") or []
+    travel_days = request.travel_days
+
+    from ....services.aigohotel_mcp_service import get_aigohotel_service
+    aigohotel_service = get_aigohotel_service()
+    if not aigohotel_service:
+        return {
+            "hotels_info": "",
+            "hotels_by_day": [[] for _ in range(travel_days)],
+            "errors": ["search_hotels_by_day: AIGoHotel 服务未配置"],
+        }
+
+    try:
+        await aigohotel_service.get_tools()
+        search_tool = await aigohotel_service.get_tool("SearchHotels")
+        if not search_tool:
+            search_tool = await aigohotel_service.get_tool("find-hotels")
+        if not search_tool:
+            return {
+                "hotels_info": "",
+                "hotels_by_day": [[] for _ in range(travel_days)],
+                "errors": ["search_hotels_by_day: SearchHotels 工具不可用"],
+            }
+    except Exception as e:
+        return {
+            "hotels_info": "",
+            "hotels_by_day": [[] for _ in range(travel_days)],
+            "errors": [f"search_hotels_by_day: AIGoHotel 初始化失败 - {str(e)[:200]}"],
+        }
+
+    accommodation = request.accommodation or ""
+    star_ratings = _accommodation_to_star_ratings(accommodation)
+
+    # 计算行程质心：所有聚类所有景点坐标的均值
+    all_coords: List[Dict[str, Any]] = []
+    for cluster in clusters:
+        all_coords.extend(cluster)
+
+    trip_centroid = _cluster_centroid(all_coords) if all_coords else None
+
+    ranked: List[Dict[str, Any]] = []
+
+    if trip_centroid and all_coords:
+        # 找到离质心最近的景点作为搜索锚点
+        from ..utils.geo import _haversine_distance
+        best_poi = min(
+            all_coords,
+            key=lambda p: _haversine_distance(trip_centroid[1], trip_centroid[0], p.get("latitude", 0), p.get("longitude", 0)) if p.get("longitude") and p.get("latitude") else 999,
+        )
+        rep_name = best_poi.get("name", request.city)
+
+        # 搜索半径：覆盖最远聚类 + 2km 余量
+        max_radius_km = _cluster_outer_radius_km(all_coords, trip_centroid) if all_coords else 5.0
+        distance_m = int(max(max_radius_km + 2.0, 3.0) * 1000)
+        distance_m = min(distance_m, 20000)
+
+        print(f" 🔎 行程质心: ({trip_centroid[0]:.4f}, {trip_centroid[1]:.4f}), 锚点景点: '{rep_name}', 搜索半径: {distance_m}m")
+
+        hotels = await _aigohotel_search_for_day(
+            search_tool, rep_name, request.city, accommodation,
+            trip_centroid, max_radius_km, star_ratings,
+            request.start_date,
+        )
+        if hotels:
+            _enrich_hotels_with_distance(hotels, trip_centroid)
+            ranked = _rank_day_hotels(hotels, top_n=5)
+
+    # 降级：景点级搜索无结果 -> 城市级兜底
+    if not ranked:
+        print(" ⚠️ 景点级搜索无结果，使用城市级兜底")
+        city_hotels = await _aigohotel_city_fallback(
+            search_tool, request.city, accommodation, star_ratings,
+            request.start_date, max(travel_days, 1),
+        )
+        if city_hotels and trip_centroid:
+            _enrich_hotels_with_distance(city_hotels, trip_centroid)
+        ranked = _rank_day_hotels(city_hotels, top_n=5) if city_hotels else []
+
+    # 同一份候选分发给所有天
+    hotels_by_day = [ranked for _ in range(travel_days)]
+    hotels_info = _format_hotels_by_day_text(hotels_by_day)
+    print(f"✅ 行程级酒店搜索完成: {len(ranked)} 家候选, 分配给 {travel_days} 天")
+
+    return {
+        "hotels_info": hotels_info,
+        "hotels_by_day": hotels_by_day,
+        "aigohotel_raw_results": hotels_info,
+    }
