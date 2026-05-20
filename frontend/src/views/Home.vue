@@ -157,15 +157,20 @@
               <a-col :xs="24" :sm="24" :md="24">
                 <a-form-item name="preferences">
                   <template #label>
-                    <span class="form-label">旅行偏好</span>
+                    <span class="form-label">感兴趣的景点类型（可选）</span>
                   </template>
+                  <div class="preference-hint">勾选后会用来筛选发现页的景点，并影响酒店、餐饮推荐的方向</div>
                   <div class="preference-tags">
                     <a-checkbox-group v-model:value="formData.preferences" class="custom-checkbox-group">
                       <a-checkbox value="历史文化" class="preference-tag">🏛️ 历史文化</a-checkbox>
                       <a-checkbox value="自然风光" class="preference-tag">🏞️ 自然风光</a-checkbox>
+                      <a-checkbox value="都市地标" class="preference-tag">🌃 都市地标</a-checkbox>
                       <a-checkbox value="购物" class="preference-tag">🛍️ 购物</a-checkbox>
                       <a-checkbox value="艺术" class="preference-tag">🎨 艺术</a-checkbox>
                       <a-checkbox value="休闲" class="preference-tag">☕ 休闲</a-checkbox>
+                      <a-checkbox value="夜生活" class="preference-tag">🌙 夜生活</a-checkbox>
+                      <a-checkbox value="户外徒步" class="preference-tag">🥾 户外徒步</a-checkbox>
+                      <a-checkbox value="祈福朝圣" class="preference-tag">🛐 祈福朝圣</a-checkbox>
                     </a-checkbox-group>
                   </div>
                 </a-form-item>
@@ -660,6 +665,13 @@ const handleSubmit = () => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.preference-hint {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--space-2);
+  line-height: 1.5;
 }
 
 .custom-checkbox-group {
