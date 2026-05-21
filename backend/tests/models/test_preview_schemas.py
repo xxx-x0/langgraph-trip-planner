@@ -54,3 +54,11 @@ def test_preview_response_shape():
     assert len(resp.day_assignments) == 2
     assert resp.day_assignments[0][0].visit_minutes == 60
     assert resp.day_durations[1].total_minutes == 90
+
+
+def test_preview_request_rejects_zero_travel_days():
+    with pytest.raises(ValidationError):
+        PreviewDayAssignmentRequest(
+            selected_attractions=[DiscoveredAttraction(name="A")],
+            travel_days=0,
+        )
