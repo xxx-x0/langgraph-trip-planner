@@ -355,6 +355,7 @@ class DiscoveredAttraction(BaseModel):
     image_url: Optional[str] = Field(default=None, description="图片URL")
     location: Optional[Location] = Field(default=None, description="经纬度坐标")
     poi_id: Optional[str] = Field(default=None, description="高德POI ID")
+    visit_minutes: Optional[int] = Field(default=None, description="预估游玩时长(分钟)")
 
 
 class ManualSearchRequest(BaseModel):
@@ -470,4 +471,23 @@ class ErrorResponse(BaseModel):
     success: bool = Field(default=False, description="是否成功")
     message: str = Field(..., description="错误消息")
     error_code: Optional[str] = Field(default=None, description="错误代码")
+
+
+class DayDurationInfo(BaseModel):
+    """单日估算时长（用于智能分配预览）"""
+    day_index: int = Field(..., description="第几天，从0开始")
+    total_minutes: int = Field(..., description="当日所有景点估算游玩总时长(分钟)")
+    warning: Optional[str] = Field(default=None, description="提示文案，如'当天偏紧'")
+
+
+class PreviewDayAssignmentRequest(BaseModel):
+    """智能日程分配预览请求"""
+    selected_attractions: List[DiscoveredAttraction] = Field(..., description="用户选中的景点列表")
+    travel_days: int = Field(..., ge=1, description="旅行天数")
+
+
+class PreviewDayAssignmentResponse(BaseModel):
+    """智能日程分配预览响应"""
+    day_assignments: List[List[DiscoveredAttraction]] = Field(..., description="每天的景点分配（每个景点带 visit_minutes）")
+    day_durations: List[DayDurationInfo] = Field(..., description="每天的估算时长")
 
