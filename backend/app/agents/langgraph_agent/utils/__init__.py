@@ -5,6 +5,7 @@ from .geo import (
     _select_top_attractions,
     _format_cluster_info,
     _extract_coordinates_regex,
+    _rebalance_by_duration,
 )
 from .parsing import (
     _extract_json_array,
