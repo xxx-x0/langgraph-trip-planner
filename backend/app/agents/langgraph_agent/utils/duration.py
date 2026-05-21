@@ -3,7 +3,7 @@
 使用 LLM 一次性估算所有候选景点的游玩时长；失败时使用 CATEGORY_DURATION_MAP 降级。
 """
 import asyncio
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from langchain_core.messages import HumanMessage
 
@@ -84,8 +84,11 @@ async def estimate_durations_batch(
             _invoke_llm_with_retry(llm, [HumanMessage(content=prompt)], max_retries=2),
             timeout=timeout_seconds,
         )
-    except (asyncio.TimeoutError, Exception) as e:
-        print(f"⚠️ 游玩时长估算失败，使用默认值兜底: {e}")
+    except asyncio.TimeoutError:
+        print(f"⚠️ 游玩时长估算超时（>{timeout_seconds}s），使用默认值兜底")
+        return fallback
+    except Exception as e:
+        print(f"⚠️ 游玩时长估算失败（{type(e).__name__}）: {e}，使用默认值兜底")
         return fallback
 
     parsed = _extract_json_array(response.content)

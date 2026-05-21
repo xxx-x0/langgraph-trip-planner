@@ -52,7 +52,7 @@ async def test_estimate_durations_falls_back_on_llm_failure():
 
 
 @pytest.mark.asyncio
-async def test_estimate_durations_clamps_invalid_minutes():
+async def test_estimate_durations_falls_back_for_invalid_minutes():
     fake_response = type("R", (), {"content":
         '[{"name":"A","visit_minutes":5},'
         '{"name":"B","visit_minutes":600},'

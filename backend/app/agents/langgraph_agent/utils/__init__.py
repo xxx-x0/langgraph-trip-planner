@@ -14,3 +14,8 @@ from .parsing import (
     _parse_response,
     _create_fallback_plan,
 )
+from .duration import (
+    CATEGORY_DURATION_MAP,
+    estimate_durations_batch,
+    _fallback_durations,
+)
