@@ -458,6 +458,8 @@ async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any
             parts.append(f"门票: {attr['ticket_price']}")
         if attr.get("description"):
             parts.append(f"简介: {attr['description']}")
+        if attr.get("visit_minutes"):
+            parts.append(f"预计游玩: {attr['visit_minutes']}min")
         attractions_info_parts.append(" | ".join(parts))
 
     attractions_info = "\n".join(attractions_info_parts)
