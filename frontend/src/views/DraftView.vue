@@ -11,33 +11,20 @@
     <a-spin v-if="loading" tip="加载草稿中..." />
 
     <main v-else-if="draft" class="draft-content">
-      <a-tabs v-model:activeKey="activeTab">
-        <a-tab-pane key="itinerary" tab="行程">
-          <div class="days-container">
-            <DayCard
-              v-for="(ctx, idx) in draft.days"
-              :key="idx"
-              :context="ctx"
-              :detail="draft.days_detail[idx] || null"
-              :is-default-expanded="idx === 0"
-              :busy="dayBusy[idx] || ''"
-              @assemble="onAssemble(idx, $event)"
-              @recompute="onRecompute(idx, $event)"
-              @ai-rearrange="onAIRearrange(idx, $event)"
-              @rewrite-narrative="onRewriteNarrative(idx)"
-            />
-          </div>
-        </a-tab-pane>
-        <a-tab-pane key="map" tab="地图">
-          <div>地图占位（沿用 TabMap 组件，传 draft.days 即可）</div>
-        </a-tab-pane>
-        <a-tab-pane key="weather" tab="天气">
-          <div>天气占位（沿用 TabWeather）</div>
-        </a-tab-pane>
-        <a-tab-pane key="budget" tab="预算">
-          <div>预算占位：已展开 {{ assembledCount }} / {{ draft.days.length }} 天</div>
-        </a-tab-pane>
-      </a-tabs>
+      <div class="days-container">
+        <DayCard
+          v-for="(ctx, idx) in draft.days"
+          :key="idx"
+          :context="ctx"
+          :detail="draft.days_detail[idx] || null"
+          :is-default-expanded="idx === 0"
+          :busy="dayBusy[idx] || ''"
+          @assemble="onAssemble(idx, $event)"
+          @recompute="onRecompute(idx, $event)"
+          @ai-rearrange="onAIRearrange(idx, $event)"
+          @rewrite-narrative="onRewriteNarrative(idx)"
+        />
+      </div>
 
       <div class="finalize-bar">
         <a-button type="primary" size="large" :loading="finalizing"
@@ -67,7 +54,6 @@ const draftId = computed(() => route.params.id as string)
 
 const draft = ref<any>(null)
 const loading = ref(true)
-const activeTab = ref('itinerary')
 const finalizing = ref(false)
 
 const dayBusy = reactive<Record<number, string>>({})
@@ -88,10 +74,6 @@ async function withDayBusy<T>(
     delete dayBusy[idx]
   }
 }
-
-const assembledCount = computed(
-  () => draft.value?.days_detail?.filter((d: any) => d?.is_assembled).length || 0
-)
 
 async function loadDraft() {
   loading.value = true
