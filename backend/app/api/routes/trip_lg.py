@@ -28,8 +28,18 @@ from ...models.schemas import (
     UserPreference,
     ManualSearchRequest,
     PlanFromSelectionsRequest,
+    PreviewDayAssignmentRequest,
+    PreviewDayAssignmentResponse,
+    DayDurationInfo,
+    DiscoveredAttraction,
 )
 from ...agents.langgraph_agent import get_trip_planner_agent, NonRetryableError
+from ...agents.langgraph_agent.utils.duration import estimate_durations_batch
+from ...agents.langgraph_agent.utils.geo import (
+    _cluster_attractions_by_proximity,
+    _order_cluster_by_tsp,
+    _rebalance_by_duration,
+)
 from ...services.langchain_amap_tools import get_langchain_amap_service
 from ...services.preferences_service import load_preferences, save_preferences, delete_preferences
 
@@ -297,6 +307,76 @@ async def plan_from_selections_stream(req: PlanFromSelectionsRequest):
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         }
+    )
+
+
+@router.post(
+    "/plan/preview-day-assignment",
+    response_model=PreviewDayAssignmentResponse,
+    summary="智能日程分配预览",
+    description="LLM 批量估时 + 地理聚类，返回每天的景点分配与估时（不持久化）"
+)
+async def preview_day_assignment(req: PreviewDayAssignmentRequest):
+    selected = [a.model_dump() for a in req.selected_attractions]
+
+    if not selected:
+        return PreviewDayAssignmentResponse(day_assignments=[], day_durations=[])
+
+    # 1. LLM 批量估时（失败自动降级）
+    durations = await estimate_durations_batch(selected)
+
+    # 2. 几何聚类（仅对有坐标的景点）
+    geo_attrs = []
+    no_coord_attrs = []
+    for attr in selected:
+        loc = attr.get("location") or {}
+        lon = loc.get("longitude")
+        lat = loc.get("latitude")
+        if lon and lat:
+            geo_attrs.append({"name": attr["name"], "longitude": lon, "latitude": lat})
+        else:
+            no_coord_attrs.append(attr)
+
+    if geo_attrs:
+        clusters = _cluster_attractions_by_proximity(geo_attrs, req.travel_days)
+        clusters = _rebalance_by_duration(clusters, durations, max_minutes=480)
+    else:
+        # 无坐标兜底：均分
+        from math import ceil
+        per_day = max(ceil(len(selected) / req.travel_days), 1)
+        clusters = []
+        for d in range(req.travel_days):
+            clusters.append([{"name": a["name"]} for a in selected[d * per_day:(d + 1) * per_day]])
+        # 兜底路径已把所有景点放入 clusters，避免下方再次追加
+        no_coord_attrs = []
+
+    # 把无坐标景点平均派发到当前天数最少的 cluster
+    for attr in no_coord_attrs:
+        shortest = min(range(len(clusters)), key=lambda i: len(clusters[i])) if clusters else 0
+        if not clusters:
+            clusters = [[] for _ in range(req.travel_days)]
+        clusters[shortest].append({"name": attr["name"]})
+
+    # 3. 还原成完整 DiscoveredAttraction（带 visit_minutes）
+    name_to_attr = {a["name"]: a for a in selected}
+    day_assignments = []
+    day_durations = []
+    for idx, cluster in enumerate(clusters):
+        day_attrs = []
+        total = 0
+        for c in cluster:
+            full = dict(name_to_attr.get(c["name"], {"name": c["name"]}))
+            mins = durations.get(c["name"], 90)
+            full["visit_minutes"] = mins
+            total += mins
+            day_attrs.append(DiscoveredAttraction(**full))
+        warning = "当天偏紧" if total > 480 else None
+        day_assignments.append(day_attrs)
+        day_durations.append(DayDurationInfo(day_index=idx, total_minutes=total, warning=warning))
+
+    return PreviewDayAssignmentResponse(
+        day_assignments=day_assignments,
+        day_durations=day_durations,
     )
 
 
