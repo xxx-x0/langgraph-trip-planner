@@ -32,7 +32,9 @@ async def test_estimate_durations_returns_llm_result_when_valid():
         '[{"name":"故宫","visit_minutes":150},'
         '{"name":"颐和园","visit_minutes":120}]'
     })()
-    with patch("app.agents.langgraph_agent.utils.duration._invoke_llm_with_retry",
+    with patch("app.agents.langgraph_agent.utils.duration.get_llm",
+               return_value=object()), \
+         patch("app.agents.langgraph_agent.utils.duration._invoke_llm_with_retry",
                new=AsyncMock(return_value=fake_response)):
         result = await estimate_durations_batch([
             {"name": "故宫", "description": "", "category": "博物馆"},
@@ -58,7 +60,9 @@ async def test_estimate_durations_falls_back_for_invalid_minutes():
         '{"name":"B","visit_minutes":600},'
         '{"name":"C","visit_minutes":"bad"}]'
     })()
-    with patch("app.agents.langgraph_agent.utils.duration._invoke_llm_with_retry",
+    with patch("app.agents.langgraph_agent.utils.duration.get_llm",
+               return_value=object()), \
+         patch("app.agents.langgraph_agent.utils.duration._invoke_llm_with_retry",
                new=AsyncMock(return_value=fake_response)):
         result = await estimate_durations_batch([
             {"name": "A", "category": "公园"},
@@ -77,7 +81,9 @@ async def test_estimate_durations_fills_missing_names():
     fake_response = type("R", (), {"content":
         '[{"name":"故宫","visit_minutes":150}]'
     })()
-    with patch("app.agents.langgraph_agent.utils.duration._invoke_llm_with_retry",
+    with patch("app.agents.langgraph_agent.utils.duration.get_llm",
+               return_value=object()), \
+         patch("app.agents.langgraph_agent.utils.duration._invoke_llm_with_retry",
                new=AsyncMock(return_value=fake_response)):
         result = await estimate_durations_batch([
             {"name": "故宫", "category": "博物馆"},
