@@ -92,6 +92,7 @@
         <a-button
           type="primary"
           size="large"
+          :loading="assignLoading"
           :disabled="selectedCount < 2"
           @click="startDayAssignment"
         >
@@ -103,8 +104,13 @@
     <!-- 阶段2: 日程分配 -->
     <div v-else-if="phase === 'assign'" class="assign-layout">
       <div class="assign-header">
-        <h3>调整日程分配</h3>
-        <p>拖拽景点到不同天数以调整安排，或直接确认系统推荐的分配方案</p>
+        <div class="assign-header-main">
+          <h3>调整日程分配</h3>
+          <p>系统已按地理距离与游玩时长智能分配，可拖拽景点微调</p>
+        </div>
+        <a-button @click="resetToSmart" :disabled="!smartAssignmentCache">
+          🔄 重置为智能推荐
+        </a-button>
       </div>
 
       <div class="day-columns">
@@ -115,7 +121,18 @@
           @dragover.prevent
           @drop="handleDrop($event, dayIdx)"
         >
-          <div class="day-header">第 {{ dayIdx + 1 }} 天</div>
+          <div class="day-header">
+            <span>第 {{ dayIdx + 1 }} 天</span>
+            <span
+              class="day-duration-badge"
+              :class="{ warning: dayDurations[dayIdx]?.warning }"
+            >
+              <template v-if="dayDurations[dayIdx]">
+                预计 {{ formatDuration(dayDurations[dayIdx].total_minutes) }}
+                <span v-if="dayDurations[dayIdx].warning"> ⚠️</span>
+              </template>
+            </span>
+          </div>
           <div class="day-attractions">
             <div
               v-for="(attr, attrIdx) in day"
@@ -164,10 +181,10 @@ import DiscoveryMap from '@/components/DiscoveryMap.vue'
 import PlanProgress from '@/components/PlanProgress.vue'
 import {
   discoverAttractionsStream, searchAttractionManual,
-  createDraftFromSelectionsStream,
+  createDraftFromSelectionsStream, previewDayAssignment,
 } from '@/services/api'
 import type { DraftStreamEvent } from '@/services/api'
-import type { DiscoveredAttraction, TripFormData, DiscoveryStreamEvent } from '@/types'
+import type { DiscoveredAttraction, TripFormData, DiscoveryStreamEvent, DayDurationInfo } from '@/types'
 
 const router = useRouter()
 
@@ -185,6 +202,9 @@ const activeCategory = ref('全部')
 const highlightedAttraction = ref('')
 const phase = ref<'discover' | 'assign' | 'planning'>('discover')
 const dayAssignments = ref<DiscoveredAttraction[][]>([])
+const dayDurations = ref<DayDurationInfo[]>([])
+const smartAssignmentCache = ref<DiscoveredAttraction[][] | null>(null)
+const assignLoading = ref(false)
 const cardRefs: Record<string, any> = {}
 const mapRef = ref<any>(null)
 
@@ -283,18 +303,74 @@ function addSearchResult(attr: DiscoveredAttraction) {
   message.success(`已添加: ${attr.name}`)
 }
 
-function startDayAssignment() {
+async function startDayAssignment() {
   const selected = attractions.filter(a => a.selected)
   if (selected.length < 2) return
 
   const days = formData.value?.travel_days || 1
-  const perDay = Math.ceil(selected.length / days)
-  const assignments: DiscoveredAttraction[][] = []
-  for (let d = 0; d < days; d++) {
-    assignments.push(selected.slice(d * perDay, (d + 1) * perDay))
+  assignLoading.value = true
+  try {
+    const resp = await previewDayAssignment(selected, days)
+    // 回写 visit_minutes 到 attractions（用 name 匹配）
+    const nameToMinutes: Record<string, number> = {}
+    for (const day of resp.day_assignments) {
+      for (const attr of day) {
+        if (attr.visit_minutes) nameToMinutes[attr.name] = attr.visit_minutes
+      }
+    }
+    for (const a of attractions) {
+      if (nameToMinutes[a.name]) a.visit_minutes = nameToMinutes[a.name]
+    }
+    dayAssignments.value = resp.day_assignments
+    dayDurations.value = resp.day_durations
+    smartAssignmentCache.value = JSON.parse(JSON.stringify(resp.day_assignments))
+    phase.value = 'assign'
+  } catch (e: any) {
+    message.warning('智能分配失败，使用均分方案')
+    const perDay = Math.ceil(selected.length / days)
+    const assignments: DiscoveredAttraction[][] = []
+    for (let d = 0; d < days; d++) {
+      assignments.push(selected.slice(d * perDay, (d + 1) * perDay))
+    }
+    dayAssignments.value = assignments
+    dayDurations.value = assignments.map((day, idx) => ({
+      day_index: idx,
+      total_minutes: day.reduce((sum, a) => sum + (a.visit_minutes || 90), 0),
+      warning: null,
+    }))
+    smartAssignmentCache.value = null
+    phase.value = 'assign'
+  } finally {
+    assignLoading.value = false
   }
-  dayAssignments.value = assignments
-  phase.value = 'assign'
+}
+
+function recalculateDayDurations() {
+  dayDurations.value = dayAssignments.value.map((day, idx) => {
+    const total = day.reduce((sum, a) => sum + (a.visit_minutes || 90), 0)
+    return {
+      day_index: idx,
+      total_minutes: total,
+      warning: total > 480 ? '当天偏紧' : null,
+    }
+  })
+}
+
+function resetToSmart() {
+  if (!smartAssignmentCache.value) {
+    message.info('无智能推荐结果可恢复')
+    return
+  }
+  dayAssignments.value = JSON.parse(JSON.stringify(smartAssignmentCache.value))
+  recalculateDayDurations()
+  message.success('已恢复智能推荐')
+}
+
+function formatDuration(min: number): string {
+  if (min < 60) return `${min}min`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return m > 0 ? `${h}h${m}min` : `${h}h`
 }
 
 // Drag and drop
@@ -311,6 +387,7 @@ function handleDrop(_event: DragEvent, toDay: number) {
   const [item] = dayAssignments.value[fromDay].splice(fromIdx, 1)
   dayAssignments.value[toDay].push(item)
   dragData = null
+  recalculateDayDurations()
 }
 
 async function confirmAndPlan() {
@@ -342,6 +419,7 @@ async function confirmAndPlan() {
         image_url: a.image_url,
         location: a.location,
         poi_id: a.poi_id,
+        visit_minutes: a.visit_minutes,
       })),
       dayAssignments.value.map(day =>
         day.map(a => ({
@@ -354,6 +432,7 @@ async function confirmAndPlan() {
           image_url: a.image_url,
           location: a.location,
           poi_id: a.poi_id,
+          visit_minutes: a.visit_minutes,
         }))
       ),
       weatherInfo.value,
@@ -663,7 +742,15 @@ onMounted(() => {
 }
 
 .assign-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 20px;
+  gap: 16px;
+}
+
+.assign-header-main {
+  flex: 1;
 }
 
 .assign-header h3 {
@@ -701,12 +788,29 @@ onMounted(() => {
 }
 
 .day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-weight: 600;
   font-size: 15px;
   color: var(--color-text-primary);
   padding-bottom: 8px;
   border-bottom: 1px solid var(--color-border-light, #f0f0f0);
   margin-bottom: 8px;
+}
+
+.day-duration-badge {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary, #f0f0f0);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill, 9999px);
+}
+
+.day-duration-badge.warning {
+  background: rgba(255, 77, 79, 0.1);
+  color: #d4380d;
 }
 
 .day-attractions {

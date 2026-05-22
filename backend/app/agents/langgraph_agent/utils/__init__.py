@@ -5,6 +5,7 @@ from .geo import (
     _select_top_attractions,
     _format_cluster_info,
     _extract_coordinates_regex,
+    _rebalance_by_duration,
 )
 from .parsing import (
     _extract_json_array,
@@ -13,4 +14,9 @@ from .parsing import (
     _validate_plan_coordinates,
     _parse_response,
     _create_fallback_plan,
+)
+from .duration import (
+    CATEGORY_DURATION_MAP,
+    estimate_durations_batch,
+    _fallback_durations,
 )

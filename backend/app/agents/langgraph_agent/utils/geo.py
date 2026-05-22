@@ -223,3 +223,73 @@ def _extract_coordinates_regex(text: str) -> List[Dict]:
             continue
 
     return attractions
+
+
+def _cluster_centroid(cluster: List[Dict]) -> tuple:
+    if not cluster:
+        return (0.0, 0.0)
+    lats = [a["latitude"] for a in cluster]
+    lons = [a["longitude"] for a in cluster]
+    return (sum(lats) / len(lats), sum(lons) / len(lons))
+
+
+def _cluster_total_minutes(cluster: List[Dict], durations: Dict[str, int]) -> int:
+    return sum(durations.get(a["name"], 0) for a in cluster)
+
+
+def _rebalance_by_duration(
+    clusters: List[List[Dict]],
+    durations: Dict[str, int],
+    max_minutes: int = 480,
+    max_iterations: int = 5,
+) -> List[List[Dict]]:
+    """若某天总时长超出 max_minutes，把离该天质心最远的景点
+    移到时长最少且地理上仍接近的相邻日。
+
+    最多迭代 max_iterations 轮，无法继续优化时停止。返回新的 clusters
+    （每个 cluster 重新做 TSP 排序）。
+    """
+    work = [list(c) for c in clusters]
+
+    for _ in range(max_iterations):
+        totals = [_cluster_total_minutes(c, durations) for c in work]
+        over_idx = max(range(len(totals)), key=lambda i: totals[i])
+        if totals[over_idx] <= max_minutes or len(work[over_idx]) <= 1:
+            break
+
+        src_cluster = work[over_idx]
+        src_lat, src_lon = _cluster_centroid(src_cluster)
+
+        # 找出离 src 质心最远的景点
+        far_idx, far_dist = 0, -1.0
+        for i, attr in enumerate(src_cluster):
+            d = _haversine_distance(src_lat, src_lon, attr["latitude"], attr["longitude"])
+            if d > far_dist:
+                far_dist = d
+                far_idx = i
+        far_attr = src_cluster[far_idx]
+        far_minutes = durations.get(far_attr["name"], 0)
+
+        # 找目标 cluster：总时长最低、且移动后不会超限、加权考虑与 far_attr 的接近度
+        best_target = None
+        best_score = float("inf")
+        for j, target_cluster in enumerate(work):
+            if j == over_idx:
+                continue
+            if totals[j] + far_minutes > max_minutes:
+                continue
+            t_lat, t_lon = _cluster_centroid(target_cluster)
+            geo_d = _haversine_distance(t_lat, t_lon, far_attr["latitude"], far_attr["longitude"])
+            # 综合得分：低 total 优先，地理接近优先 (1 km 折算 10 分钟成本)
+            score = totals[j] + geo_d * 10
+            if score < best_score:
+                best_score = score
+                best_target = j
+
+        if best_target is None:
+            break
+
+        work[over_idx].pop(far_idx)
+        work[best_target].append(far_attr)
+
+    return [_order_cluster_by_tsp(c) for c in work]

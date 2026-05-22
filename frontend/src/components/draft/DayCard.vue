@@ -9,20 +9,30 @@
       </div>
     </template>
     <template #extra>
-      <a-button v-if="!isExpanded" type="link" @click="onExpand">展开装配 →</a-button>
+      <a-button v-if="!isExpanded" type="link" @click="onExpand"
+                :loading="busy === '装配中'">展开装配 →</a-button>
       <template v-else>
-        <a-button type="link" @click="onAIRearrange">AI 重新安排</a-button>
-        <a-button type="link" @click="$emit('rewrite-narrative')">重写叙述</a-button>
+        <a-button type="link" @click="onAIRearrange"
+                  :disabled="!!busy">AI 重新安排</a-button>
+        <a-button type="link" @click="$emit('rewrite-narrative')"
+                  :disabled="!!busy">重写叙述</a-button>
       </template>
     </template>
 
-    <div v-if="isExpanded && detail">
+    <!-- 首次装配：骨架屏 -->
+    <div v-if="isExpanded && !detail && busy === '装配中'" class="day-loading">
+      <a-skeleton :active="true" :paragraph="{ rows: 4 }" />
+      <div class="loading-hint">正在装配第 {{ context.day_index + 1 }} 天行程…</div>
+    </div>
+
+    <!-- 已装配内容（可叠加遮罩） -->
+    <div v-else-if="isExpanded && detail" class="day-content">
       <div v-if="detail.description" class="narrative">
         <div v-html="renderedDescription"></div>
       </div>
       <div class="timeline-editor">
         <draggable v-model="orderedAttractions" item-key="name" handle=".drag-handle"
-                   @end="onOrderChange">
+                   @end="onOrderChange" :disabled="!!busy">
           <template #item="{ element }">
             <div class="attr-row">
               <span class="drag-handle">⋮⋮</span>
@@ -40,7 +50,7 @@
           <span class="kind">🍴</span>
           <span class="name">{{ m.name }}</span>
           <a-tag>{{ m.category || m.type }}</a-tag>
-          <a-button size="small" danger @click="onRemoveMeal(m)">删除</a-button>
+          <a-button size="small" danger @click="onRemoveMeal(m)" :disabled="!!busy">删除</a-button>
         </div>
       </div>
       <div class="route-info" v-if="detail.route_segments?.length">
@@ -50,6 +60,12 @@
             {{ seg.from_name }} → {{ seg.to_name }}: {{ seg.distance }} ({{ seg.duration }}, {{ seg.mode }})
           </li>
         </ul>
+      </div>
+
+      <!-- 非首次装配的遮罩 -->
+      <div v-if="busy && busy !== '装配中'" class="day-overlay">
+        <a-spin size="large" />
+        <div class="overlay-label">{{ busy }}…</div>
       </div>
     </div>
   </a-card>
@@ -65,8 +81,9 @@ interface Props {
   context: any
   detail: any | null
   isDefaultExpanded: boolean
+  busy?: string
 }
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { busy: '' })
 const emit = defineEmits<{
   (e: 'assemble', body: any): void
   (e: 'recompute', body: any): void
@@ -153,4 +170,32 @@ const renderedDescription = computed(() => {
 .drag-handle { cursor: grab; color: #888; user-select: none; }
 .kind { font-size: 16px; }
 .name { flex: 1; }
+.day-content {
+  position: relative;
+}
+.day-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 10;
+  border-radius: 4px;
+}
+.overlay-label {
+  font-size: 14px;
+  color: #666;
+}
+.day-loading {
+  padding: 16px 0;
+}
+.loading-hint {
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  margin-top: 12px;
+}
 </style>

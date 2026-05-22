@@ -189,6 +189,7 @@ export interface DiscoveredAttraction {
   poi_id?: string
   selected?: boolean
   manuallyAdded?: boolean
+  visit_minutes?: number
 }
 
 export interface DiscoveryStreamEvent {
@@ -205,5 +206,16 @@ export interface PlanFromSelectionsPayload {
   day_assignments?: DiscoveredAttraction[][]
   weather_info: string
   user_id?: string
+}
+
+export interface DayDurationInfo {
+  day_index: number
+  total_minutes: number
+  warning?: string | null
+}
+
+export interface PreviewDayAssignmentResponse {
+  day_assignments: DiscoveredAttraction[][]
+  day_durations: DayDurationInfo[]
 }
 

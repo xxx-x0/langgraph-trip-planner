@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { TripFormData, TripPlanResponse, TripPlan, TripListResponse, TripRecord, UserPreference, DiscoveredAttraction, DiscoveryStreamEvent, PlanFromSelectionsPayload } from '@/types'
+import type { TripFormData, TripPlanResponse, TripPlan, TripListResponse, TripRecord, UserPreference, DiscoveredAttraction, DiscoveryStreamEvent, PlanFromSelectionsPayload, PreviewDayAssignmentResponse } from '@/types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -523,6 +523,21 @@ export async function finalizeDraftStream(
   }
 }
 
+
+export async function previewDayAssignment(
+  selectedAttractions: DiscoveredAttraction[],
+  travelDays: number,
+): Promise<PreviewDayAssignmentResponse> {
+  const response = await apiClient.post<PreviewDayAssignmentResponse>(
+    '/api/trip/plan/preview-day-assignment',
+    {
+      selected_attractions: selectedAttractions,
+      travel_days: travelDays,
+    },
+    { timeout: 30000 },
+  )
+  return response.data
+}
 
 export default apiClient
 
