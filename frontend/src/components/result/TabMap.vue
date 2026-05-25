@@ -197,13 +197,11 @@ defineExpose({ refreshMap })
   animation: fadeInUp var(--transition-normal);
 }
 
+/* Bauhaus card styling */
 .glass-card {
-  background: var(--color-glass-bg);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
-  border: 1px solid var(--color-glass-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  background: var(--white);
+  border: var(--border-main) solid var(--border);
+  box-shadow: var(--shadow-main);
   overflow: hidden;
 }
 
@@ -211,19 +209,27 @@ defineExpose({ refreshMap })
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
-  background: var(--color-gradient);
-  color: #fff;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+  padding: var(--space-4) var(--space-6);
+  background: var(--primary-blue);
+  color: var(--white);
+  border-bottom: var(--border-main) solid var(--border);
+}
+
+.card-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .card-icon {
-  font-size: var(--font-size-xl);
+  font-size: var(--text-2xl);
 }
 
 .map-body {
   height: 600px;
+  border: var(--border-2) solid var(--border);
+  margin: var(--space-4);
 }
 
 .map-container {

@@ -123,13 +123,11 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
   animation: fadeInUp var(--transition-normal);
 }
 
+/* Bauhaus card styling */
 .glass-card {
-  background: var(--color-glass-bg);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
-  border: 1px solid var(--color-glass-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  background: var(--white);
+  border: var(--border-main) solid var(--border);
+  box-shadow: var(--shadow-main);
   overflow: hidden;
 }
 
@@ -137,19 +135,25 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
-  background: var(--color-gradient);
-  color: #fff;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
+  padding: var(--space-4) var(--space-6);
+  background: var(--primary-red);
+  color: var(--white);
+  border-bottom: var(--border-main) solid var(--border);
+}
+
+.card-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .card-icon {
-  font-size: var(--font-size-xl);
+  font-size: var(--text-2xl);
 }
 
 .itinerary-body {
-  padding: var(--space-5);
+  padding: var(--space-6);
 }
 
 :deep(.ant-collapse) {
@@ -159,19 +163,21 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
 
 :deep(.ant-collapse-item) {
   margin-bottom: var(--space-4);
-  border: 1px solid var(--color-border) !important;
-  border-radius: var(--radius-md) !important;
+  border: var(--border-main) solid var(--border) !important;
+  border-radius: 0 !important;
   overflow: hidden;
+  box-shadow: var(--shadow-main);
 }
 
 :deep(.ant-collapse-header) {
-  background: var(--color-bg-secondary) !important;
+  background: var(--background) !important;
   padding: var(--space-4) var(--space-5) !important;
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-black);
+  border-bottom: var(--border-2) solid var(--border) !important;
 }
 
 :deep(.ant-collapse-content) {
-  border-top: 1px solid var(--color-border-light) !important;
+  border-top: none !important;
 }
 
 :deep(.ant-collapse-content-box) {
@@ -186,22 +192,23 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
 }
 
 .day-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  color: var(--foreground);
 }
 
 .day-date {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: var(--muted-foreground);
 }
 
 .day-info {
   margin-bottom: var(--space-5);
   padding: var(--space-4);
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border-light);
+  background: var(--background);
+  border: var(--border-2) solid var(--border);
 }
 
 .info-row {
@@ -213,13 +220,13 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
 .info-row:last-child { margin-bottom: 0; }
 
 .info-row .label {
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
+  font-weight: var(--font-bold);
+  color: var(--muted-foreground);
   min-width: 100px;
 }
 
 .info-row .value {
-  color: var(--color-text-primary);
+  color: var(--foreground);
   flex: 1;
 }
 
@@ -245,9 +252,10 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
 .meals-group:last-child { margin-bottom: 0; }
 
 .meals-group-title {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
+  font-size: var(--text-base);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  color: var(--foreground);
   margin-bottom: var(--space-3);
   padding-left: var(--space-1);
 }

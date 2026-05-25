@@ -43,13 +43,11 @@ const renderedSuggestions = computed(() => {
   animation: fadeInUp var(--transition-normal);
 }
 
+/* Bauhaus card styling */
 .glass-card {
-  background: var(--color-glass-bg);
-  backdrop-filter: blur(var(--blur-glass));
-  -webkit-backdrop-filter: blur(var(--blur-glass));
-  border: 1px solid var(--color-glass-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  background: var(--white);
+  border: var(--border-main) solid var(--border);
+  box-shadow: var(--shadow-main);
   overflow: hidden;
 }
 
@@ -57,24 +55,30 @@ const renderedSuggestions = computed(() => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  background: var(--color-gradient);
-  color: #fff;
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
+  padding: var(--space-4) var(--space-6);
+  background: var(--primary-red);
+  color: var(--white);
+  border-bottom: var(--border-main) solid var(--border);
+}
+
+.card-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .card-icon {
-  font-size: var(--font-size-lg);
+  font-size: var(--text-2xl);
 }
 
 .card-body {
-  padding: var(--space-4);
+  padding: var(--space-6);
 }
 
 .suggestions-content {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  color: var(--foreground);
   line-height: var(--line-height-relaxed);
 }
 
@@ -83,18 +87,19 @@ const renderedSuggestions = computed(() => {
 :deep(.suggestions-content h3),
 :deep(.suggestions-content h4) {
   margin: var(--space-4) 0 var(--space-2);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
+  color: var(--foreground);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
 }
 
 :deep(.suggestions-content h2) {
-  font-size: var(--font-size-lg);
-  padding-bottom: var(--space-1);
-  border-bottom: 1px solid var(--color-border-light);
+  font-size: var(--text-xl);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-2) solid var(--border);
 }
 
 :deep(.suggestions-content h3) {
-  font-size: var(--font-size-md);
+  font-size: var(--text-lg);
 }
 
 :deep(.suggestions-content p) {
@@ -112,21 +117,23 @@ const renderedSuggestions = computed(() => {
 }
 
 :deep(.suggestions-content strong) {
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-semibold);
+  color: var(--foreground);
+  font-weight: var(--font-bold);
 }
 
 :deep(.suggestions-content code) {
-  background: var(--color-bg-secondary);
+  background: var(--background);
   padding: 2px 6px;
-  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
   font-size: 0.9em;
 }
 
 :deep(.suggestions-content blockquote) {
-  border-left: 3px solid var(--color-primary);
+  border-left: 4px solid var(--primary-blue);
   padding-left: var(--space-3);
   margin: var(--space-3) 0;
-  color: var(--color-text-secondary);
+  color: var(--muted-foreground);
+  background: var(--background);
+  padding: var(--space-3);
 }
 </style>
