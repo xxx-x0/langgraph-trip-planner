@@ -56,7 +56,58 @@
         layout="vertical"
         @finish="handleSubmit"
       >
-        <!-- Form cards will be added in subsequent tasks -->
+        <!-- 卡片 1: 目的地与日期 - 黄色背景 -->
+        <div class="form-card card-yellow">
+          <div class="card-decoration decoration-circle decoration-red"></div>
+          <h3 class="card-title">📍 目的地与日期</h3>
+
+          <a-row :gutter="16">
+            <a-col :xs="24" :md="12">
+              <a-form-item name="city" :rules="[{ required: true, message: '请输入目的地城市' }]">
+                <template #label>
+                  <span class="form-label">目的地城市</span>
+                </template>
+                <a-input
+                  v-model:value="formData.city"
+                  placeholder="例如: 北京"
+                  size="large"
+                />
+              </a-form-item>
+            </a-col>
+
+            <a-col :xs="12" :md="6">
+              <a-form-item name="start_date" :rules="[{ required: true, message: '请选择开始日期' }]">
+                <template #label>
+                  <span class="form-label">开始日期</span>
+                </template>
+                <a-date-picker
+                  v-model:value="formData.start_date"
+                  style="width: 100%"
+                  size="large"
+                />
+              </a-form-item>
+            </a-col>
+
+            <a-col :xs="12" :md="6">
+              <a-form-item name="end_date" :rules="[{ required: true, message: '请选择结束日期' }]">
+                <template #label>
+                  <span class="form-label">结束日期</span>
+                </template>
+                <a-date-picker
+                  v-model:value="formData.end_date"
+                  style="width: 100%"
+                  size="large"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <div class="days-display">
+            <span class="days-label">旅行天数：</span>
+            <span class="days-value">{{ formData.travel_days }}</span>
+            <span class="days-unit">天</span>
+          </div>
+        </div>
       </a-form>
     </div>
   </div>
@@ -262,6 +313,102 @@ const handleSubmit = () => {
   margin: 0 auto;
 }
 
+/* 表单卡片基础样式 */
+.form-card {
+  background: var(--white);
+  border: var(--border-main) solid var(--border);
+  box-shadow: var(--shadow-main);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+  position: relative;
+}
+
+/* 黄色卡片 */
+.card-yellow {
+  background: var(--primary-yellow);
+}
+
+/* 红色卡片 */
+.card-red {
+  background: var(--primary-red);
+}
+
+.card-red .card-title,
+.card-red .form-label {
+  color: var(--white);
+}
+
+/* 卡片装饰 */
+.card-decoration {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+}
+
+.decoration-circle {
+  border-radius: var(--radius-full);
+}
+
+.decoration-square {
+  border-radius: var(--radius-none);
+}
+
+.decoration-red {
+  background: var(--primary-red);
+}
+
+.decoration-blue {
+  background: var(--primary-blue);
+}
+
+.decoration-yellow {
+  background: var(--primary-yellow);
+}
+
+/* 卡片标题 */
+.card-title {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  margin-bottom: var(--space-4);
+  color: var(--foreground);
+}
+
+/* 表单标签 */
+.form-label {
+  font-weight: var(--font-bold);
+  font-size: var(--text-base);
+  color: var(--foreground);
+}
+
+/* 天数显示 */
+.days-display {
+  background: var(--white);
+  border: var(--border-main) solid var(--border);
+  padding: var(--space-3);
+  text-align: center;
+  margin-top: var(--space-4);
+}
+
+.days-label {
+  font-weight: var(--font-bold);
+  margin-right: var(--space-2);
+}
+
+.days-value {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-black);
+  color: var(--primary-blue);
+  margin: 0 var(--space-1);
+}
+
+.days-unit {
+  font-weight: var(--font-bold);
+}
+
 /* 移动端适配 */
 @media (max-width: 640px) {
   .bauhaus-home {
@@ -282,6 +429,15 @@ const handleSubmit = () => {
 
   .city-pills {
     justify-content: center;
+  }
+
+  .form-card {
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .card-title {
+    font-size: var(--text-lg);
   }
 }
 </style>
