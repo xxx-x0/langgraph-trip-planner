@@ -1,0 +1,216 @@
+/**
+ * Bauhaus Design System - Design Tokens
+ * 包豪斯设计系统 - 设计令牌
+ */
+
+/* ========================================
+   Color System - 颜色系统
+   ======================================== */
+:root {
+  /* Primary Colors - 主色 */
+  --primary-red: #D02020;
+  --primary-blue: #1040C0;
+  --primary-yellow: #F0C020;
+
+  /* Neutral Colors - 中性色 */
+  --background: #F0F0F0;
+  --foreground: #121212;
+  --border: #121212;
+  --muted: #E0E0E0;
+  --white: #FFFFFF;
+
+  /* Semantic Colors - 语义色 */
+  --success: #20A020;
+  --warning: #F0A020;
+  --error: #D02020;
+  --info: #1040C0;
+}
+
+/* ========================================
+   Typography System - 排版系统
+   ======================================== */
+:root {
+  /* Font Families - 字体家族 */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  --font-mono: 'Courier New', Courier, monospace;
+
+  /* Font Sizes - 字体大小 */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+  --text-4xl: 2.25rem;   /* 36px */
+  --text-5xl: 3rem;      /* 48px */
+
+  /* Font Weights - 字重 */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-black: 900;
+
+  /* Line Heights - 行高 */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+
+  /* Letter Spacing - 字间距 */
+  --tracking-tighter: -0.05em;
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
+}
+
+/* ========================================
+   Border & Radius - 边框与圆角
+   ======================================== */
+:root {
+  /* Border Widths - 边框宽度 */
+  --border-width-thin: 1px;
+  --border-width-base: 2px;
+  --border-width-thick: 3px;
+  --border-width-heavy: 4px;
+
+  /* Border Radius - 圆角 */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-base: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+}
+
+/* ========================================
+   Shadows - 阴影
+   ======================================== */
+:root {
+  /* Box Shadows - 盒阴影 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-none: none;
+
+  /* Bauhaus Geometric Shadows - 包豪斯几何阴影 */
+  --shadow-bauhaus-sm: 2px 2px 0 var(--foreground);
+  --shadow-bauhaus-base: 4px 4px 0 var(--foreground);
+  --shadow-bauhaus-md: 6px 6px 0 var(--foreground);
+  --shadow-bauhaus-lg: 8px 8px 0 var(--foreground);
+}
+
+/* ========================================
+   Spacing System - 间距系统
+   ======================================== */
+:root {
+  /* Spacing Scale - 间距比例 */
+  --space-0: 0;
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
+  --space-32: 8rem;     /* 128px */
+}
+
+/* ========================================
+   Transitions - 过渡动画
+   ======================================== */
+:root {
+  /* Transition Durations - 过渡时长 */
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --duration-slower: 500ms;
+
+  /* Transition Timing Functions - 缓动函数 */
+  --ease-linear: linear;
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-bauhaus: cubic-bezier(0.25, 0.1, 0.25, 1);
+
+  /* Common Transitions - 常用过渡 */
+  --transition-colors: color var(--duration-base) var(--ease-in-out),
+                       background-color var(--duration-base) var(--ease-in-out),
+                       border-color var(--duration-base) var(--ease-in-out);
+  --transition-transform: transform var(--duration-base) var(--ease-bauhaus);
+  --transition-shadow: box-shadow var(--duration-base) var(--ease-in-out);
+  --transition-all: all var(--duration-base) var(--ease-in-out);
+}
+
+/* ========================================
+   Z-Index Scale - 层级系统
+   ======================================== */
+:root {
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+}
+
+/* ========================================
+   Breakpoints - 响应式断点
+   ======================================== */
+:root {
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+}
+
+/* ========================================
+   Mobile Responsive Tokens - 移动端响应式令牌
+   ======================================== */
+@media (max-width: 768px) {
+  :root {
+    /* Adjust font sizes for mobile - 移动端字体调整 */
+    --text-xs: 0.7rem;     /* 11.2px */
+    --text-sm: 0.8125rem;  /* 13px */
+    --text-base: 0.9375rem; /* 15px */
+    --text-lg: 1.0625rem;  /* 17px */
+    --text-xl: 1.125rem;   /* 18px */
+    --text-2xl: 1.375rem;  /* 22px */
+    --text-3xl: 1.625rem;  /* 26px */
+    --text-4xl: 2rem;      /* 32px */
+    --text-5xl: 2.5rem;    /* 40px */
+
+    /* Adjust spacing for mobile - 移动端间距调整 */
+    --space-4: 0.875rem;   /* 14px */
+    --space-6: 1.25rem;    /* 20px */
+    --space-8: 1.75rem;    /* 28px */
+    --space-12: 2.5rem;    /* 40px */
+    --space-16: 3.5rem;    /* 56px */
+
+    /* Adjust shadows for mobile - 移动端阴影调整 */
+    --shadow-bauhaus-sm: 1px 1px 0 var(--foreground);
+    --shadow-bauhaus-base: 3px 3px 0 var(--foreground);
+    --shadow-bauhaus-md: 4px 4px 0 var(--foreground);
+    --shadow-bauhaus-lg: 6px 6px 0 var(--foreground);
+  }
+}
