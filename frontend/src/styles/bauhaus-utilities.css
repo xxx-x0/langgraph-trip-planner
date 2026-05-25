@@ -1,0 +1,151 @@
+/* frontend/src/styles/bauhaus-utilities.css */
+
+/* ============================================
+   包豪斯工具类
+   ============================================ */
+
+/* ========== 排版工具类 ========== */
+
+.bauhaus-title {
+  font-family: var(--font-family);
+  font-weight: var(--font-black);
+  line-height: var(--leading-tight);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+.bauhaus-title-xl {
+  font-size: var(--text-8xl);
+}
+
+.bauhaus-title-lg {
+  font-size: var(--text-6xl);
+}
+
+.bauhaus-title-md {
+  font-size: var(--text-4xl);
+}
+
+.bauhaus-title-sm {
+  font-size: var(--text-2xl);
+}
+
+.bauhaus-text {
+  font-family: var(--font-family);
+  line-height: var(--leading-normal);
+}
+
+/* ========== 布局工具类 ========== */
+
+.bauhaus-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.bauhaus-section {
+  padding: var(--space-16) 0;
+}
+
+.bauhaus-grid {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.bauhaus-grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.bauhaus-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.bauhaus-flex {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.bauhaus-flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bauhaus-flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ========== 背景色工具类 ========== */
+
+.bg-red {
+  background: var(--primary-red);
+  color: var(--white);
+}
+
+.bg-blue {
+  background: var(--primary-blue);
+  color: var(--white);
+}
+
+.bg-yellow {
+  background: var(--primary-yellow);
+  color: var(--foreground);
+}
+
+.bg-white {
+  background: var(--white);
+  color: var(--foreground);
+}
+
+/* ========== 边框工具类 ========== */
+
+.border-main {
+  border: var(--border-main) solid var(--border);
+}
+
+.border-top {
+  border-top: var(--border-main) solid var(--border);
+}
+
+.border-bottom {
+  border-bottom: var(--border-main) solid var(--border);
+}
+
+.shadow-main {
+  box-shadow: var(--shadow-main);
+}
+
+/* ========== 几何装饰工具类 ========== */
+
+.geometric-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  border: var(--border-3) solid var(--border);
+}
+
+.geometric-square {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-none);
+  border: var(--border-3) solid var(--border);
+}
+
+/* ========== 移动端响应式 ========== */
+
+@media (max-width: 640px) {
+  .bauhaus-grid-2,
+  .bauhaus-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .bauhaus-title-xl {
+    font-size: var(--text-4xl);
+  }
+
+  .hide-mobile {
+    display: none;
+  }
+}
