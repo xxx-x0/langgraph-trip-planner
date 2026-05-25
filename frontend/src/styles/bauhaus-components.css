@@ -1,0 +1,448 @@
+/**
+ * Bauhaus Design System - Component Styles
+ * 包豪斯设计系统 - 组件样式
+ */
+
+/* ========================================
+   Button Base Styles - 按钮基础样式
+   ======================================== */
+.bauhaus-btn {
+  /* Layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+
+  /* Typography */
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-none);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+
+  /* Spacing */
+  padding: var(--space-3) var(--space-6);
+
+  /* Border */
+  border: var(--border-width-thick) solid var(--foreground);
+  border-radius: var(--radius-none);
+
+  /* Visual */
+  background-color: var(--white);
+  color: var(--foreground);
+  box-shadow: var(--shadow-bauhaus-base);
+
+  /* Interaction */
+  cursor: pointer;
+  transition: var(--transition-transform), var(--transition-shadow), var(--transition-colors);
+  user-select: none;
+
+  /* Reset */
+  text-decoration: none;
+  outline: none;
+}
+
+.bauhaus-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--foreground);
+}
+
+.bauhaus-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--foreground);
+}
+
+.bauhaus-btn:focus-visible {
+  outline: var(--border-width-thick) solid var(--primary-blue);
+  outline-offset: 2px;
+}
+
+.bauhaus-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-bauhaus-base);
+}
+
+/* ========================================
+   Button Color Variants - 按钮颜色变体
+   ======================================== */
+
+/* Primary Red Button */
+.bauhaus-btn-primary {
+  background-color: var(--primary-red);
+  color: var(--white);
+  border-color: var(--foreground);
+}
+
+.bauhaus-btn-primary:hover {
+  background-color: #B01818;
+}
+
+.bauhaus-btn-primary:active {
+  background-color: #A01010;
+}
+
+/* Secondary Blue Button */
+.bauhaus-btn-secondary {
+  background-color: var(--primary-blue);
+  color: var(--white);
+  border-color: var(--foreground);
+}
+
+.bauhaus-btn-secondary:hover {
+  background-color: #0D35A0;
+}
+
+.bauhaus-btn-secondary:active {
+  background-color: #0A2A80;
+}
+
+/* Yellow Button */
+.bauhaus-btn-yellow {
+  background-color: var(--primary-yellow);
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+
+.bauhaus-btn-yellow:hover {
+  background-color: #D8A818;
+}
+
+.bauhaus-btn-yellow:active {
+  background-color: #C09010;
+}
+
+/* Outline Button */
+.bauhaus-btn-outline {
+  background-color: transparent;
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+
+.bauhaus-btn-outline:hover {
+  background-color: var(--muted);
+}
+
+.bauhaus-btn-outline:active {
+  background-color: #D0D0D0;
+}
+
+/* ========================================
+   Button Shape Variants - 按钮形状变体
+   ======================================== */
+
+/* Square Button */
+.bauhaus-btn-square {
+  aspect-ratio: 1;
+  padding: var(--space-3);
+}
+
+/* Pill Button */
+.bauhaus-btn-pill {
+  border-radius: var(--radius-full);
+}
+
+/* Small Button */
+.bauhaus-btn-sm {
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-4);
+}
+
+/* Large Button */
+.bauhaus-btn-lg {
+  font-size: var(--text-lg);
+  padding: var(--space-4) var(--space-8);
+}
+
+/* ========================================
+   Card Styles - 卡片样式
+   ======================================== */
+.bauhaus-card {
+  /* Layout */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+
+  /* Spacing */
+  padding: var(--space-6);
+
+  /* Border */
+  border: var(--border-width-thick) solid var(--foreground);
+  border-radius: var(--radius-none);
+
+  /* Visual */
+  background-color: var(--white);
+  box-shadow: var(--shadow-bauhaus-base);
+
+  /* Interaction */
+  transition: var(--transition-transform), var(--transition-shadow);
+}
+
+.bauhaus-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--foreground);
+}
+
+/* Card with geometric decoration */
+.bauhaus-card::before {
+  content: '';
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 24px;
+  height: 24px;
+  background-color: var(--primary-red);
+  border: var(--border-width-base) solid var(--foreground);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.bauhaus-card-blue::before {
+  background-color: var(--primary-blue);
+}
+
+.bauhaus-card-yellow::before {
+  background-color: var(--primary-yellow);
+}
+
+/* Card without decoration */
+.bauhaus-card-plain::before {
+  display: none;
+}
+
+/* Card Header */
+.bauhaus-card-header {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: var(--border-width-base) solid var(--foreground);
+}
+
+.bauhaus-card-title {
+  font-size: var(--text-xl);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
+  margin: 0;
+}
+
+.bauhaus-card-subtitle {
+  font-size: var(--text-sm);
+  color: #666;
+  margin-top: var(--space-2);
+}
+
+/* Card Body */
+.bauhaus-card-body {
+  flex: 1;
+}
+
+/* Card Footer */
+.bauhaus-card-footer {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--border-width-base) solid var(--foreground);
+}
+
+/* ========================================
+   Input Styles - 输入框样式
+   ======================================== */
+.bauhaus-input {
+  /* Layout */
+  display: block;
+  width: 100%;
+
+  /* Typography */
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  line-height: var(--leading-normal);
+
+  /* Spacing */
+  padding: var(--space-3) var(--space-4);
+
+  /* Border */
+  border: var(--border-width-thick) solid var(--foreground);
+  border-radius: var(--radius-none);
+
+  /* Visual */
+  background-color: var(--white);
+  color: var(--foreground);
+  box-shadow: var(--shadow-bauhaus-sm);
+
+  /* Interaction */
+  transition: var(--transition-shadow), var(--transition-colors);
+  outline: none;
+}
+
+.bauhaus-input:hover {
+  box-shadow: var(--shadow-bauhaus-base);
+}
+
+.bauhaus-input:focus {
+  border-color: var(--primary-blue);
+  box-shadow: var(--shadow-bauhaus-base);
+}
+
+.bauhaus-input:disabled {
+  background-color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.bauhaus-input::placeholder {
+  color: #999;
+}
+
+/* Textarea */
+.bauhaus-textarea {
+  /* Inherit input styles */
+  display: block;
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+  line-height: var(--leading-normal);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width-thick) solid var(--foreground);
+  border-radius: var(--radius-none);
+  background-color: var(--white);
+  color: var(--foreground);
+  box-shadow: var(--shadow-bauhaus-sm);
+  transition: var(--transition-shadow), var(--transition-colors);
+  outline: none;
+
+  /* Textarea specific */
+  min-height: 120px;
+  resize: vertical;
+}
+
+.bauhaus-textarea:hover {
+  box-shadow: var(--shadow-bauhaus-base);
+}
+
+.bauhaus-textarea:focus {
+  border-color: var(--primary-blue);
+  box-shadow: var(--shadow-bauhaus-base);
+}
+
+.bauhaus-textarea:disabled {
+  background-color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.bauhaus-textarea::placeholder {
+  color: #999;
+}
+
+/* ========================================
+   Label Styles - 标签样式
+   ======================================== */
+.bauhaus-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: var(--space-2);
+  color: var(--foreground);
+}
+
+/* ========================================
+   Badge Styles - 徽章样式
+   ======================================== */
+.bauhaus-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  border: var(--border-width-base) solid var(--foreground);
+  border-radius: var(--radius-none);
+  background-color: var(--white);
+  color: var(--foreground);
+}
+
+.bauhaus-badge-red {
+  background-color: var(--primary-red);
+  color: var(--white);
+}
+
+.bauhaus-badge-blue {
+  background-color: var(--primary-blue);
+  color: var(--white);
+}
+
+.bauhaus-badge-yellow {
+  background-color: var(--primary-yellow);
+  color: var(--foreground);
+}
+
+/* ========================================
+   Divider Styles - 分割线样式
+   ======================================== */
+.bauhaus-divider {
+  height: var(--border-width-thick);
+  background-color: var(--foreground);
+  border: none;
+  margin: var(--space-6) 0;
+}
+
+.bauhaus-divider-vertical {
+  width: var(--border-width-thick);
+  height: auto;
+  background-color: var(--foreground);
+  margin: 0 var(--space-4);
+}
+
+/* ========================================
+   Mobile Responsive Adjustments - 移动端响应式调整
+   ======================================== */
+@media (max-width: 768px) {
+  /* Button adjustments */
+  .bauhaus-btn {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+  }
+
+  .bauhaus-btn-sm {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .bauhaus-btn-lg {
+    padding: var(--space-3) var(--space-6);
+    font-size: var(--text-base);
+  }
+
+  /* Card adjustments */
+  .bauhaus-card {
+    padding: var(--space-4);
+  }
+
+  .bauhaus-card::before {
+    width: 16px;
+    height: 16px;
+    top: var(--space-3);
+    right: var(--space-3);
+  }
+
+  .bauhaus-card-title {
+    font-size: var(--text-lg);
+  }
+
+  /* Input adjustments */
+  .bauhaus-input,
+  .bauhaus-textarea {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+  }
+
+  .bauhaus-textarea {
+    min-height: 100px;
+  }
+}
