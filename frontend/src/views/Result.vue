@@ -1,19 +1,54 @@
 <template>
   <div class="result-container">
-    <ResultHero
-      v-if="tripPlan"
-      :trip-plan="tripPlan"
-      :is-saved="isSaved"
-      :saving-trip="savingTrip"
-      :edit-mode="editMode"
-      @go-back="goBack"
-      @save="handleSaveTrip"
-      @edit="toggleEditMode"
-      @save-changes="saveChanges"
-      @cancel-edit="cancelEdit"
-      @export-image="exportAsImage"
-      @export-pdf="exportAsPDF"
-    />
+    <!-- Hero 区域 - 红色背景 -->
+    <div v-if="tripPlan" class="result-hero">
+      <div class="hero-content">
+        <h1 class="hero-title">{{ tripPlan.title || tripPlan.city + '旅行计划' }}</h1>
+        <div class="hero-actions">
+          <button class="hero-btn" @click="handleSaveTrip" :disabled="savingTrip">
+            💾 {{ isSaved ? '已保存' : '保存行程' }}
+          </button>
+          <button class="hero-btn" @click="toggleEditMode" v-if="!editMode">
+            ✏️ 编辑
+          </button>
+          <button class="hero-btn" @click="saveChanges" v-if="editMode">
+            ✅ 保存修改
+          </button>
+          <button class="hero-btn" @click="cancelEdit" v-if="editMode">
+            ❌ 取消
+          </button>
+          <button class="hero-btn" @click="exportAsImage">
+            📥 导出图片
+          </button>
+          <button class="hero-btn" @click="exportAsPDF">
+            📄 导出PDF
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 统计数据区 - 黄色背景 -->
+    <div v-if="tripPlan" class="stats-section">
+      <div class="stat-item">
+        <div class="stat-value">{{ tripPlan.days?.length || 0 }}</div>
+        <div class="stat-label">天数</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <div class="stat-value">{{ totalAttractions }}</div>
+        <div class="stat-label">景点数</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <div class="stat-value">¥{{ tripPlan.budget?.total_cost || 0 }}</div>
+        <div class="stat-label">预算</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <div class="stat-value">{{ transportLabel }}</div>
+        <div class="stat-label">交通方式</div>
+      </div>
+    </div>
 
     <div v-if="tripPlan" class="tab-bar">
       <div class="tab-bar-inner">
@@ -111,6 +146,23 @@ const savingTrip = ref(false)
 const isExporting = ref(false)
 const tabContentRef = ref<HTMLElement | null>(null)
 const tabMapRef = ref<InstanceType<typeof TabMap> | null>(null)
+
+const totalAttractions = computed(() => {
+  if (!tripPlan.value?.days) return 0
+  return tripPlan.value.days.reduce((sum, day) => sum + (day.attractions?.length || 0), 0)
+})
+
+const transportLabel = computed(() => {
+  if (!tripPlan.value) return '-'
+  const transport = tripPlan.value.transport_mode || tripPlan.value.days?.[0]?.transport_mode
+  const labels: Record<string, string> = {
+    'driving': '自驾',
+    'transit': '公交',
+    'walking': '步行',
+    'bicycling': '骑行'
+  }
+  return labels[transport] || transport || '-'
+})
 
 const visibleTabs = computed(() => {
   const tabs = [{ key: 'overview', icon: '📋', label: '行程概览' }]
@@ -292,23 +344,120 @@ const exportAsPDF = async () => {
 <style scoped>
 .result-container {
   min-height: 100vh;
-  background: var(--color-bg-secondary);
-  transition: background var(--transition-normal);
+  background: var(--background);
 }
 
+/* Hero 区域 - 红色背景 */
+.result-hero {
+  background: var(--primary-red);
+  border-bottom: var(--border-main) solid var(--border);
+  padding: var(--space-12) var(--space-6);
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-content {
+  max-width: 1200px;
+  width: 100%;
+  text-align: center;
+}
+
+.hero-title {
+  color: var(--white);
+  font-size: var(--text-6xl);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  margin-bottom: var(--space-6);
+  text-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+}
+
+.hero-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.hero-btn {
+  background: transparent;
+  color: var(--white);
+  border: var(--border-main) solid var(--white);
+  padding: 12px 24px;
+  font-family: var(--font-family);
+  font-weight: var(--font-black);
+  font-size: var(--text-base);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  box-shadow: 3px 3px 0px 0px var(--white);
+}
+
+.hero-btn:hover:not(:disabled) {
+  background: var(--white);
+  color: var(--primary-red);
+}
+
+.hero-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.hero-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 统计数据区 - 黄色背景 */
+.stats-section {
+  background: var(--primary-yellow);
+  border-bottom: var(--border-main) solid var(--border);
+  display: flex;
+  height: 80px;
+  align-items: center;
+  justify-content: center;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+  padding: var(--space-4);
+}
+
+.stat-value {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-black);
+  color: var(--foreground);
+  margin-bottom: var(--space-1);
+}
+
+.stat-label {
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  color: var(--foreground);
+  text-transform: uppercase;
+}
+
+.stat-divider {
+  width: var(--border-main);
+  height: 60%;
+  background: var(--border);
+}
+
+/* Tab 导航 - 包豪斯风格 */
 .tab-bar {
   position: sticky;
-  top: var(--header-height);
+  top: 64px;
   z-index: var(--z-sticky);
-  background: var(--color-glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--color-border-light);
-  padding: var(--space-3) var(--space-6);
+  background: var(--white);
+  border-bottom: var(--border-main) solid var(--border);
+  padding: var(--space-4) var(--space-6);
 }
 
 .tab-bar-inner {
-  max-width: var(--content-max-width);
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   gap: var(--space-2);
@@ -318,87 +467,157 @@ const exportAsPDF = async () => {
 .tab-pill {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-5);
-  border-radius: var(--radius-pill);
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-medium);
+  gap: var(--space-2);
+  padding: 12px 24px;
+  border: var(--border-main) solid var(--border);
+  background: var(--white);
+  color: var(--foreground);
+  font-size: var(--text-base);
+  font-weight: var(--font-black);
   font-family: var(--font-family);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
+  box-shadow: 3px 3px 0px 0px var(--border);
 }
 
 .tab-pill:hover {
-  background: var(--color-primary-bg);
-  color: var(--color-text-primary);
-  border-color: var(--color-border);
+  background: var(--primary-yellow);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px var(--border);
+}
+
+.tab-pill:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 
 .tab-pill.active {
-  background: var(--color-gradient);
-  color: #fff;
-  box-shadow: var(--shadow-button);
-  border-color: transparent;
+  background: var(--primary-blue);
+  color: var(--white);
 }
 
 .tab-icon {
-  font-size: var(--font-size-base);
+  font-size: var(--text-base);
 }
 
+/* 内容区 */
 .tab-content {
-  max-width: var(--content-max-width);
+  max-width: 1200px;
   margin: 0 auto;
-  padding: var(--space-6);
+  padding: var(--space-8) var(--space-6);
 }
 
+/* 所有卡片统一包豪斯样式 */
+:deep(.ant-card) {
+  background: var(--white) !important;
+  border: var(--border-main) solid var(--border) !important;
+  border-radius: 0 !important;
+  box-shadow: var(--shadow-main) !important;
+  margin-bottom: var(--space-6) !important;
+}
+
+:deep(.ant-card-head) {
+  border-bottom: var(--border-main) solid var(--border) !important;
+  background: transparent !important;
+}
+
+:deep(.ant-card-head-title) {
+  font-weight: var(--font-black) !important;
+  text-transform: uppercase !important;
+  font-size: var(--text-xl) !important;
+}
+
+/* 返回顶部按钮 */
 .back-top-button {
   width: 48px;
   height: 48px;
-  background: var(--color-gradient);
-  color: #fff;
-  border-radius: var(--radius-circle);
+  background: var(--primary-blue);
+  color: var(--white);
+  border: var(--border-2) solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  box-shadow: var(--shadow-button);
+  font-size: var(--text-xl);
+  font-weight: var(--font-black);
+  box-shadow: var(--shadow-md);
   cursor: pointer;
   transition: all var(--transition-normal);
 }
 
 .back-top-button:hover {
-  transform: scale(1.1);
-  box-shadow: var(--shadow-button-hover);
+  background: var(--primary-yellow);
+  color: var(--foreground);
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0px 0px var(--border);
 }
 
-@media (max-width: 768px) {
-  .tab-bar {
-    padding: var(--space-2) var(--space-3);
+.back-top-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .result-hero {
+    min-height: 150px;
+    padding: var(--space-8) var(--space-4);
   }
-  .tab-bar-inner {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    justify-content: flex-start;
+
+  .hero-title {
+    font-size: var(--text-3xl);
   }
-  .tab-bar-inner::-webkit-scrollbar {
+
+  .hero-btn {
+    padding: 10px 20px;
+    font-size: var(--text-sm);
+  }
+
+  .stats-section {
+    flex-wrap: wrap;
+    height: auto;
+  }
+
+  .stat-item {
+    flex: 0 0 50%;
+    border-bottom: var(--border-2) solid var(--border);
+  }
+
+  .stat-item:nth-child(1),
+  .stat-item:nth-child(3) {
+    border-right: var(--border-2) solid var(--border);
+  }
+
+  .stat-divider {
     display: none;
   }
+
+  .tab-bar {
+    padding: var(--space-3) var(--space-4);
+    overflow-x: auto;
+  }
+
+  .tab-bar-inner {
+    justify-content: flex-start;
+  }
+
+  .tab-pill {
+    padding: 10px 16px;
+    font-size: var(--text-sm);
+  }
+
   .tab-content {
-    padding: var(--space-4) var(--space-3);
+    padding: var(--space-4);
+  }
+
+  :deep(.ant-card) {
+    margin-bottom: var(--space-4) !important;
   }
 }
 
 @media (max-width: 480px) {
-  .tab-pill {
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--font-size-sm);
-  }
   .tab-label {
     display: none;
   }
