@@ -427,22 +427,28 @@ function getModeIcon(mode: string): string {
 
 <style scoped>
 .day-timeline {
-  background: var(--color-bg-secondary, #fafbfc);
-  border-radius: var(--radius-md, 12px);
-  padding: var(--space-4, 16px);
+  background: var(--white);
+  border-radius: 0;
+  padding: var(--space-4);
+  border: var(--border-main) solid var(--border);
+  box-shadow: var(--shadow-main);
 }
 
 .timeline-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-4, 16px);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--border-2) solid var(--border);
 }
 
 .timeline-title {
-  font-size: var(--font-size-md, 15px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-primary, #1a1a2e);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  color: var(--foreground);
+  letter-spacing: 0.05em;
 }
 
 .timeline-summary {
@@ -555,30 +561,36 @@ function getModeIcon(mode: string): string {
 
 /* Card column */
 .tl-card {
-  border-radius: var(--radius-sm, 8px);
+  border-radius: 0;
   padding: var(--space-3, 12px);
   margin-bottom: var(--space-3, 12px);
-  transition: box-shadow 0.2s ease;
+  transition: all var(--transition-fast);
+  border: var(--border-2) solid var(--border);
+}
+
+.tl-card:hover {
+  box-shadow: 4px 4px 0px 0px var(--border);
 }
 
 .tl-card.attraction {
-  background: linear-gradient(135deg, #e6f4ff, #bae0ff);
-  border-left: 3px solid #1677ff;
+  background: var(--white);
+  border-left: 4px solid var(--primary-blue);
 }
 
 .tl-card.meal {
-  background: linear-gradient(135deg, #fff7e6, #ffe7ba);
-  border-left: 3px solid #fa8c16;
+  background: var(--white);
+  border-left: 4px solid var(--primary-yellow);
 }
 
 .tl-card.hotel {
-  background: linear-gradient(135deg, #f6ffed, #d9f7be);
-  border-left: 3px solid #52c41a;
+  background: var(--white);
+  border-left: 4px solid var(--primary-red);
 }
 
 .tl-card.travel {
   background: transparent;
-  border-left: 2px dashed var(--color-border, #ddd);
+  border: none;
+  border-left: 2px dashed var(--border);
   padding: var(--space-1, 4px) var(--space-2, 8px);
   margin-bottom: var(--space-2, 8px);
 }
@@ -596,13 +608,15 @@ function getModeIcon(mode: string): string {
 
 .tl-name {
   font-size: var(--font-size-sm, 13px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-primary, #333);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  color: var(--foreground);
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: 0.03em;
 }
 
 .tl-cost {

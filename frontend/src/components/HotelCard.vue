@@ -169,16 +169,32 @@ const formatDistance = (meters: number): string => {
 
 <style>
 .hotel-card {
-  background: #ffffff;
-  border-radius: 12px;
+  background: var(--white);
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: rgba(0, 0, 0, 0.02) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 6px, rgba(102, 126, 234, 0.06) 0px 4px 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  border: var(--border-main) solid var(--border);
+  box-shadow: var(--shadow-main);
+  transition: all var(--transition-fast);
+  position: relative;
 }
 
 .hotel-card:hover {
-  box-shadow: rgba(0, 0, 0, 0.02) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 4px 12px, rgba(102, 126, 234, 0.1) 0px 8px 24px;
+  transform: translateY(-2px);
+  box-shadow: 8px 8px 0px 0px var(--border);
+}
+
+/* 右上角蓝色装饰 */
+.hotel-card::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--primary-blue);
+  z-index: 10;
 }
 </style>
 
@@ -220,12 +236,14 @@ const formatDistance = (meters: number): string => {
 
 .hotel-name {
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  color: var(--foreground);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.05em;
 }
 
 .hotel-tags {

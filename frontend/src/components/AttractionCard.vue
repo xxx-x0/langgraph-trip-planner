@@ -92,17 +92,32 @@ const handleImageError = (event: Event) => {
 
 <style scoped>
 .attraction-card {
-  background: var(--color-bg-elevated);
-  border-radius: var(--radius-md);
+  background: var(--white);
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: var(--shadow-card);
-  transition: all var(--transition-normal);
-  border: 1px solid var(--color-border-light);
+  border: var(--border-main) solid var(--border);
+  box-shadow: var(--shadow-main);
+  transition: all var(--transition-fast);
+  position: relative;
 }
 
 .attraction-card:hover {
-  box-shadow: var(--shadow-card-hover);
   transform: translateY(-2px);
+  box-shadow: 8px 8px 0px 0px var(--border);
+}
+
+/* 右上角红色装饰 */
+.attraction-card::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--primary-red);
+  z-index: 10;
 }
 
 .attraction-image-wrapper {
@@ -115,6 +130,7 @@ const handleImageError = (event: Event) => {
   height: 180px;
   object-fit: cover;
   transition: transform var(--transition-slow);
+  display: block;
 }
 
 .attraction-card:hover .attraction-image {
@@ -169,12 +185,14 @@ const handleImageError = (event: Event) => {
 
 .attraction-name {
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  color: var(--foreground);
   margin: 0 0 var(--space-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.05em;
 }
 
 .attraction-meta {

@@ -57,23 +57,23 @@ const imageUrl = computed(() => {
 <style scoped>
 .selectable-card-wrapper {
   position: relative;
-  border-radius: var(--radius-lg, 12px);
-  background: var(--color-bg-elevated, #fff);
-  border: 2px solid transparent;
-  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.08));
+  border-radius: 0;
+  background: var(--white);
+  border: var(--border-main) solid var(--border);
+  box-shadow: var(--shadow-main);
   cursor: pointer;
-  transition: all var(--transition-normal, 0.3s) ease;
+  transition: all var(--transition-fast);
   overflow: hidden;
 }
 
 .selectable-card-wrapper:hover {
-  box-shadow: var(--shadow-card-hover, 0 4px 16px rgba(0,0,0,0.12));
   transform: translateY(-2px);
+  box-shadow: 8px 8px 0px 0px var(--border);
 }
 
 .selectable-card-wrapper.selected {
-  border-color: var(--color-primary, #667eea);
-  box-shadow: 0 0 0 1px var(--color-primary, #667eea), var(--shadow-card-hover, 0 4px 16px rgba(0,0,0,0.12));
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px var(--primary-blue), 8px 8px 0px 0px var(--border);
 }
 
 .selection-checkbox {
@@ -86,19 +86,19 @@ const imageUrl = computed(() => {
 .checkbox-inner {
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.8);
-  background: rgba(0,0,0,0.2);
-  backdrop-filter: blur(4px);
+  border-radius: 0;
+  border: 2px solid var(--border);
+  background: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
+  box-shadow: 2px 2px 0px 0px var(--border);
 }
 
 .checkbox-inner.checked {
-  background: var(--color-primary, #667eea);
-  border-color: var(--color-primary, #667eea);
+  background: var(--primary-blue);
+  border-color: var(--border);
 }
 
 .check-icon {
@@ -112,11 +112,15 @@ const imageUrl = computed(() => {
   top: 8px;
   left: 8px;
   z-index: 10;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill, 9999px);
-  background: var(--color-accent, #764ba2);
-  color: white;
+  padding: 4px 8px;
+  border-radius: 0;
+  background: var(--primary-red);
+  color: var(--white);
   font-size: 11px;
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  border: 2px solid var(--border);
+  box-shadow: 2px 2px 0px 0px var(--border);
 }
 
 .card-image {
@@ -158,11 +162,13 @@ const imageUrl = computed(() => {
 .card-name {
   margin: 0;
   font-size: var(--font-size-sm, 14px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-primary);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  color: var(--foreground);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: 0.05em;
 }
 
 .card-meta {
