@@ -53,11 +53,21 @@ const { resolvedTheme, toggleTheme } = useTheme()
 </script>
 
 <style>
-#app {
+/* 全局包豪斯样式 */
+body {
   font-family: var(--font-family);
-  color: var(--color-text-primary);
-  background: var(--color-bg-primary);
-  transition: background var(--transition-normal), color var(--transition-normal);
+  color: var(--foreground);
+  background: var(--background);
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#app {
+  min-height: 100vh;
 }
 </style>
 
