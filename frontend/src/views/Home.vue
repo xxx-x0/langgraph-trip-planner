@@ -562,6 +562,20 @@ const handleSubmit = () => {
   color: var(--foreground);
 }
 
+/* 统一所有输入框和选择框的高度 */
+:deep(.ant-input-lg),
+:deep(.ant-select-lg .ant-select-selector),
+:deep(.ant-picker-large),
+:deep(.ant-input-number-lg) {
+  min-height: 40px !important;
+  height: 40px !important;
+}
+
+:deep(.ant-input[type="time"]) {
+  min-height: 40px !important;
+  height: 40px !important;
+}
+
 /* 天数显示 */
 .days-display {
   background: var(--white);
