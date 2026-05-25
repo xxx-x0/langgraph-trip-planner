@@ -5,13 +5,7 @@
         <div class="header-inner">
           <div class="header-left">
             <router-link to="/" class="logo-link">
-              <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="2"/>
-                <path d="M8 18C8 18 10 14 16 14C22 14 24 18 24 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                <path d="M10 20C10 20 12 17 16 17C20 17 22 20 22 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                <circle cx="16" cy="11" r="2" fill="currentColor"/>
-              </svg>
-              <span class="logo-text">HelloAgents</span>
+              <span class="logo-text">Let's Go!</span>
             </router-link>
           </div>
           <div class="header-right">
@@ -40,7 +34,7 @@
         </router-view>
       </a-layout-content>
       <a-layout-footer class="app-footer">
-        <span>HelloAgents智能旅行助手 ©2025 基于HelloAgents框架</span>
+        <span>Let's Go! 智能旅行助手 ©2025</span>
       </a-layout-footer>
     </a-layout>
   </div>
@@ -73,21 +67,15 @@ body {
 
 <style scoped>
 .app-header {
-  background: rgba(255, 255, 255, 0.8) !important;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--white) !important;
+  border-bottom: var(--border-main) solid var(--border);
   padding: 0 var(--space-6) !important;
-  height: var(--header-height);
-  line-height: var(--header-height);
+  height: 64px;
+  line-height: 64px;
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-  transition: background var(--transition-normal), border-color var(--transition-normal);
-}
-
-[data-theme="dark"] .app-header {
-  background: rgba(18, 18, 24, 0.85) !important;
+  box-shadow: var(--shadow-md);
 }
 
 .header-inner {
@@ -95,7 +83,7 @@ body {
   align-items: center;
   justify-content: space-between;
   height: 100%;
-  max-width: var(--content-max-width);
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -107,105 +95,110 @@ body {
 .logo-link {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  color: var(--color-text-primary) !important;
+  color: var(--foreground) !important;
   text-decoration: none;
   transition: opacity var(--transition-fast);
 }
 
 .logo-link:hover {
-  opacity: 0.85;
-}
-
-.logo-icon {
-  width: 28px;
-  height: 28px;
-  color: var(--color-primary);
+  opacity: 0.8;
 }
 
 .logo-text {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: -0.02em;
+  font-size: var(--text-2xl);
+  font-weight: var(--font-black);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary-red);
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .header-nav {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  color: var(--color-text-secondary) !important;
+  gap: var(--space-2);
+  color: var(--foreground) !important;
   text-decoration: none;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-medium);
+  padding: 8px 20px;
+  border: var(--border-2) solid var(--border);
+  background: var(--white);
+  font-size: var(--text-base);
+  font-weight: var(--font-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   transition: all var(--transition-fast);
+  box-shadow: 2px 2px 0px 0px var(--border);
 }
 
 .nav-item:hover {
-  color: var(--color-text-primary) !important;
-  background: var(--color-primary-bg);
+  background: var(--primary-yellow);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px 0px var(--border);
+}
+
+.nav-item:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 
 .nav-active {
-  color: var(--color-primary) !important;
-  background: var(--color-primary-bg);
-  font-weight: var(--font-weight-semibold);
+  background: var(--primary-blue) !important;
+  color: var(--white) !important;
 }
 
 .nav-icon {
-  font-size: var(--font-size-base);
+  font-size: var(--text-base);
 }
 
 .theme-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-elevated);
+  width: 40px;
+  height: 40px;
+  border: var(--border-2) solid var(--border);
+  background: var(--white);
   cursor: pointer;
   transition: all var(--transition-fast);
+  box-shadow: 2px 2px 0px 0px var(--border);
 }
 
 .theme-toggle:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-bg);
-  transform: scale(1.05);
+  background: var(--primary-yellow);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px 0px var(--border);
 }
 
 .theme-toggle:active {
-  transform: scale(0.95);
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 
 .theme-icon {
-  font-size: var(--font-size-lg);
+  font-size: var(--text-lg);
 }
 
 .app-footer {
   text-align: center;
-  background: var(--color-bg-secondary) !important;
-  border-top: 1px solid var(--color-border);
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-sm);
+  background: var(--foreground) !important;
+  border-top: var(--border-main) solid var(--border);
+  color: var(--white);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   padding: var(--space-6) var(--space-4) !important;
-  transition: background var(--transition-normal), border-color var(--transition-normal);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 640px) {
   .app-header {
     padding: 0 var(--space-4) !important;
   }
@@ -219,11 +212,16 @@ body {
   }
 
   .nav-item {
-    padding: var(--space-2);
+    padding: 8px 12px;
   }
 
   .logo-text {
-    font-size: var(--font-size-lg);
+    font-size: var(--text-lg);
+  }
+
+  .theme-toggle {
+    width: 36px;
+    height: 36px;
   }
 }
 </style>
