@@ -1,0 +1,200 @@
+/* frontend/src/styles/bauhaus-antd-override.css */
+
+/* ============================================
+   Ant Design 组件包豪斯风格覆盖
+   ============================================ */
+
+/* ========== 全局覆盖 ========== */
+
+.ant-btn {
+  border-radius: var(--radius-none) !important;
+  font-weight: var(--font-black) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.ant-btn-primary {
+  background: var(--primary-red) !important;
+  border-color: var(--border) !important;
+  border-width: var(--border-main) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.ant-btn-primary:hover {
+  background: var(--primary-red) !important;
+  opacity: 0.9;
+}
+
+.ant-btn-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: none !important;
+}
+
+/* ========== DatePicker 覆盖 ========== */
+
+.ant-picker {
+  border: var(--border-main) solid var(--border) !important;
+  border-radius: var(--radius-none) !important;
+  box-shadow: none !important;
+  font-family: var(--font-family) !important;
+}
+
+.ant-picker:hover {
+  border-color: var(--primary-blue) !important;
+}
+
+.ant-picker-focused {
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 3px rgba(16, 64, 192, 0.1) !important;
+}
+
+.ant-picker-dropdown {
+  border: var(--border-main) solid var(--border) !important;
+  border-radius: var(--radius-none) !important;
+  box-shadow: var(--shadow-main) !important;
+}
+
+.ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner {
+  background: var(--primary-blue) !important;
+  border-radius: var(--radius-none) !important;
+}
+
+.ant-picker-cell-in-view.ant-picker-cell-today .ant-picker-cell-inner::before {
+  border: 2px solid var(--primary-yellow) !important;
+  border-radius: var(--radius-none) !important;
+}
+
+/* ========== Select 覆盖 ========== */
+
+.ant-select-selector {
+  border: var(--border-main) solid var(--border) !important;
+  border-radius: var(--radius-none) !important;
+  box-shadow: none !important;
+  font-family: var(--font-family) !important;
+}
+
+.ant-select:hover .ant-select-selector {
+  border-color: var(--primary-blue) !important;
+}
+
+.ant-select-focused .ant-select-selector {
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 3px rgba(16, 64, 192, 0.1) !important;
+}
+
+.ant-select-dropdown {
+  border: var(--border-main) solid var(--border) !important;
+  border-radius: var(--radius-none) !important;
+  box-shadow: var(--shadow-main) !important;
+}
+
+.ant-select-item-option-selected {
+  background: var(--primary-blue) !important;
+  color: var(--white) !important;
+  font-weight: var(--font-bold) !important;
+}
+
+.ant-select-item-option-active {
+  background: rgba(16, 64, 192, 0.1) !important;
+}
+
+/* ========== Checkbox 覆盖 ========== */
+
+.ant-checkbox-wrapper {
+  font-family: var(--font-family) !important;
+  font-weight: var(--font-medium) !important;
+}
+
+.ant-checkbox-inner {
+  border: var(--border-2) solid var(--border) !important;
+  border-radius: var(--radius-none) !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+.ant-checkbox-checked .ant-checkbox-inner {
+  background: var(--primary-blue) !important;
+  border-color: var(--border) !important;
+}
+
+.ant-checkbox-checked::after {
+  border: var(--border-2) solid var(--primary-blue) !important;
+  border-radius: var(--radius-none) !important;
+}
+
+/* ========== Input 覆盖 ========== */
+
+.ant-input {
+  border: var(--border-main) solid var(--border) !important;
+  border-radius: var(--radius-none) !important;
+  font-family: var(--font-family) !important;
+  font-weight: var(--font-medium) !important;
+}
+
+.ant-input:hover {
+  border-color: var(--primary-blue) !important;
+}
+
+.ant-input:focus {
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 3px rgba(16, 64, 192, 0.1) !important;
+}
+
+.ant-input-number {
+  border: var(--border-main) solid var(--border) !important;
+  border-radius: var(--radius-none) !important;
+}
+
+.ant-input-number:hover {
+  border-color: var(--primary-blue) !important;
+}
+
+.ant-input-number-focused {
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 3px rgba(16, 64, 192, 0.1) !important;
+}
+
+/* ========== Progress 覆盖 ========== */
+
+.ant-progress-bg {
+  background: var(--primary-blue) !important;
+  border-radius: var(--radius-none) !important;
+}
+
+.ant-progress-inner {
+  background: var(--muted) !important;
+  border-radius: var(--radius-none) !important;
+  border: var(--border-2) solid var(--border) !important;
+}
+
+/* ========== Card 覆盖 ========== */
+
+.ant-card {
+  border: var(--border-main) solid var(--border) !important;
+  border-radius: var(--radius-none) !important;
+  box-shadow: var(--shadow-main) !important;
+}
+
+.ant-card-head {
+  border-bottom: var(--border-main) solid var(--border) !important;
+  font-weight: var(--font-black) !important;
+  text-transform: uppercase !important;
+}
+
+/* ========== 移动端响应式 ========== */
+
+@media (max-width: 640px) {
+  .ant-picker,
+  .ant-select-selector,
+  .ant-input,
+  .ant-input-number,
+  .ant-card {
+    border-width: var(--border-2) !important;
+  }
+
+  .ant-picker-dropdown,
+  .ant-select-dropdown {
+    border-width: var(--border-3) !important;
+    box-shadow: var(--shadow-lg) !important;
+  }
+}
