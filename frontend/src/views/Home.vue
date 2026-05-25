@@ -108,6 +108,184 @@
             <span class="days-unit">天</span>
           </div>
         </div>
+
+        <!-- 卡片 2: 偏好设置 - 白色背景 -->
+        <div class="form-card">
+          <div class="card-decoration decoration-square decoration-blue"></div>
+          <h3 class="card-title">⚙️ 偏好设置</h3>
+
+          <a-row :gutter="16">
+            <a-col :xs="24" :md="12">
+              <a-form-item name="transportation">
+                <template #label>
+                  <span class="form-label">交通方式</span>
+                </template>
+                <a-select
+                  v-model:value="formData.transportation"
+                  size="large"
+                >
+                  <a-select-option value="公共交通">🚇 公共交通</a-select-option>
+                  <a-select-option value="自驾">🚗 自驾</a-select-option>
+                  <a-select-option value="步行">🚶 步行</a-select-option>
+                  <a-select-option value="混合">🔀 混合</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+
+            <a-col :xs="24" :md="12">
+              <a-form-item name="accommodation">
+                <template #label>
+                  <span class="form-label">住宿偏好</span>
+                </template>
+                <a-select
+                  v-model:value="formData.accommodation"
+                  size="large"
+                >
+                  <a-select-option value="经济型酒店">💰 经济型酒店</a-select-option>
+                  <a-select-option value="舒适型酒店">🏨 舒适型酒店</a-select-option>
+                  <a-select-option value="豪华酒店">⭐ 豪华酒店</a-select-option>
+                  <a-select-option value="民宿">🏡 民宿</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+
+            <a-col :xs="24" :md="12">
+              <a-form-item name="food_preference">
+                <template #label>
+                  <span class="form-label">美食偏好</span>
+                </template>
+                <a-select
+                  v-model:value="formData.food_preference"
+                  size="large"
+                >
+                  <a-select-option value="本地特色">🍜 本地特色</a-select-option>
+                  <a-select-option value="川菜">🌶️ 川菜</a-select-option>
+                  <a-select-option value="粤菜">🥘 粤菜</a-select-option>
+                  <a-select-option value="日料">🍣 日料</a-select-option>
+                  <a-select-option value="西餐">🥩 西餐</a-select-option>
+                  <a-select-option value="火锅">🍲 火锅</a-select-option>
+                  <a-select-option value="烧烤">🍢 烧烤</a-select-option>
+                  <a-select-option value="海鲜">🦐 海鲜</a-select-option>
+                  <a-select-option value="小吃">🥟 小吃</a-select-option>
+                  <a-select-option value="无特殊要求">❌ 无特殊要求</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+
+            <a-col :xs="24" :md="12">
+              <a-form-item name="default_day_start_time">
+                <template #label>
+                  <span class="form-label">每日开始时间</span>
+                </template>
+                <a-input
+                  v-model:value="formData.default_day_start_time"
+                  type="time"
+                  size="large"
+                />
+              </a-form-item>
+            </a-col>
+
+            <a-col :xs="24">
+              <a-form-item name="preferences">
+                <template #label>
+                  <span class="form-label">感兴趣的景点类型（可选）</span>
+                </template>
+                <a-checkbox-group v-model:value="formData.preferences" class="preference-group">
+                  <a-checkbox value="历史文化">🏛️ 历史文化</a-checkbox>
+                  <a-checkbox value="自然风光">🏞️ 自然风光</a-checkbox>
+                  <a-checkbox value="都市地标">🌃 都市地标</a-checkbox>
+                  <a-checkbox value="购物">🛍️ 购物</a-checkbox>
+                  <a-checkbox value="艺术">🎨 艺术</a-checkbox>
+                  <a-checkbox value="休闲">☕ 休闲</a-checkbox>
+                  <a-checkbox value="夜生活">🌙 夜生活</a-checkbox>
+                  <a-checkbox value="户外徒步">🥾 户外徒步</a-checkbox>
+                  <a-checkbox value="祈福朝圣">🛐 祈福朝圣</a-checkbox>
+                </a-checkbox-group>
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <!-- 卡片 3: 预算与同伴 - 红色背景 -->
+        <div class="form-card card-red">
+          <div class="card-decoration decoration-circle decoration-yellow"></div>
+          <h3 class="card-title">💰 预算与同伴</h3>
+
+          <a-row :gutter="16">
+            <a-col :xs="24" :md="8">
+              <a-form-item name="budget">
+                <template #label>
+                  <span class="form-label">预算上限（元）</span>
+                </template>
+                <a-input-number
+                  v-model:value="formData.budget"
+                  :min="0"
+                  :step="100"
+                  style="width: 100%"
+                  size="large"
+                  placeholder="不限预算"
+                />
+              </a-form-item>
+            </a-col>
+
+            <a-col :xs="12" :md="8">
+              <a-form-item>
+                <template #label>
+                  <span class="form-label">出行人数</span>
+                </template>
+                <a-input-number
+                  v-model:value="formData.companions!.count"
+                  :min="1"
+                  :max="20"
+                  style="width: 100%"
+                  size="large"
+                />
+              </a-form-item>
+            </a-col>
+
+            <a-col :xs="12" :md="8">
+              <a-form-item>
+                <template #label>
+                  <span class="form-label">同伴类型</span>
+                </template>
+                <a-select
+                  v-model:value="formData.companions!.type"
+                  size="large"
+                >
+                  <a-select-option value="solo">🧑 独自</a-select-option>
+                  <a-select-option value="couple">💑 情侣</a-select-option>
+                  <a-select-option value="family">👨‍👩‍👧‍👦 家庭</a-select-option>
+                  <a-select-option value="friends">👥 朋友</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
+        <!-- 卡片 4: 额外要求 - 白色背景 -->
+        <div class="form-card">
+          <div class="card-decoration decoration-square decoration-red"></div>
+          <h3 class="card-title">💬 额外要求</h3>
+
+          <a-form-item name="free_text_input">
+            <a-textarea
+              v-model:value="formData.free_text_input"
+              placeholder="告诉我们您的特殊需求或偏好..."
+              :rows="4"
+              size="large"
+            />
+          </a-form-item>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="submit-section">
+          <button
+            type="submit"
+            class="bauhaus-btn bauhaus-btn-yellow bauhaus-btn-square submit-btn"
+          >
+            🚀 开始探索景点
+          </button>
+        </div>
       </a-form>
     </div>
   </div>
@@ -409,6 +587,25 @@ const handleSubmit = () => {
   font-weight: var(--font-bold);
 }
 
+/* 偏好选择组 */
+.preference-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* 提交按钮区域 */
+.submit-section {
+  text-align: center;
+  margin-top: var(--space-8);
+}
+
+.submit-btn {
+  min-width: 300px;
+  padding: 16px 48px;
+  font-size: var(--text-lg);
+}
+
 /* 移动端适配 */
 @media (max-width: 640px) {
   .bauhaus-home {
@@ -438,6 +635,10 @@ const handleSubmit = () => {
 
   .card-title {
     font-size: var(--text-lg);
+  }
+
+  .submit-btn {
+    min-width: 100%;
   }
 }
 </style>
