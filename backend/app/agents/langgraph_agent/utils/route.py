@@ -138,6 +138,7 @@ def _parse_amap_result(raw: Any, tool_name: str) -> Dict[str, str]:
                         detail_parts.append(f"步行{_parse_distance(w_dist)}")
             detail = "，".join(detail_parts) if detail_parts else ""
             return {"distance": distance, "duration": duration, "detail": detail}
+        return {"distance": "", "duration": "", "detail": ""}
 
     return {"distance": "", "duration": "", "detail": str(data)[:200]}
 
@@ -163,6 +164,80 @@ def _fallback_segment(
     }
 
 
+def _candidate_tools(
+    from_wp: Dict[str, Any],
+    to_wp: Dict[str, Any],
+    transportation: str,
+) -> List[str]:
+    """Pick useful AMap route tools for a segment, nearest modes first."""
+    preferred = _pick_tool_name(transportation)
+    dist_km = _haversine_distance(
+        from_wp["latitude"], from_wp["longitude"],
+        to_wp["latitude"], to_wp["longitude"],
+    )
+    if dist_km <= 1.5:
+        ordered = [
+            "maps_direction_walking",
+            "maps_direction_bicycling",
+            preferred,
+            "maps_direction_driving",
+            "maps_direction_transit_integrated",
+        ]
+    elif dist_km <= 5:
+        ordered = [
+            "maps_direction_bicycling",
+            preferred,
+            "maps_direction_driving",
+            "maps_direction_transit_integrated",
+            "maps_direction_walking",
+        ]
+    else:
+        ordered = [
+            preferred,
+            "maps_direction_driving",
+            "maps_direction_transit_integrated",
+            "maps_direction_bicycling",
+        ]
+
+    deduped: List[str] = []
+    for tool_name in ordered:
+        if tool_name not in deduped:
+            deduped.append(tool_name)
+    return deduped
+
+
+async def _invoke_route_tool(
+    service: Any,
+    tool_name: str,
+    tool: Any,
+    args: Dict[str, Any],
+) -> tuple[Any, Any]:
+    """Call a route tool with the existing reconnect behavior."""
+    last_err: Optional[Exception] = None
+    result = None
+    for attempt in range(3):
+        try:
+            result = await asyncio.wait_for(tool.ainvoke(args), timeout=30.0)
+            return tool, result
+        except Exception as retry_e:
+            last_err = retry_e
+            if _is_connection_error(retry_e):
+                print(f"⚠️ 路线工具连接异常 (尝试 {attempt+1}/3): {str(retry_e)[:100]}")
+                await _reset_mcp_client()
+                try:
+                    tool = await service.get_tool(tool_name)
+                except Exception:
+                    tool = None
+                if tool is None:
+                    break
+            elif attempt < 2:
+                print(f"⚠️ 路线工具调用失败 (尝试 {attempt+1}/3): {str(retry_e)[:100]}")
+                await asyncio.sleep(min(2 ** attempt, 5))
+            else:
+                break
+    raise last_err or RuntimeError("路线工具调用失败")
+
+
 async def compute_route_segments(
     waypoints: List[Dict],
     transportation: str,
@@ -181,71 +256,54 @@ async def compute_route_segments(
     if len(waypoints) < 2:
         return []
 
-    tool_name = _pick_tool_name(transportation)
-    mode_label = _TOOL_MODE_LABEL.get(tool_name, "公交")
-
     service = get_langchain_amap_service()
-    try:
-        tool = await service.get_tool(tool_name)
-    except Exception as e:
-        print(f"⚠️ 路线工具 {tool_name} 加载失败: {e}，使用估算数据")
-        tool = None
+    preferred_tool_name = _pick_tool_name(transportation)
+    preferred_mode_label = _TOOL_MODE_LABEL.get(preferred_tool_name, "公交")
+    tool_cache: Dict[str, Any] = {}
 
     segments = []
     for i in range(len(waypoints) - 1):
         from_wp = waypoints[i]
         to_wp = waypoints[i + 1]
 
-        if tool is None:
-            segments.append(_fallback_segment(from_wp, to_wp, mode_label))
-            continue
-
         origin = f"{from_wp['longitude']},{from_wp['latitude']}"
         destination = f"{to_wp['longitude']},{to_wp['latitude']}"
-        args: Dict[str, Any] = {"origin": origin, "destination": destination}
-        if tool_name == "maps_direction_transit_integrated":
-            args["city"] = city
-
-        try:
-            last_err: Optional[Exception] = None
-            result = None
-            for attempt in range(3):
+        appended = False
+        for tool_name in _candidate_tools(from_wp, to_wp, transportation):
+            if tool_name not in tool_cache:
                 try:
-                    result = await asyncio.wait_for(
-                        tool.ainvoke(args), timeout=30.0
-                    )
-                    last_err = None
-                    break
-                except Exception as retry_e:
-                    last_err = retry_e
-                    if _is_connection_error(retry_e):
-                        print(f"⚠️ 路线工具连接异常 (尝试 {attempt+1}/3): {str(retry_e)[:100]}")
-                        await _reset_mcp_client()
-                        try:
-                            tool = await service.get_tool(tool_name)
-                        except Exception:
-                            tool = None
-                            break
-                    elif attempt < 2:
-                        print(f"⚠️ 路线工具调用失败 (尝试 {attempt+1}/3): {str(retry_e)[:100]}")
-                        await asyncio.sleep(min(2 ** attempt, 5))
-                    else:
-                        break
+                    tool_cache[tool_name] = await service.get_tool(tool_name)
+                except Exception as e:
+                    print(f"⚠️ 路线工具 {tool_name} 加载失败: {e}")
+                    tool_cache[tool_name] = None
+            tool = tool_cache[tool_name]
+            if tool is None:
+                continue
 
-            if last_err is not None or result is None:
-                raise last_err or RuntimeError("路线工具调用失败")
+            args: Dict[str, Any] = {"origin": origin, "destination": destination}
+            if tool_name == "maps_direction_transit_integrated":
+                args["city"] = city
 
-            parsed = _parse_amap_result(result, tool_name)
-            segments.append({
-                "from_name": from_wp["name"],
-                "to_name": to_wp["name"],
-                "distance": parsed["distance"],
-                "duration": parsed["duration"],
-                "mode": mode_label,
-                "detail": parsed["detail"],
-            })
-        except Exception as e:
-            print(f"⚠️ 路线段 {from_wp['name']}→{to_wp['name']} 查询失败: {str(e)[:100]}，使用估算")
-            segments.append(_fallback_segment(from_wp, to_wp, mode_label))
+            try:
+                tool, result = await _invoke_route_tool(service, tool_name, tool, args)
+                tool_cache[tool_name] = tool
+                parsed = _parse_amap_result(result, tool_name)
+                if not parsed["distance"] and not parsed["duration"]:
+                    continue
+                segments.append({
+                    "from_name": from_wp["name"],
+                    "to_name": to_wp["name"],
+                    "distance": parsed["distance"],
+                    "duration": parsed["duration"],
+                    "mode": _TOOL_MODE_LABEL.get(tool_name, preferred_mode_label),
+                    "detail": parsed["detail"],
+                })
+                appended = True
+                break
+            except Exception as e:
+                print(f"⚠️ 路线段 {from_wp['name']}→{to_wp['name']} 的 {tool_name} 查询失败: {str(e)[:100]}")
+
+        if not appended:
+            segments.append(_fallback_segment(from_wp, to_wp, preferred_mode_label))
 
     return segments

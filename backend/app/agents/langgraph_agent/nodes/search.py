@@ -1,5 +1,6 @@
 import json
 import re
+from html.parser import HTMLParser
 from typing import Any, Dict, List
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -19,6 +20,24 @@ class FreeTextAnalysis(BaseModel):
     food_preferences: List[str] = Field(default_factory=list, description="用户提到的美食/餐饮偏好")
     accommodation_preferences: List[str] = Field(default_factory=list, description="用户提到的住宿偏好")
     general_suggestions: List[str] = Field(default_factory=list, description="用户的非具体意见或建议")
+
+
+class _HotelDescriptionTextParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.fragments: List[str] = []
+
+    def handle_data(self, data: str) -> None:
+        text = data.strip()
+        if text:
+            self.fragments.append(text)
+
+
+def _clean_hotel_description(description: Any) -> str:
+    parser = _HotelDescriptionTextParser()
+    parser.feed(str(description))
+    parser.close()
+    return re.sub(r"\s+", " ", " ".join(parser.fragments)).strip()
 
 
 FREE_TEXT_ANALYSIS_PROMPT = """你是一个旅行需求分析专家。请分析用户的额外要求文本，将其分类为以下四类：
@@ -415,11 +434,12 @@ async def search_hotel_node(state: TripPlannerState) -> Dict[str, Any]:
                     "withRoomAmenities": True,
                 }
                 if star_ratings:
-                    aigohotel_args["starRatings"] = star_ratings
+                    aigohotel_args["filterOptions"] = {"starRatings": star_ratings}
                 if request.start_date:
-                    aigohotel_args["checkIn"] = request.start_date
-                if request.travel_days:
-                    aigohotel_args["stayNights"] = request.travel_days
+                    aigohotel_args["checkInParam"] = {
+                        "checkInDate": request.start_date,
+                        "stayNights": max(request.travel_days, 1),
+                    }
                 direct_result = await _invoke_tool_with_retry(
                     search_tool,
                     aigohotel_args,
@@ -603,16 +623,33 @@ def _parse_aigohotel_hotels(raw: Any) -> List[Dict[str, Any]]:
             except (TypeError, ValueError):
                 pass
 
+        hotel_id = h.get("hotelId") or h.get("hotel_id") or h.get("id")
+        if hotel_id is not None:
+            item["hotel_id"] = hotel_id
+
+        price_obj = h.get("price")
+        if isinstance(price_obj, dict):
+            current_price = price_obj.get("lowestPrice") or price_obj.get("price")
+            if price_obj.get("hasPrice", current_price is not None) and current_price is not None:
+                try:
+                    item["price"] = float(current_price)
+                except (TypeError, ValueError):
+                    pass
+            currency = price_obj.get("currency")
+            if currency:
+                item["currency"] = str(currency)
+
         for src_key, dst_key in (("price", "price"), ("totalPrice", "price"), ("originalPrice", "original_price")):
             v = h.get(src_key)
+            if isinstance(v, dict):
+                continue
             if v is not None and dst_key not in item:
                 try:
                     item[dst_key] = float(v)
                 except (TypeError, ValueError):
                     pass
 
-        currency = h.get("currency") or "CNY"
-        item["currency"] = str(currency)
+        item.setdefault("currency", str(h.get("currency") or "CNY"))
 
         ham = h.get("hotelAmenities") or h.get("hotel_amenities") or h.get("amenities")
         if isinstance(ham, list):
@@ -623,12 +660,14 @@ def _parse_aigohotel_hotels(raw: Any) -> List[Dict[str, Any]]:
 
         desc = h.get("description") or h.get("intro") or h.get("summary")
         if desc:
-            item["description"] = str(desc)[:500]
+            cleaned_desc = _clean_hotel_description(desc)
+            if cleaned_desc:
+                item["description"] = cleaned_desc[:500]
 
         img = h.get("imageUrl") or h.get("image") or h.get("photo") or h.get("mainImage")
         if img:
             item["image_url"] = str(img)
-        durl = h.get("detailUrl") or h.get("url") or h.get("link")
+        durl = h.get("bookingUrl") or h.get("detailUrl") or h.get("url") or h.get("link")
         if durl:
             item["detail_url"] = str(durl)
 
@@ -771,16 +810,15 @@ async def _aigohotel_search_for_day(
         "place": rep_name,
         "placeType": "景点",
         "originQuery": f"搜索{city}{rep_name}附近的{accommodation or ''}酒店".strip(),
-        "distanceInMeter": distance_m,
         "size": 8,
         "withHotelAmenities": True,
         "withRoomAmenities": True,
+        "filterOptions": {"distanceInMeter": distance_m},
     }
     if star_ratings:
-        args["starRatings"] = star_ratings
+        args["filterOptions"]["starRatings"] = star_ratings
     if check_in:
-        args["checkIn"] = check_in
-        args["stayNights"] = 1
+        args["checkInParam"] = {"checkInDate": check_in, "stayNights": 1}
 
     try:
         raw = await _invoke_tool_with_retry(search_tool, args, max_retries=1, per_attempt_timeout=30.0)
@@ -811,10 +849,9 @@ async def _aigohotel_city_fallback(
         "withRoomAmenities": True,
     }
     if star_ratings:
-        args["starRatings"] = star_ratings
+        args["filterOptions"] = {"starRatings": star_ratings}
     if check_in:
-        args["checkIn"] = check_in
-        args["stayNights"] = stay_nights
+        args["checkInParam"] = {"checkInDate": check_in, "stayNights": stay_nights}
 
     try:
         raw = await _invoke_tool_with_retry(search_tool, args, max_retries=2, per_attempt_timeout=30.0)

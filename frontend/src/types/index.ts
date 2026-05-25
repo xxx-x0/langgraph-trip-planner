@@ -18,7 +18,8 @@ export interface Attraction {
 }
 
 export interface Meal {
-  type: 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  type: 'breakfast' | 'lunch' | 'dinner' | 'main' | 'snack' | 'dessert' | 'cafe' | 'late_night'
+  category?: 'main' | 'snack' | 'dessert' | 'cafe' | 'late_night'
   name: string
   address?: string
   location?: Location
@@ -52,6 +53,7 @@ export interface Hotel {
   image_url?: string
   detail_url?: string
   distance_in_meters?: number
+  hotel_id?: number | string
 }
 
 export interface CompanionInfo {
@@ -88,6 +90,14 @@ export interface DayPlan {
   attractions: Attraction[]
   meals: Meal[]
   route_segments: RouteSegment[]
+  timeline_order?: TimelineOrderItem[]
+  day_start_time?: string
+}
+
+export interface TimelineOrderItem {
+  kind: 'attraction' | 'meal' | 'hotel'
+  ref_name: string
+  phase?: 'start' | 'end'
 }
 
 export interface WeatherInfo {
@@ -123,6 +133,7 @@ export interface TripFormData {
   preferences: string[]
   food_preference: string
   free_text_input: string
+  default_day_start_time?: string
   budget?: number
   companions?: CompanionInfo
 }
@@ -218,4 +229,3 @@ export interface PreviewDayAssignmentResponse {
   day_assignments: DiscoveredAttraction[][]
   day_durations: DayDurationInfo[]
 }
-

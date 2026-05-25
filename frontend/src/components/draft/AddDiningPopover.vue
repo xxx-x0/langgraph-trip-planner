@@ -28,7 +28,7 @@ import { ref } from 'vue'
 
 const props = defineProps<{
   pool: any
-  insertAfter: string
+  insertAfter?: string
 }>()
 const emit = defineEmits<{
   (e: 'add', meal: any): void
@@ -42,13 +42,19 @@ const activeCat = ref('main')
 const customName = ref('')
 
 function onPick(cat: string, c: any) {
-  emit('add', { ...c, category: cat, insert_after: props.insertAfter })
+  emit('add', {
+    ...c,
+    category: cat,
+    ...(props.insertAfter ? { insert_after: props.insertAfter } : {}),
+  })
 }
 
 function onPickCustom(cat: string) {
   emit('add', {
-    name: customName.value, category: cat,
-    source: 'user_custom', insert_after: props.insertAfter,
+    name: customName.value,
+    category: cat,
+    source: 'user_custom',
+    ...(props.insertAfter ? { insert_after: props.insertAfter } : {}),
   })
   customName.value = ''
 }

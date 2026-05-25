@@ -61,6 +61,35 @@ def test_preserves_all_attractions_after_rebalance():
     assert all_names == ["A", "B", "C", "D"]
 
 
+def test_keeps_nearby_cluster_when_only_remote_day_has_capacity():
+    clusters = [
+        [
+            _attr("Beach A", 109.5050, 18.2450),
+            _attr("Beach B", 109.5060, 18.2460),
+            _attr("Beach C", 109.5070, 18.2470),
+            _attr("Beach D", 109.5080, 18.2480),
+        ],
+        [_attr("Bay", 109.3470, 18.3100)],
+    ]
+    durations = {
+        "Beach A": 150,
+        "Beach B": 150,
+        "Beach C": 120,
+        "Beach D": 120,
+        "Bay": 60,
+    }
+
+    result = _rebalance_by_duration(clusters, durations, max_minutes=480)
+
+    assert {a["name"] for a in result[0]} == {
+        "Beach A",
+        "Beach B",
+        "Beach C",
+        "Beach D",
+    }
+    assert [a["name"] for a in result[1]] == ["Bay"]
+
+
 def test_handles_missing_coords_gracefully():
     clusters = [
         [{"name": "A", "longitude": 0, "latitude": 0}, {"name": "B", "longitude": 0, "latitude": 0}],

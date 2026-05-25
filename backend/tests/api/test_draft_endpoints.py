@@ -206,6 +206,23 @@ async def test_recompute_field_omission_preserves_current(client):
 
 
 @pytest.mark.asyncio
+async def test_recompute_accepts_day_start_override(client):
+    draft_id = await _seed_draft()
+
+    with patch(
+        "app.api.routes.trip_draft.compute_day_route",
+        new=AsyncMock(return_value=[]),
+    ):
+        resp = await client.post(
+            f"/api/trip/draft/{draft_id}/day/0/recompute",
+            json={"day_start_time": "09:45"},
+        )
+
+    assert resp.status_code == 200
+    assert resp.json()["day_detail"]["day_start_time"] == "09:45"
+
+
+@pytest.mark.asyncio
 async def test_narrative_endpoint_rewrites_description_only(client):
     from app.models.schemas import DayDetail, Attraction
     draft_id = await _seed_draft()

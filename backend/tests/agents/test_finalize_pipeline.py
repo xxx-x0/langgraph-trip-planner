@@ -99,3 +99,62 @@ async def test_finalize_rejects_already_finalized():
 
     with pytest.raises(ValueError, match="已 finalized"):
         await finalize_draft(draft_id, user_id="u1")
+
+
+@pytest.mark.asyncio
+async def test_finalize_preserves_timeline_order_and_day_start_time():
+    await init_db()
+    draft_id = await trip_draft_service.create_draft(
+        user_id="u1",
+        request=_sample_request(),
+        selected_attractions=[],
+        macro_plan=_sample_macro(),
+        clusters_data=[[], []],
+        hotels_by_day=[[], []],
+        dining_pool=[DiningPoolDay().model_dump(mode="json")] * 2,
+        weather_info=[],
+    )
+    await trip_draft_service.patch_day_detail(
+        draft_id,
+        0,
+        DayDetail(
+            day_index=0,
+            date="2026-06-01",
+            day_start_time="09:20",
+            timeline_order=[
+                {"kind": "attraction", "ref_name": "A"},
+                {"kind": "meal", "ref_name": "自选正餐"},
+            ],
+            attractions=[
+                Attraction(
+                    name="A",
+                    address="",
+                    visit_duration=120,
+                    description="",
+                ),
+            ],
+            is_assembled=True,
+        ),
+    )
+    fake_trip_record = type("Rec", (), {"id": 778})()
+
+    with patch(
+        "app.agents.langgraph_agent.finalize.pipeline._run_global_synthesizer",
+        new=AsyncMock(return_value=("", "", "")),
+    ), patch(
+        "app.agents.langgraph_agent.finalize.pipeline._run_extract_and_save_preferences",
+        new=AsyncMock(return_value=None),
+    ), patch(
+        "app.agents.langgraph_agent.finalize.pipeline.save_trip",
+        new=AsyncMock(return_value=fake_trip_record),
+    ), patch(
+        "app.agents.langgraph_agent.finalize.pipeline.compute_day_route",
+        new=AsyncMock(return_value=[]),
+    ):
+        trip_plan, _ = await finalize_draft(draft_id, user_id="u1")
+
+    assert trip_plan.days[0].day_start_time == "09:20"
+    assert trip_plan.days[0].timeline_order == [
+        {"kind": "attraction", "ref_name": "A"},
+        {"kind": "meal", "ref_name": "自选正餐"},
+    ]

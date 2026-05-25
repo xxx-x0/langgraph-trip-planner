@@ -280,6 +280,10 @@ def _rebalance_by_duration(
                 continue
             t_lat, t_lon = _cluster_centroid(target_cluster)
             geo_d = _haversine_distance(t_lat, t_lon, far_attr["latitude"], far_attr["longitude"])
+            # Duration balancing must not split a compact geographic group just
+            # because another day has capacity.
+            if geo_d >= far_dist:
+                continue
             # 综合得分：低 total 优先，地理接近优先 (1 km 折算 10 分钟成本)
             score = totals[j] + geo_d * 10
             if score < best_score:

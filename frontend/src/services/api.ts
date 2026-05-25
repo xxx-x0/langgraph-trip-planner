@@ -433,6 +433,7 @@ export async function deleteDraft(draftId: string) {
 export interface DayEditBody {
   attractions_order?: string[]
   meals?: Array<Record<string, any>>
+  day_start_time?: string
 }
 
 export async function assembleDay(
@@ -540,4 +541,3 @@ export async function previewDayAssignment(
 }
 
 export default apiClient
-

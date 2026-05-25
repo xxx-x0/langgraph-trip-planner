@@ -45,3 +45,26 @@ def test_day_edit_request_field_omission_semantics():
     assert r1.meals is None
     r2 = DayEditRequest(meals=[])
     assert r2.meals == []
+
+
+def test_timeline_start_time_fields_round_trip():
+    request = TripRequest(
+        city="北京",
+        start_date="2026-06-01",
+        end_date="2026-06-01",
+        travel_days=1,
+        transportation="公共交通",
+        accommodation="经济型酒店",
+        default_day_start_time="09:15",
+    )
+    detail = DayDetail(
+        day_index=0,
+        date="2026-06-01",
+        day_start_time="10:00",
+        timeline_order=[{"kind": "meal", "ref_name": "早餐"}],
+    )
+    edit = DayEditRequest(day_start_time="08:30")
+
+    assert request.default_day_start_time == "09:15"
+    assert detail.day_start_time == "10:00"
+    assert edit.day_start_time == "08:30"

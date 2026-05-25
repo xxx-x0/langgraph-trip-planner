@@ -186,6 +186,7 @@ def rule_assemble_day_timeline(
         attractions=attractions,
         meals=meals,
         hotel=ctx.hotel,
+        day_start_time=overrides.get("day_start_time") or ctx.day_start_time,
         timeline_order=timeline,
         is_assembled=True,
     )

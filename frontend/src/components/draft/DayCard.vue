@@ -31,27 +31,53 @@
         <div v-html="renderedDescription"></div>
       </div>
       <div class="timeline-editor">
-        <draggable v-model="orderedAttractions" item-key="name" handle=".drag-handle"
-                   @end="onOrderChange" :disabled="!!busy">
-          <template #item="{ element }">
-            <div class="attr-row">
-              <span class="drag-handle">⋮⋮</span>
-              <span class="kind">📍</span>
-              <span class="name">{{ element.name }}</span>
-              <AddDiningPopover
-                :pool="context.dining_pool"
-                :insert-after="element.name"
-                @add="onAddMeal"
-              />
+        <section class="editor-section">
+          <div class="section-header">
+            <h4>开始时间</h4>
+            <a-input
+              v-model:value="dayStartTime"
+              class="day-start-input"
+              type="time"
+              :disabled="!!busy"
+              @change="onStartTimeChange"
+            />
+          </div>
+        </section>
+
+        <section class="editor-section">
+          <div class="section-header">
+            <h4>景点安排</h4>
+          </div>
+          <draggable v-model="orderedAttractions" item-key="name" handle=".drag-handle"
+                     @end="onOrderChange" :disabled="!!busy">
+            <template #item="{ element }">
+              <div class="attr-row">
+                <span class="drag-handle">⋮⋮</span>
+                <span class="kind">📍</span>
+                <span class="name">{{ element.name }}</span>
+              </div>
+            </template>
+          </draggable>
+        </section>
+
+        <section class="editor-section">
+          <div class="section-header">
+            <h4>用餐安排</h4>
+            <AddDiningPopover
+              :pool="context.dining_pool"
+              @add="onAddMeal"
+            />
+          </div>
+          <div v-if="detail?.meals?.length" class="meal-list">
+            <div v-for="m in detail.meals" :key="m.name + (m.category || m.type)" class="meal-row">
+              <span class="kind">🍴</span>
+              <span class="name">{{ m.name }}</span>
+              <a-tag>{{ getMealLabel(m) }}</a-tag>
+              <a-button size="small" danger @click="onRemoveMeal(m)" :disabled="!!busy">删除</a-button>
             </div>
-          </template>
-        </draggable>
-        <div v-for="m in detail?.meals || []" :key="m.name + (m.category || m.type)" class="meal-row">
-          <span class="kind">🍴</span>
-          <span class="name">{{ m.name }}</span>
-          <a-tag>{{ m.category || m.type }}</a-tag>
-          <a-button size="small" danger @click="onRemoveMeal(m)" :disabled="!!busy">删除</a-button>
-        </div>
+          </div>
+          <a-empty v-else class="meal-empty" description="还没有用餐安排" />
+        </section>
       </div>
       <div class="route-info" v-if="detail.route_segments?.length">
         <h4>路线</h4>
@@ -109,10 +135,19 @@ function onAIRearrange() {
 }
 
 const orderedAttractions = ref<any[]>([])
+const dayStartTime = ref('08:00')
 
 watch(() => props.detail, (d) => {
   if (d?.attractions) orderedAttractions.value = [...d.attractions]
 }, { immediate: true })
+
+watch(
+  () => [props.detail?.day_start_time, props.context?.day_start_time],
+  ([detailTime, contextTime]) => {
+    dayStartTime.value = detailTime || contextTime || '08:00'
+  },
+  { immediate: true },
+)
 
 let debounceTimer: any = null
 function debouncedRecompute() {
@@ -120,17 +155,20 @@ function debouncedRecompute() {
   debounceTimer = setTimeout(() => {
     emit('recompute', {
       attractions_order: orderedAttractions.value.map(a => a.name),
-      meals: (props.detail?.meals || []).map((m: any) => ({
-        ...m,
-        insert_after: m.insert_after || (orderedAttractions.value[
-          Math.max(orderedAttractions.value.length / 2 - 1, 0) | 0
-        ]?.name || ''),
-      })),
+      meals: (props.detail?.meals || []).map((m: any) => ({ ...m })),
     })
   }, 500)
 }
 
 function onOrderChange() { debouncedRecompute() }
+
+function onStartTimeChange() {
+  emit('recompute', {
+    attractions_order: orderedAttractions.value.map(a => a.name),
+    meals: (props.detail?.meals || []).map((m: any) => ({ ...m })),
+    day_start_time: dayStartTime.value || props.context?.day_start_time || '08:00',
+  })
+}
 
 function onAddMeal(meal: any) {
   const currentMeals = (props.detail?.meals || []).map((m: any) => ({ ...m }))
@@ -150,6 +188,22 @@ function onRemoveMeal(meal: any) {
   })
 }
 
+const mealLabels: Record<string, string> = {
+  breakfast: '早餐',
+  lunch: '午餐',
+  dinner: '晚餐',
+  main: '正餐',
+  snack: '小吃',
+  dessert: '甜品',
+  cafe: '咖啡',
+  late_night: '夜宵',
+}
+
+function getMealLabel(meal: any) {
+  const key = meal.category || meal.type
+  return mealLabels[key] || '用餐'
+}
+
 const renderedDescription = computed(() => {
   return marked.parse(props.detail?.description || '') as string
 })
@@ -162,7 +216,35 @@ const renderedDescription = computed(() => {
 .timeline li { padding: 4px 0; }
 .route-info { margin-top: 12px; }
 .route-info h4 { margin-bottom: 4px; }
-.timeline-editor { display: flex; flex-direction: column; gap: 6px; }
+.timeline-editor { display: flex; flex-direction: column; gap: 14px; }
+.editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.section-header h4 {
+  margin: 0;
+  font-size: 15px;
+}
+.day-start-input {
+  width: 132px;
+}
+.meal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.meal-empty {
+  border: 1px dashed #e5e7eb;
+  border-radius: 4px;
+  padding: 8px 0;
+}
 .attr-row, .meal-row {
   display: flex; align-items: center; gap: 8px; padding: 6px;
   border: 1px solid #eee; border-radius: 4px;

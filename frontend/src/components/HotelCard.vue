@@ -1,8 +1,8 @@
 <template>
   <div class="hotel-card">
     <!-- 酒店图片 -->
-    <div class="hotel-image-wrapper">
-      <img :src="imageUrl" :alt="hotel.name" class="hotel-image" @error="handleImageError" />
+    <div v-if="showImage" class="hotel-image-wrapper">
+      <img :src="hotel.image_url" :alt="hotel.name" class="hotel-image" @error="handleImageError" />
     </div>
 
     <div class="hotel-header">
@@ -45,9 +45,10 @@
         <div v-else-if="hotel.price_range" class="price-main">
           <span class="info-text price">{{ hotel.price_range }}</span>
         </div>
-        <div v-if="hotel.estimated_cost && !hotel.price" class="price-estimated">
+        <div v-else-if="hotel.estimated_cost" class="price-estimated">
           约¥{{ hotel.estimated_cost }}/晚
         </div>
+        <div v-else class="price-pending">价格待确认</div>
       </div>
 
       <!-- 距离 -->
@@ -88,12 +89,12 @@
       </div>
 
       <!-- 详细描述 -->
-      <div v-if="hotel.description" class="description-section">
+      <div v-if="cleanedDescription" class="description-section">
         <div class="description-content" :class="{ expanded: isDescExpanded }">
-          {{ hotel.description }}
+          {{ cleanedDescription }}
         </div>
         <button
-          v-if="hotel.description.length > 80"
+          v-if="cleanedDescription.length > 80"
           class="desc-toggle"
           @click="isDescExpanded = !isDescExpanded"
         >
@@ -126,26 +127,21 @@ const props = defineProps<{
 
 const isDescExpanded = ref(false)
 
-const imageUrl = computed(() => {
-  if (props.hotel.image_url) return props.hotel.image_url
-  const name = props.hotel.name || '酒店'
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200">
-    <defs>
-      <linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-        <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
-      </linearGradient>
-    </defs>
-    <rect width="400" height="200" fill="url(#hg)"/>
-    <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="20" font-weight="bold" fill="white">${name}</text>
-    <text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" fill="rgba(255,255,255,0.7)">🏨</text>
-  </svg>`
-  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
+const imageFailed = ref(false)
+const showImage = computed(() => !!props.hotel.image_url && !imageFailed.value)
+const cleanedDescription = computed(() => {
+  const description = props.hotel.description?.trim()
+  if (!description) return ''
+
+  const document = new DOMParser().parseFromString(
+    description.replace(/<br\s*\/?>/gi, ' '),
+    'text/html',
+  )
+  return (document.body.textContent || '').replace(/\s+/g, ' ').trim()
 })
 
-const handleImageError = (event: Event) => {
-  const img = event.target as HTMLImageElement
-  img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200"%3E%3Crect width="400" height="200" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="%23999"%3E图片加载失败%3C/text%3E%3C/svg%3E'
+const handleImageError = () => {
+  imageFailed.value = true
 }
 
 const getStars = (rating: number): string => {
@@ -356,6 +352,11 @@ const formatDistance = (meters: number): string => {
 .price-estimated {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+}
+
+.price-pending {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
 }
 
 .distance-meters {

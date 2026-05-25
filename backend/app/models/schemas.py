@@ -27,6 +27,10 @@ class TripRequest(BaseModel):
     free_text_input: Optional[str] = Field(default="", description="额外要求", example="希望多安排一些博物馆")
     budget: Optional[int] = Field(default=None, description="总预算上限(元)，为空表示不限预算", example=5000)
     companions: Optional[CompanionInfo] = Field(default=None, description="出行同伴信息")
+    default_day_start_time: str = Field(
+        default="08:00",
+        description="每日行程默认开始时间 HH:mm，草稿中的单日设置可覆盖",
+    )
 
     @field_validator("travel_days", mode="before")
     @classmethod
@@ -187,6 +191,7 @@ class Hotel(BaseModel):
     image_url: Optional[str] = Field(default=None, description="酒店主图URL")
     detail_url: Optional[str] = Field(default=None, description="酒店详情页链接")
     distance_in_meters: Optional[int] = Field(default=None, description="距中心点距离(米)")
+    hotel_id: Optional[Union[int, str]] = Field(default=None, description="AIGoHotel 酒店标识")
 
 
 class RouteSegment(BaseModel):
@@ -210,6 +215,14 @@ class DayPlan(BaseModel):
     attractions: List[Attraction] = Field(default=[], description="景点列表")
     meals: List[Meal] = Field(default=[], description="餐饮列表")
     route_segments: List[RouteSegment] = Field(default=[], description="路线段列表")
+    timeline_order: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="单日结果时间轴顺序",
+    )
+    day_start_time: Optional[str] = Field(
+        default=None,
+        description="单日行程开始时间 HH:mm",
+    )
 
 
 class WeatherInfo(BaseModel):
@@ -406,6 +419,7 @@ class DraftDayContext(BaseModel):
     hotel: Optional[Hotel] = Field(default=None)
     dining_pool: DiningPoolDay = Field(default_factory=DiningPoolDay)
     weather: Optional[WeatherInfo] = Field(default=None)
+    day_start_time: Optional[str] = Field(default=None)
 
 
 class DayDetail(BaseModel):
@@ -417,6 +431,7 @@ class DayDetail(BaseModel):
     hotel: Optional[Hotel] = Field(default=None)
     meals: List[Meal] = Field(default_factory=list)
     route_segments: List[RouteSegment] = Field(default_factory=list)
+    day_start_time: Optional[str] = Field(default=None)
     timeline_order: List[Dict[str, Any]] = Field(
         default_factory=list,
         description="[{kind:'attraction|meal|hotel', ref_name:'...'}]"
@@ -449,6 +464,10 @@ class DayEditRequest(BaseModel):
         default=None,
         description="用户当前勾选的餐饮（完整状态，不是 patch）"
                     "；不传则保留 day_detail.meals；传 [] 则清空"
+    )
+    day_start_time: Optional[str] = Field(
+        default=None,
+        description="单日行程开始时间 HH:mm；不传则沿用现有或全程默认值",
     )
 
 
@@ -490,4 +509,3 @@ class PreviewDayAssignmentResponse(BaseModel):
     """智能日程分配预览响应"""
     day_assignments: List[List[DiscoveredAttraction]] = Field(..., description="每天的景点分配（每个景点带 visit_minutes）")
     day_durations: List[DayDurationInfo] = Field(..., description="每天的估算时长")
-

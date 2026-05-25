@@ -61,6 +61,8 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         attractions=detail.attractions,
         meals=detail.meals,
         route_segments=detail.route_segments,
+        timeline_order=detail.timeline_order,
+        day_start_time=detail.day_start_time,
     )
 
 
@@ -71,6 +73,7 @@ def _build_day_context(
     hotels_by_day: list,
     dining_pool: list,
     weather_info: list,
+    default_day_start_time: str,
 ) -> DraftDayContext:
     day_skeleton = macro_plan.days[day_idx]
     cluster = clusters_data[day_idx] if day_idx < len(clusters_data) else []
@@ -112,6 +115,7 @@ def _build_day_context(
         hotel=hotel,
         dining_pool=pool,
         weather=weather_obj,
+        day_start_time=default_day_start_time,
     )
 
 
@@ -144,7 +148,8 @@ async def finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int]
                 detail.day_budget = compute_day_budget(detail)
         else:
             ctx = _build_day_context(
-                idx, macro_plan, clusters_data, hotels_by_day, dining_pool, weather_info
+                idx, macro_plan, clusters_data, hotels_by_day, dining_pool,
+                weather_info, request.default_day_start_time,
             )
             detail = rule_assemble_day_timeline(ctx, overrides=None)
             detail.route_segments = await compute_day_route(

@@ -116,6 +116,7 @@ def _load_payload(record) -> TripDraftPayload:
             attraction_names=ds.attraction_names if ds else [],
             attractions=attractions, hotel=hotel,
             dining_pool=pool, weather=weather_obj,
+            day_start_time=request.default_day_start_time,
         ))
 
     days_detail = []
@@ -230,12 +231,20 @@ async def recompute_day(draft_id: str, day_index: int, edit: DayEditRequest):
             mid = max(len(final_order) // 2 - 1, 0)
             for m in final_meals:
                 m.setdefault("insert_after", final_order[mid] if final_order else "")
+    final_day_start_time = edit.day_start_time
+    if final_day_start_time is None:
+        final_day_start_time = (
+            current.day_start_time if current and current.day_start_time
+            else ctx.day_start_time
+        )
 
     overrides_dict = {}
     if final_order is not None:
         overrides_dict["attractions_order"] = final_order
     if final_meals is not None:
         overrides_dict["meals"] = final_meals
+    if final_day_start_time is not None:
+        overrides_dict["day_start_time"] = final_day_start_time
 
     request = TripRequest.model_validate_json(record.request_json)
     detail = rule_assemble_day_timeline(ctx, overrides=overrides_dict or None)

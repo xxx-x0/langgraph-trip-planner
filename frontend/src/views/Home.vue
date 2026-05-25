@@ -154,6 +154,19 @@
                   </a-select>
                 </a-form-item>
               </a-col>
+              <a-col :xs="24" :sm="12" :md="8">
+                <a-form-item name="default_day_start_time">
+                  <template #label>
+                    <span class="form-label">每日开始时间</span>
+                  </template>
+                  <a-input
+                    v-model:value="formData.default_day_start_time"
+                    type="time"
+                    size="large"
+                    class="custom-input"
+                  />
+                </a-form-item>
+              </a-col>
               <a-col :xs="24" :sm="24" :md="24">
                 <a-form-item name="preferences">
                   <template #label>
@@ -330,6 +343,7 @@ const formData = reactive<{
   food_preference: string
   preferences: string[]
   free_text_input: string
+  default_day_start_time: string
   budget?: number
   companions: { count: number; type: string }
 }>({
@@ -342,6 +356,7 @@ const formData = reactive<{
   food_preference: '本地特色',
   preferences: [],
   free_text_input: '',
+  default_day_start_time: '08:00',
   budget: undefined,
   companions: { count: 1, type: 'solo' }
 })
@@ -381,6 +396,7 @@ const handleSubmit = () => {
     food_preference: formData.food_preference,
     preferences: formData.preferences,
     free_text_input: formData.free_text_input,
+    default_day_start_time: formData.default_day_start_time,
     budget: formData.budget || undefined,
     companions: formData.companions,
   }
