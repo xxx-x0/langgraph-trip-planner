@@ -516,63 +516,78 @@ onMounted(() => {
 <style scoped>
 .discover-page {
   min-height: 100vh;
-  background: var(--color-bg-primary, #f5f5f5);
+  background: var(--white, #fff);
 }
 
+/* Bauhaus Header - Yellow */
 .discover-header {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--color-bg-elevated, #fff);
-  border-bottom: 1px solid var(--color-border, #e8e8e8);
-  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.06));
+  background: var(--primary-yellow, #F0C020);
+  border-bottom: var(--border-main, 4px) solid var(--border, #121212);
+  box-shadow: none;
 }
 
 .header-content {
   max-width: var(--content-max-width, 1400px);
   margin: 0 auto;
-  padding: 12px 24px;
+  padding: var(--space-4, 16px) var(--space-6, 24px);
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
 .back-btn {
-  background: none;
-  border: none;
+  background: var(--white, #fff);
+  border: 2px solid var(--border, #121212);
   cursor: pointer;
   font-size: 14px;
-  color: var(--color-primary, #667eea);
-  padding: 4px 8px;
-  border-radius: var(--radius-sm, 6px);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  color: var(--foreground, #121212);
+  padding: 8px 16px;
+  border-radius: 0;
+  box-shadow: 3px 3px 0px 0px var(--border, #121212);
+  transition: all 0.2s ease-out;
 }
 
 .back-btn:hover {
-  background: var(--color-bg-secondary, #f0f0f0);
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px 0px var(--border, #121212);
+}
+
+.back-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
 }
 
 .header-title {
   margin: 0;
-  font-size: var(--font-size-xl, 20px);
-  font-weight: var(--font-weight-semibold, 600);
-  color: var(--color-text-primary);
+  font-size: var(--text-2xl, 20px);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  color: var(--foreground, #121212);
   flex: 1;
+  letter-spacing: 0.02em;
 }
 
 .header-info {
   font-size: 14px;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-secondary, #f0f0f0);
-  padding: 4px 12px;
-  border-radius: var(--radius-pill, 9999px);
+  font-weight: var(--font-bold, 700);
+  color: var(--foreground, #121212);
+  background: var(--white, #fff);
+  padding: 6px 16px;
+  border: 2px solid var(--border, #121212);
+  border-radius: 0;
 }
 
 /* === 发现布局 === */
 .discover-layout {
   max-width: var(--content-max-width, 1400px);
   margin: 0 auto;
-  padding: 16px 24px;
-  padding-bottom: 80px;
+  padding: var(--space-4, 16px) var(--space-6, 24px);
+  padding-bottom: 100px;
   display: flex;
   gap: 20px;
   min-height: calc(100vh - 60px);
@@ -583,7 +598,7 @@ onMounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-4, 16px);
 }
 
 .right-panel {
@@ -591,45 +606,72 @@ onMounted(() => {
   position: sticky;
   top: 76px;
   height: calc(100vh - 92px);
-  border-radius: var(--radius-lg, 12px);
+  border: var(--border-main, 4px) solid var(--border, #121212);
+  box-shadow: var(--shadow-main, 8px 8px 0px 0px #121212);
   overflow: hidden;
-  box-shadow: var(--shadow-card, 0 2px 8px rgba(0,0,0,0.08));
 }
 
 .search-bar {
   max-width: 400px;
 }
 
+/* Override Ant Design Input Search */
+:deep(.ant-input-search) {
+  border: 2px solid var(--border, #121212);
+  border-radius: 0;
+}
+
+:deep(.ant-input-search .ant-input) {
+  border: none;
+  border-radius: 0;
+  font-weight: var(--font-medium, 500);
+}
+
+:deep(.ant-input-search .ant-input-group-addon) {
+  border: none;
+  border-left: 2px solid var(--border, #121212);
+  background: var(--primary-blue, #1040C0);
+}
+
+:deep(.ant-input-search .ant-btn) {
+  border: none;
+  background: transparent;
+  color: var(--white, #fff);
+  font-weight: var(--font-black, 900);
+}
+
 .search-results-dropdown {
-  background: var(--color-bg-elevated, #fff);
-  border: 1px solid var(--color-border, #e8e8e8);
-  border-radius: var(--radius-md, 8px);
-  box-shadow: var(--shadow-elevated, 0 4px 16px rgba(0,0,0,0.12));
+  background: var(--white, #fff);
+  border: var(--border-main, 4px) solid var(--border, #121212);
+  box-shadow: var(--shadow-main, 8px 8px 0px 0px #121212);
   max-height: 240px;
   overflow-y: auto;
+  margin-top: 8px;
 }
 
 .search-result-item {
-  padding: 10px 16px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  border-bottom: 2px solid var(--background, #F0F0F0);
+  transition: background 0.15s;
 }
 
 .search-result-item:hover {
-  background: var(--color-bg-secondary, #f5f5f5);
+  background: var(--primary-yellow, #F0C020);
 }
 
 .result-name {
-  font-weight: 500;
+  font-weight: var(--font-bold, 700);
   flex-shrink: 0;
+  color: var(--foreground, #121212);
 }
 
 .result-address {
   font-size: 12px;
-  color: var(--color-text-tertiary);
+  color: var(--foreground, #121212);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -637,18 +679,27 @@ onMounted(() => {
 }
 
 .result-add {
-  color: var(--color-primary, #667eea);
+  color: var(--primary-blue, #1040C0);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
   flex-shrink: 0;
 }
 
 .search-results-close {
   padding: 8px;
   text-align: center;
-  color: var(--color-text-tertiary);
+  color: var(--foreground, #121212);
   cursor: pointer;
   font-size: 12px;
+  font-weight: var(--font-bold, 700);
+  text-transform: uppercase;
+  background: var(--background, #F0F0F0);
+}
+
+.search-results-close:hover {
+  background: var(--primary-red, #D02020);
+  color: var(--white, #fff);
 }
 
 .category-filters {
@@ -658,61 +709,75 @@ onMounted(() => {
 }
 
 .filter-btn {
-  padding: 4px 14px;
-  border: 1px solid var(--color-border, #d9d9d9);
-  border-radius: var(--radius-pill, 9999px);
-  background: var(--color-bg-elevated, #fff);
-  color: var(--color-text-secondary);
+  padding: 8px 16px;
+  border: 2px solid var(--border, #121212);
+  border-radius: 0;
+  background: var(--white, #fff);
+  color: var(--foreground, #121212);
   cursor: pointer;
   font-size: 13px;
-  transition: all 0.2s;
+  font-weight: var(--font-bold, 700);
+  text-transform: uppercase;
+  transition: all 0.2s ease-out;
+  box-shadow: 3px 3px 0px 0px var(--border, #121212);
 }
 
 .filter-btn:hover {
-  border-color: var(--color-primary, #667eea);
-  color: var(--color-primary, #667eea);
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px 0px var(--border, #121212);
+}
+
+.filter-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
 }
 
 .filter-btn.active {
-  background: var(--color-primary, #667eea);
-  border-color: var(--color-primary, #667eea);
-  color: white;
+  background: var(--primary-blue, #1040C0);
+  color: var(--white, #fff);
 }
 
 .loading-bar {
-  padding: 8px 0;
+  padding: var(--space-3, 12px) 0;
+  background: var(--background, #F0F0F0);
+  border: 2px solid var(--border, #121212);
+  padding: var(--space-4, 16px);
 }
 
 .loading-text {
   font-size: 13px;
-  color: var(--color-text-secondary);
-  margin-bottom: 4px;
+  font-weight: var(--font-bold, 700);
+  text-transform: uppercase;
+  color: var(--foreground, #121212);
+  margin-bottom: 8px;
 }
 
 .attractions-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  gap: var(--space-4, 16px);
 }
 
 .empty-state {
   grid-column: 1 / -1;
   text-align: center;
-  padding: 40px;
-  color: var(--color-text-tertiary);
+  padding: var(--space-10, 40px);
+  color: var(--foreground, #121212);
+  font-weight: var(--font-bold, 700);
+  text-transform: uppercase;
 }
 
-/* === 底部操作栏 === */
+/* === 底部操作栏 - Bauhaus Blue === */
 .bottom-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 100;
-  background: var(--color-bg-elevated, #fff);
-  border-top: 1px solid var(--color-border, #e8e8e8);
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
-  padding: 12px 24px;
+  background: var(--primary-blue, #1040C0);
+  border-top: var(--border-main, 4px) solid var(--border, #121212);
+  box-shadow: none;
+  padding: var(--space-4, 16px) var(--space-6, 24px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -720,33 +785,74 @@ onMounted(() => {
 
 .selection-info {
   font-size: 15px;
-  color: var(--color-text-primary);
+  font-weight: var(--font-bold, 700);
+  color: var(--white, #fff);
+  text-transform: uppercase;
 }
 
 .selection-info strong {
-  color: var(--color-primary, #667eea);
-  font-size: 20px;
+  color: var(--primary-yellow, #F0C020);
+  font-size: 24px;
+  font-weight: var(--font-black, 900);
 }
 
 .hint {
   font-size: 12px;
-  color: var(--color-text-tertiary);
+  color: var(--white, #fff);
   margin-left: 8px;
+  font-weight: var(--font-medium, 500);
+}
+
+/* Override Ant Design Button in bottom bar */
+:deep(.bottom-bar .ant-btn-primary) {
+  background: var(--primary-yellow, #F0C020);
+  border: 2px solid var(--border, #121212);
+  color: var(--foreground, #121212);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  border-radius: 0;
+  box-shadow: 4px 4px 0px 0px var(--border, #121212);
+  height: auto;
+  padding: 12px 32px;
+  font-size: 14px;
+}
+
+:deep(.bottom-bar .ant-btn-primary:hover) {
+  background: var(--primary-yellow, #F0C020);
+  transform: translate(1px, 1px);
+  box-shadow: 3px 3px 0px 0px var(--border, #121212);
+}
+
+:deep(.bottom-bar .ant-btn-primary:active) {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
+:deep(.bottom-bar .ant-btn-primary:disabled) {
+  background: var(--background, #F0F0F0);
+  color: #888;
+  border-color: #888;
+  box-shadow: none;
+  transform: none;
 }
 
 /* === 日程分配 === */
 .assign-layout {
   max-width: var(--content-max-width, 1400px);
   margin: 0 auto;
-  padding: 24px;
+  padding: var(--space-6, 24px);
 }
 
 .assign-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5, 20px);
   gap: 16px;
+  background: var(--primary-yellow, #F0C020);
+  border: var(--border-main, 4px) solid var(--border, #121212);
+  padding: var(--space-6, 24px);
+  box-shadow: var(--shadow-main, 8px 8px 0px 0px #121212);
 }
 
 .assign-header-main {
@@ -754,15 +860,18 @@ onMounted(() => {
 }
 
 .assign-header h3 {
-  margin: 0 0 4px;
-  font-size: var(--font-size-xl, 20px);
-  color: var(--color-text-primary);
+  margin: 0 0 8px;
+  font-size: var(--text-2xl, 20px);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  color: var(--foreground, #121212);
 }
 
 .assign-header p {
   margin: 0;
   font-size: 14px;
-  color: var(--color-text-secondary);
+  font-weight: var(--font-medium, 500);
+  color: var(--foreground, #121212);
 }
 
 .day-columns {
@@ -775,42 +884,44 @@ onMounted(() => {
 .day-column {
   flex: 1;
   min-width: 200px;
-  background: var(--color-bg-elevated, #fff);
-  border-radius: var(--radius-lg, 12px);
-  border: 2px dashed var(--color-border, #d9d9d9);
-  padding: 12px;
+  background: var(--white, #fff);
+  border: var(--border-main, 4px) solid var(--border, #121212);
+  box-shadow: var(--shadow-main, 8px 8px 0px 0px #121212);
+  padding: var(--space-3, 12px);
   min-height: 200px;
-  transition: border-color 0.2s;
+  transition: transform 0.2s;
 }
 
 .day-column:hover {
-  border-color: var(--color-primary, #667eea);
+  transform: translateY(-2px);
 }
 
 .day-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-weight: 600;
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
   font-size: 15px;
-  color: var(--color-text-primary);
+  color: var(--foreground, #121212);
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  border-bottom: 2px solid var(--border, #121212);
   margin-bottom: 8px;
 }
 
 .day-duration-badge {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-secondary, #f0f0f0);
-  padding: 2px 8px;
-  border-radius: var(--radius-pill, 9999px);
+  font-size: 11px;
+  font-weight: var(--font-bold, 700);
+  color: var(--foreground, #121212);
+  background: var(--background, #F0F0F0);
+  padding: 4px 8px;
+  border: 2px solid var(--border, #121212);
+  border-radius: 0;
 }
 
 .day-duration-badge.warning {
-  background: rgba(255, 77, 79, 0.1);
-  color: #d4380d;
+  background: var(--primary-red, #D02020);
+  color: var(--white, #fff);
 }
 
 .day-attractions {
@@ -821,69 +932,120 @@ onMounted(() => {
 
 .draggable-mini-card {
   padding: 10px 12px;
-  background: var(--color-bg-secondary, #f5f5f5);
-  border-radius: var(--radius-md, 8px);
+  background: var(--white, #fff);
+  border: 2px solid var(--border, #121212);
   cursor: grab;
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: box-shadow 0.2s;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.draggable-mini-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary-blue, #1040C0);
+}
+
+.draggable-mini-card:hover {
+  box-shadow: 4px 4px 0px 0px var(--border, #121212);
+  transform: translate(-2px, -2px);
 }
 
 .draggable-mini-card:active {
   cursor: grabbing;
-  box-shadow: var(--shadow-elevated, 0 4px 12px rgba(0,0,0,0.15));
+  box-shadow: 6px 6px 0px 0px var(--border, #121212);
+  transform: translate(-3px, -3px);
 }
 
 .mini-card-name {
   font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text-primary);
+  font-weight: var(--font-bold, 700);
+  color: var(--foreground, #121212);
   flex: 1;
 }
 
 .mini-card-tag {
   font-size: 11px;
-  padding: 1px 6px;
-  border-radius: var(--radius-pill, 9999px);
-  background: var(--color-primary, #667eea);
-  color: white;
+  padding: 2px 8px;
+  border: 2px solid var(--border, #121212);
+  background: var(--primary-yellow, #F0C020);
+  color: var(--foreground, #121212);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
 }
 
 .day-empty {
   padding: 20px;
   text-align: center;
-  color: var(--color-text-disabled, #bbb);
+  color: var(--foreground, #121212);
   font-size: 13px;
+  font-weight: var(--font-bold, 700);
+  text-transform: uppercase;
+  border: 2px dashed var(--border, #121212);
+  background: var(--background, #F0F0F0);
 }
 
 .assign-actions {
   display: flex;
   justify-content: space-between;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border, #e8e8e8);
+  margin-top: var(--space-6, 24px);
+  padding-top: var(--space-4, 16px);
+  border-top: var(--border-main, 4px) solid var(--border, #121212);
+}
+
+/* Override Ant Design Buttons in assign actions */
+:deep(.assign-actions .ant-btn) {
+  border: 2px solid var(--border, #121212);
+  border-radius: 0;
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0px 0px var(--border, #121212);
+  height: auto;
+  padding: 10px 24px;
+}
+
+:deep(.assign-actions .ant-btn-primary) {
+  background: var(--primary-blue, #1040C0);
+  color: var(--white, #fff);
+}
+
+:deep(.assign-actions .ant-btn:hover) {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px 0px var(--border, #121212);
+}
+
+:deep(.assign-actions .ant-btn:active) {
+  transform: translate(3px, 3px);
+  box-shadow: none;
 }
 
 /* === 规划中 === */
 .planning-layout {
   max-width: 600px;
   margin: 0 auto;
-  padding: 60px 24px;
+  padding: var(--space-16, 64px) var(--space-6, 24px);
 }
 
 .planning-container h3 {
   text-align: center;
-  margin-bottom: 24px;
-  font-size: var(--font-size-xl, 20px);
-  color: var(--color-text-primary);
+  margin-bottom: var(--space-6, 24px);
+  font-size: var(--text-2xl, 20px);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  color: var(--foreground, #121212);
 }
 
 /* === 响应式 === */
 @media (max-width: 768px) {
   .discover-layout {
     flex-direction: column;
-    padding: 12px;
+    padding: var(--space-3, 12px);
   }
 
   .right-panel {
@@ -904,6 +1066,16 @@ onMounted(() => {
 
   .day-column {
     min-width: auto;
+  }
+
+  .bottom-bar {
+    flex-direction: column;
+    gap: var(--space-3, 12px);
+    align-items: stretch;
+  }
+
+  .selection-info {
+    text-align: center;
   }
 }
 </style>

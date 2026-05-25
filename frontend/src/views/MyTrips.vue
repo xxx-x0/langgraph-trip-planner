@@ -1,7 +1,14 @@
 <template>
   <div class="my-trips-page">
+    <!-- Bauhaus Three-Color Mosaic Header -->
+    <div class="mosaic-header">
+      <div class="mosaic-red"></div>
+      <div class="mosaic-blue"></div>
+      <div class="mosaic-yellow"></div>
+    </div>
+
     <div class="page-header">
-      <h1 class="page-title">🗺️ 我的行程</h1>
+      <h1 class="page-title">我的行程</h1>
       <p class="page-subtitle">查看和管理你的旅行计划</p>
     </div>
 
@@ -242,24 +249,53 @@ onMounted(loadTrips)
 .my-trips-page {
   max-width: var(--content-max-width);
   margin: 0 auto;
-  padding: var(--space-8) var(--space-6);
+  padding: 0;
+  background: var(--white, #fff);
+}
+
+/* Bauhaus Three-Color Mosaic Header */
+.mosaic-header {
+  display: flex;
+  height: 120px;
+  border-bottom: var(--border-main, 4px) solid var(--border, #121212);
+}
+
+.mosaic-red {
+  flex: 1;
+  background: var(--primary-red, #D02020);
+}
+
+.mosaic-blue {
+  flex: 1;
+  background: var(--primary-blue, #1040C0);
+  border-left: var(--border-main, 4px) solid var(--border, #121212);
+  border-right: var(--border-main, 4px) solid var(--border, #121212);
+}
+
+.mosaic-yellow {
+  flex: 1;
+  background: var(--primary-yellow, #F0C020);
 }
 
 .page-header {
   text-align: center;
   margin-bottom: var(--space-8);
+  padding: var(--space-8, 32px) var(--space-6, 24px) 0;
 }
 
 .page-title {
   font-size: var(--font-size-4xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  color: var(--foreground, #121212);
   margin-bottom: var(--space-2);
+  letter-spacing: 0.02em;
 }
 
 .page-subtitle {
-  color: var(--color-text-secondary);
+  color: var(--foreground, #121212);
   font-size: var(--font-size-base);
+  font-weight: var(--font-medium, 500);
 }
 
 .toolbar {
@@ -267,6 +303,7 @@ onMounted(loadTrips)
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-6);
+  padding: 0 var(--space-6, 24px);
   flex-wrap: wrap;
   gap: var(--space-4);
 }
@@ -281,27 +318,31 @@ onMounted(loadTrips)
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
-  background: var(--color-bg-elevated);
-  color: var(--color-text-secondary);
+  border: 2px solid var(--border, #121212);
+  border-radius: 0;
+  background: var(--white, #fff);
+  color: var(--foreground, #121212);
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
   cursor: pointer;
   transition: all var(--transition-fast);
+  box-shadow: 3px 3px 0px 0px var(--border, #121212);
 }
 
 .filter-pill:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px 0px var(--border, #121212);
+}
+
+.filter-pill:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
 }
 
 .filter-pill.active {
-  background: var(--color-gradient);
-  color: var(--color-text-inverse);
-  border-color: transparent;
-  box-shadow: var(--shadow-button);
+  background: var(--primary-blue, #1040C0);
+  color: var(--white, #fff);
 }
 
 .pill-icon {
@@ -312,22 +353,45 @@ onMounted(loadTrips)
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--space-5);
+  padding: 0 var(--space-6, 24px) var(--space-8, 32px);
 }
 
 .trip-card {
-  background: var(--color-bg-elevated);
-  border-radius: var(--radius-md);
+  background: var(--white, #fff);
+  border: var(--border-main, 4px) solid var(--border, #121212);
+  box-shadow: var(--shadow-main, 8px 8px 0px 0px #121212);
   overflow: hidden;
-  box-shadow: var(--shadow-card);
   cursor: pointer;
   transition: all var(--transition-normal);
   position: relative;
-  border: 1px solid var(--color-border-light);
 }
 
 .trip-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-card-hover);
+  transform: translate(-2px, -2px);
+  box-shadow: 10px 10px 0px 0px var(--border, #121212);
+}
+
+/* Colorful left border (8px) - cycles through red/blue/yellow */
+.trip-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  z-index: 1;
+}
+
+.trip-card:nth-child(3n+1)::before {
+  background: var(--primary-red, #D02020);
+}
+
+.trip-card:nth-child(3n+2)::before {
+  background: var(--primary-blue, #1040C0);
+}
+
+.trip-card:nth-child(3n+3)::before {
+  background: var(--primary-yellow, #F0C020);
 }
 
 .card-cover {
@@ -338,58 +402,63 @@ onMounted(loadTrips)
   display: flex;
   align-items: flex-end;
   padding: var(--space-3);
+  border-bottom: var(--border-main, 4px) solid var(--border, #121212);
 }
 
 .card-cover-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.5) 0%, transparent 60%);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, transparent 60%);
 }
 
 .card-status-badge {
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
-  padding: 2px var(--space-2);
-  border-radius: var(--radius-pill);
+  padding: 4px var(--space-3);
+  border: 2px solid var(--border, #121212);
   font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--color-text-primary);
-  backdrop-filter: blur(4px);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  background: var(--white, #fff);
+  color: var(--foreground, #121212);
+  box-shadow: 2px 2px 0px 0px var(--border, #121212);
 }
 
 .card-status-badge.favorite {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
+  background: var(--primary-yellow, #F0C020);
+  color: var(--foreground, #121212);
 }
 
 .card-status-badge.archived {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-tertiary);
+  background: var(--background, #F0F0F0);
+  color: var(--foreground, #121212);
 }
 
 .card-city {
   position: relative;
   z-index: 1;
-  color: var(--color-text-inverse);
+  color: var(--white, #fff);
   font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8);
 }
 
 .card-body {
   padding: var(--space-4);
+  padding-left: calc(var(--space-4) + 8px); /* Account for left border */
 }
 
 .card-title {
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  font-weight: var(--font-black, 900);
+  color: var(--foreground, #121212);
   margin-bottom: var(--space-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-transform: uppercase;
 }
 
 .card-meta {
@@ -397,12 +466,13 @@ onMounted(loadTrips)
   gap: var(--space-3);
   margin-bottom: var(--space-1);
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--foreground, #121212);
+  font-weight: var(--font-medium, 500);
 }
 
 .meta-item.cost {
-  color: var(--color-warning);
-  font-weight: var(--font-weight-semibold);
+  color: var(--primary-red, #D02020);
+  font-weight: var(--font-black, 900);
 }
 
 .card-tags {
@@ -414,20 +484,23 @@ onMounted(loadTrips)
 
 .tag-pill {
   display: inline-block;
-  padding: 1px var(--space-2);
-  border-radius: var(--radius-pill);
+  padding: 2px var(--space-2);
+  border: 2px solid var(--border, #121212);
   font-size: var(--font-size-xs);
-  color: var(--color-primary);
-  background: var(--color-primary-bg);
-  border: 1px solid rgba(102, 126, 234, 0.15);
+  color: var(--foreground, #121212);
+  background: var(--background, #F0F0F0);
+  font-weight: var(--font-bold, 700);
+  text-transform: uppercase;
 }
 
 .card-actions {
   display: flex;
   justify-content: flex-end;
   padding: var(--space-2) var(--space-3);
-  border-top: 1px solid var(--color-border-light);
+  padding-left: calc(var(--space-3) + 8px); /* Account for left border */
+  border-top: 2px solid var(--border, #121212);
   gap: var(--space-1);
+  background: var(--background, #F0F0F0);
 }
 
 .action-btn {
@@ -436,29 +509,32 @@ onMounted(loadTrips)
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: none;
-  border-radius: var(--radius-circle);
-  background: transparent;
+  border: 2px solid var(--border, #121212);
+  border-radius: 0;
+  background: var(--white, #fff);
   cursor: pointer;
   font-size: var(--font-size-base);
   transition: all var(--transition-fast);
+  box-shadow: 2px 2px 0px 0px var(--border, #121212);
 }
 
 .action-btn:hover {
-  background: var(--color-bg-tertiary);
-  transform: scale(1.1);
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px 0px var(--border, #121212);
 }
 
 .action-btn:active {
-  transform: scale(0.95);
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 
 .action-btn.fav-active {
-  color: var(--color-warning);
+  background: var(--primary-yellow, #F0C020);
 }
 
 .action-btn.danger:hover {
-  background: var(--color-error-bg);
+  background: var(--primary-red, #D02020);
+  color: var(--white, #fff);
 }
 
 .empty-state {
@@ -473,36 +549,59 @@ onMounted(loadTrips)
 
 .empty-text {
   font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  color: var(--foreground, #121212);
   margin-bottom: var(--space-2);
 }
 
 .empty-hint {
-  color: var(--color-text-tertiary);
+  color: var(--foreground, #121212);
+  font-weight: var(--font-medium, 500);
   margin-bottom: var(--space-6);
 }
 
 .empty-btn {
-  border-radius: var(--radius-pill) !important;
+  border: 2px solid var(--border, #121212) !important;
+  border-radius: 0 !important;
   height: 44px;
   padding: 0 var(--space-8);
+  background: var(--primary-blue, #1040C0) !important;
+  color: var(--white, #fff) !important;
+  font-weight: var(--font-black, 900) !important;
+  text-transform: uppercase !important;
+  box-shadow: 4px 4px 0px 0px var(--border, #121212) !important;
+}
+
+.empty-btn:hover {
+  transform: translate(1px, 1px);
+  box-shadow: 3px 3px 0px 0px var(--border, #121212) !important;
 }
 
 .pagination-wrapper {
   display: flex;
   justify-content: center;
   margin-top: var(--space-8);
+  padding-bottom: var(--space-8);
 }
 
 @media (max-width: 768px) {
   .my-trips-page {
-    padding: var(--space-4) var(--space-3);
+    padding: 0;
+  }
+
+  .mosaic-header {
+    height: 80px;
+  }
+
+  .page-header {
+    padding: var(--space-6, 24px) var(--space-3, 12px) 0;
   }
 
   .toolbar {
     flex-direction: column;
     align-items: stretch;
+    padding: 0 var(--space-3, 12px);
   }
 
   .filter-pills {
@@ -520,6 +619,7 @@ onMounted(loadTrips)
 
   .trips-grid {
     grid-template-columns: 1fr;
+    padding: 0 var(--space-3, 12px) var(--space-6, 24px);
   }
 }
 </style>
