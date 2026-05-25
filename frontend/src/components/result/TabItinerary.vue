@@ -20,27 +20,29 @@
               </div>
             </template>
 
-            <!-- 每日信息 - 三色块设计 -->
+            <!-- 每日信息 - 1+2 布局：描述占满 + 交通住宿横排 -->
             <div class="day-info-grid">
-              <div class="info-card info-card-blue">
+              <div class="info-card info-card-blue info-card-wide">
                 <div class="info-card-icon">📝</div>
                 <div class="info-card-content">
                   <div class="info-card-label">行程描述</div>
                   <div class="info-card-value">{{ day.description }}</div>
                 </div>
               </div>
-              <div class="info-card info-card-yellow">
-                <div class="info-card-icon">🚗</div>
-                <div class="info-card-content">
-                  <div class="info-card-label">交通方式</div>
-                  <div class="info-card-value">{{ day.transportation }}</div>
+              <div class="info-row-pair">
+                <div class="info-card info-card-yellow">
+                  <div class="info-card-icon">🚗</div>
+                  <div class="info-card-content">
+                    <div class="info-card-label">交通方式</div>
+                    <div class="info-card-value">{{ day.transportation }}</div>
+                  </div>
                 </div>
-              </div>
-              <div class="info-card info-card-red">
-                <div class="info-card-icon">🏨</div>
-                <div class="info-card-content">
-                  <div class="info-card-label">住宿</div>
-                  <div class="info-card-value">{{ day.accommodation }}</div>
+                <div class="info-card info-card-red">
+                  <div class="info-card-icon">🏨</div>
+                  <div class="info-card-content">
+                    <div class="info-card-label">住宿</div>
+                    <div class="info-card-value">{{ day.accommodation }}</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -221,6 +223,11 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
   box-shadow: var(--shadow-main);
 }
 
+:deep(.ant-collapse-item-active) {
+  /* 展开时降低阴影避免与内部叠加 */
+  box-shadow: 4px 4px 0px 0px var(--border);
+}
+
 :deep(.ant-collapse-header) {
   padding: 0 !important;
   background: transparent !important;
@@ -315,28 +322,31 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
   letter-spacing: 0.03em;
 }
 
-/* 每日信息卡片 - 三色块设计 */
+/* 每日信息卡片 - 1+2 布局 */
 .day-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.info-row-pair {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
 }
 
 .info-card {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border: 3px solid var(--border);
-  box-shadow: 4px 4px 0px 0px var(--border);
-  position: relative;
-  transition: all 0.15s ease-out;
+  transition: background 0.15s ease-out;
 }
 
-.info-card:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0px 0px var(--border);
+.info-card-wide {
+  align-items: center;
 }
 
 .info-card-blue {
@@ -355,9 +365,9 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
 }
 
 .info-card-icon {
-  font-size: 32px;
-  width: 48px;
-  height: 48px;
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
   background: var(--white);
   border: 2px solid var(--border);
   display: flex;
@@ -383,15 +393,14 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
 .info-card-value {
   font-size: 14px;
   font-weight: var(--font-bold);
-  line-height: 1.4;
+  line-height: 1.5;
   word-break: break-word;
 }
 
-/* Section 块 - 带彩色标题栏 */
+/* Section 块 - 简洁边框，无阴影 */
 .section-block {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-5);
   border: 3px solid var(--border);
-  box-shadow: 4px 4px 0px 0px var(--border);
   background: var(--white);
   overflow: hidden;
 }
@@ -425,7 +434,23 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
 
 .section-block-content {
   padding: var(--space-4);
-  background: var(--background);
+  background: var(--white);
+}
+
+/* 内部嵌套的卡片降级阴影 - 避免阴影叠加 */
+.section-block-content :deep(.attraction-card),
+.section-block-content :deep(.hotel-card),
+.section-block-content :deep(.meal-card),
+.section-block-content :deep(.day-timeline) {
+  box-shadow: none !important;
+  border-width: 2px !important;
+}
+
+.section-block-content :deep(.attraction-card:hover),
+.section-block-content :deep(.hotel-card:hover),
+.section-block-content :deep(.meal-card:hover) {
+  box-shadow: 3px 3px 0px 0px var(--border) !important;
+  transform: translate(-1px, -1px);
 }
 
 /* 景点网格 */
@@ -451,14 +476,12 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
   border-radius: 0 !important;
   font-weight: var(--font-black) !important;
   background: var(--white) !important;
-  box-shadow: 2px 2px 0px 0px var(--border) !important;
-  transition: all 0.15s ease-out;
+  box-shadow: none !important;
+  transition: background 0.15s ease-out;
 }
 
 :deep(.attraction-actions .ant-btn:hover) {
   background: var(--primary-yellow) !important;
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0px 0px var(--border) !important;
 }
 
 :deep(.attraction-actions .ant-btn-dangerous) {
@@ -470,17 +493,16 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
   background: var(--foreground) !important;
 }
 
-/* 餐饮分组 */
+/* 餐饮分组 - 简洁边框，无外层阴影 */
 .meals-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .meals-group {
   background: var(--white);
-  border: 3px solid var(--border);
-  box-shadow: 3px 3px 0px 0px var(--border);
+  border: 2px solid var(--border);
   overflow: hidden;
 }
 
@@ -516,7 +538,7 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
 }
 
 @media (max-width: 768px) {
-  .day-info-grid {
+  .info-row-pair {
     grid-template-columns: 1fr;
   }
 
