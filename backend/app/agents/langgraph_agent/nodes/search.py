@@ -686,6 +686,18 @@ def _parse_aigohotel_hotels(raw: Any) -> List[Dict[str, Any]]:
         if hotel_type:
             item["type"] = str(hotel_type)
 
+        if "price" in item and item.get("price"):
+            try:
+                item["estimated_cost"] = int(float(item["price"]))
+            except (TypeError, ValueError):
+                pass
+        if "estimated_cost" not in item:
+            star = item.get("star_rating")
+            if star and star > 0:
+                item["estimated_cost"] = int(star * 200)
+            else:
+                item["estimated_cost"] = 500
+
         parsed.append(item)
     return parsed
 

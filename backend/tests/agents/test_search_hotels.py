@@ -41,3 +41,44 @@ def test_parse_aigohotel_hotels_reads_current_rate_and_booking_fields():
     assert hotels[0]["price"] == 350
     assert hotels[0]["currency"] == "CNY"
     assert hotels[0]["detail_url"] == "https://rollinggo.example/hotel"
+
+
+def test_parse_aigohotel_hotels_fills_estimated_cost_from_price():
+    hotels = _parse_aigohotel_hotels({
+        "hotels": [{
+            "name": "测试酒店",
+            "totalPrice": "688.5",
+        }],
+    })
+    assert hotels[0]["estimated_cost"] == 688
+
+
+def test_parse_aigohotel_hotels_fills_estimated_cost_from_price_obj():
+    hotels = _parse_aigohotel_hotels({
+        "hotels": [{
+            "name": "测试酒店2",
+            "price": {"hasPrice": True, "lowestPrice": 350, "currency": "CNY"},
+        }],
+    })
+    assert hotels[0]["estimated_cost"] == 350
+
+
+def test_parse_aigohotel_hotels_estimated_cost_falls_back_to_star_rating():
+    hotels = _parse_aigohotel_hotels({
+        "hotels": [{
+            "name": "无价酒店",
+            "starRating": 4,
+        }],
+    })
+    # 4 星 × 200 = 800
+    assert hotels[0]["estimated_cost"] == 800
+
+
+def test_parse_aigohotel_hotels_estimated_cost_default_when_no_signals():
+    hotels = _parse_aigohotel_hotels({
+        "hotels": [{
+            "name": "纯净酒店",
+        }],
+    })
+    # 无 price 也无 star → 默认 500
+    assert hotels[0]["estimated_cost"] == 500
