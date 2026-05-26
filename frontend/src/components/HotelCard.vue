@@ -2,13 +2,13 @@
   <div class="hotel-card">
     <!-- 酒店图片 -->
     <div v-if="showImage" class="hotel-image-wrapper">
-      <img :src="hotel.image_url" :alt="hotel.name" class="hotel-image" @error="handleImageError" />
+      <img :src="hotel.image_url" :alt="cleanHotelName(hotel.name)" class="hotel-image" @error="handleImageError" />
     </div>
 
     <div class="hotel-header">
       <div class="hotel-icon">🏨</div>
       <div class="hotel-title-area">
-        <h4 class="hotel-name">{{ hotel.name }}</h4>
+        <h4 class="hotel-name">{{ cleanHotelName(hotel.name) }}</h4>
         <div class="hotel-tags">
           <span v-if="hotel.type" class="hotel-type">{{ hotel.type }}</span>
           <span v-if="hotel.star_rating" class="hotel-star-badge">
@@ -120,6 +120,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { Hotel } from '@/types'
+import { cleanHotelName } from '@/utils/hotelFormat'
 
 const props = defineProps<{
   hotel: Hotel

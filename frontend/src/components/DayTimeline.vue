@@ -43,6 +43,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Attraction, DayPlan, Hotel, Meal } from '@/types'
+import { cleanHotelName } from '@/utils/hotelFormat'
 
 interface TimelineItem {
   type: 'attraction' | 'meal' | 'hotel' | 'travel'
@@ -85,6 +86,7 @@ const rawTimelineItems = computed<TimelineItem[]>(() => {
   let currentMinutes = parseClockTime(day.day_start_time)
 
   const hotelName = day.hotel?.name || '酒店'
+  const hotelDisplayName = cleanHotelName(day.hotel?.name) || '酒店'
   const attractions = day.attractions || []
   const meals = day.meals || []
   const routeSegs = day.route_segments || []
@@ -100,7 +102,7 @@ const rawTimelineItems = computed<TimelineItem[]>(() => {
     const detail = routeDetail(route?.detail, '前往早餐地点')
     const mode = route?.mode
     const distance = route?.distance
-    items.push(makeItem('travel', `${hotelName} → ${breakfast.name}`, currentMinutes, travelMin, undefined, detail, mode, distance))
+    items.push(makeItem('travel', `${hotelDisplayName} → ${breakfast.name}`, currentMinutes, travelMin, undefined, detail, mode, distance))
     currentMinutes += travelMin
 
     const dur = 45
@@ -134,7 +136,7 @@ const rawTimelineItems = computed<TimelineItem[]>(() => {
       const detail = routeDetail(route?.detail, '从酒店出发')
       const mode = route?.mode
       const distance = route?.distance
-      items.push(makeItem('travel', `${hotelName} → ${attr.name}`, currentMinutes, travelMin, undefined, detail, mode, distance))
+      items.push(makeItem('travel', `${hotelDisplayName} → ${attr.name}`, currentMinutes, travelMin, undefined, detail, mode, distance))
       currentMinutes += travelMin
     }
 
@@ -181,7 +183,7 @@ const rawTimelineItems = computed<TimelineItem[]>(() => {
   currentMinutes += travelBack
 
   if (day.hotel) {
-    items.push(makeItem('hotel', day.hotel.name, currentMinutes, 30, day.hotel.estimated_cost, day.hotel.address))
+    items.push(makeItem('hotel', cleanHotelName(day.hotel.name), currentMinutes, 30, day.hotel.estimated_cost, day.hotel.address))
   }
 
   return items
@@ -276,9 +278,11 @@ function buildSavedTimeline(day: DayPlan, startMinutes: number): TimelineItem[] 
     if (previous && previous.name !== node.name) {
       const route = findRouteSegment(routeSegs, previous.name, node.name)
       const travelMin = route ? parseDuration(route.duration) : 20
+      const previousDisplay = previous.type === 'hotel' ? cleanHotelName(previous.name) : previous.name
+      const nodeDisplay = node.type === 'hotel' ? cleanHotelName(node.name) : node.name
       const travelName = node.type === 'hotel'
         ? '返回酒店'
-        : `${previous.name} → ${node.name}`
+        : `${previousDisplay} → ${nodeDisplay}`
       const detail = routeDetail(route?.detail, (
         node.type === 'hotel'
           ? '结束一天行程，返回酒店'
@@ -323,7 +327,7 @@ function buildSavedTimeline(day: DayPlan, startMinutes: number): TimelineItem[] 
     } else if (node.type === 'hotel' && node.hotel) {
       items.push(makeItem(
         'hotel',
-        node.hotel.name,
+        cleanHotelName(node.hotel.name),
         currentMinutes,
         30,
         node.hotel.estimated_cost,

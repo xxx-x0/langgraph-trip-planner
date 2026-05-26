@@ -16,6 +16,7 @@
 import { ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import type { TripPlan } from '@/types'
+import { cleanHotelName } from '@/utils/hotelFormat'
 
 const props = defineProps<{
   tripPlan: TripPlan
@@ -135,19 +136,20 @@ const addAttractionMarkers = (AMap: any) => {
   const addedHotels = new Set<string>()
   props.tripPlan.days.forEach((day) => {
     if (day.hotel && day.hotel.location && day.hotel.location.longitude && day.hotel.location.latitude) {
-      const hotelKey = day.hotel.name
+      const hotelDisplayName = cleanHotelName(day.hotel.name)
+      const hotelKey = hotelDisplayName || day.hotel.name
       if (addedHotels.has(hotelKey)) return
       addedHotels.add(hotelKey)
       const hotelMarker = new AMap.Marker({
         position: [day.hotel.location.longitude, day.hotel.location.latitude],
-        title: day.hotel.name,
+        title: hotelDisplayName,
         label: {
-          content: `<div style="background: #9C27B0; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap;">🏨${escapeHtml(day.hotel.name)}</div>`,
+          content: `<div style="background: #9C27B0; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap;">🏨${escapeHtml(hotelDisplayName)}</div>`,
           offset: new AMap.Pixel(0, -30)
         }
       })
       const hotelInfoWindow = new AMap.InfoWindow({
-        content: `<div style="padding: 10px; min-width: 200px;"><h4 style="margin: 0 0 8px 0;">🏨 ${escapeHtml(day.hotel.name)}</h4>${day.hotel.address ? `<p style="margin: 4px 0;"><strong>地址:</strong> ${escapeHtml(day.hotel.address)}</p>` : ''}${day.hotel.price_range ? `<p style="margin: 4px 0;"><strong>价格:</strong> ${escapeHtml(day.hotel.price_range)}</p>` : ''}</div>`,
+        content: `<div style="padding: 10px; min-width: 200px;"><h4 style="margin: 0 0 8px 0;">🏨 ${escapeHtml(hotelDisplayName)}</h4>${day.hotel.address ? `<p style="margin: 4px 0;"><strong>地址:</strong> ${escapeHtml(day.hotel.address)}</p>` : ''}${day.hotel.price_range ? `<p style="margin: 4px 0;"><strong>价格:</strong> ${escapeHtml(day.hotel.price_range)}</p>` : ''}</div>`,
         offset: new AMap.Pixel(0, -30)
       })
       hotelMarker.on('click', () => { hotelInfoWindow.open(map, hotelMarker.getPosition()) })
