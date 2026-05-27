@@ -135,7 +135,13 @@
           @drop="handleDrop($event, dayIdx)"
         >
           <div class="day-header">
-            <span>第 {{ dayIdx + 1 }} 天</span>
+            <span class="day-header-title">
+              <span>第 {{ dayIdx + 1 }} 天</span>
+              <a-tooltip placement="top">
+                <template #title>已根据距离和时长自动均衡，可手动拖拽调整</template>
+                <InfoCircleOutlined class="day-balance-info" />
+              </a-tooltip>
+            </span>
             <span
               class="day-duration-badge"
               :class="{ warning: dayDurations[dayIdx]?.warning }"
@@ -189,6 +195,7 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { InfoCircleOutlined } from '@ant-design/icons-vue'
 import SelectableAttractionCard from '@/components/SelectableAttractionCard.vue'
 import DiscoveryMap from '@/components/DiscoveryMap.vue'
 import PlanProgress from '@/components/PlanProgress.vue'
@@ -963,6 +970,18 @@ onMounted(() => {
   padding-bottom: 8px;
   border-bottom: 2px solid var(--border, #121212);
   margin-bottom: 8px;
+}
+
+.day-header-title {
+  display: inline-flex;
+  align-items: center;
+}
+
+.day-balance-info {
+  margin-left: 6px;
+  color: var(--color-text-secondary, #888);
+  font-size: 14px;
+  cursor: help;
 }
 
 .day-duration-badge {
