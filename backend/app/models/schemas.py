@@ -509,3 +509,16 @@ class PreviewDayAssignmentResponse(BaseModel):
     """智能日程分配预览响应"""
     day_assignments: List[List[DiscoveredAttraction]] = Field(..., description="每天的景点分配（每个景点带 visit_minutes）")
     day_durations: List[DayDurationInfo] = Field(..., description="每天的估算时长")
+
+
+class LoadMoreAttractionsRequest(BaseModel):
+    """加载更多景点请求"""
+    city: str = Field(..., min_length=1, description="目的地城市")
+    exclude_names: List[str] = Field(default_factory=list, description="已展示的景点名，需排除")
+    batch_size: int = Field(default=20, ge=1, le=50, description="单次返回数量")
+    categories: Optional[List[str]] = Field(default=None, description="可选的偏好类别过滤")
+
+
+class LoadMoreAttractionsResponse(BaseModel):
+    """加载更多景点响应"""
+    attractions: List[Dict[str, Any]] = Field(default_factory=list, description="新一批景点 (DiscoveredAttraction 结构的 dict)")

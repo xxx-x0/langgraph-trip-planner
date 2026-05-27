@@ -32,6 +32,8 @@ from ...models.schemas import (
     PreviewDayAssignmentResponse,
     DayDurationInfo,
     DiscoveredAttraction,
+    LoadMoreAttractionsRequest,
+    LoadMoreAttractionsResponse,
 )
 from ...agents.langgraph_agent import get_trip_planner_agent, NonRetryableError
 from ...agents.langgraph_agent.utils.duration import estimate_durations_batch
@@ -40,10 +42,13 @@ from ...agents.langgraph_agent.utils.geo import (
     _order_cluster_by_tsp,
     _rebalance_by_duration,
 )
+from ...agents.langgraph_agent.nodes.discovery import _fetch_attractions_batch
+from ...agents.langgraph_agent.nodes.search import _preferences_to_categories
 from ...services.langchain_amap_tools import get_langchain_amap_service
 from ...services.preferences_service import load_preferences, save_preferences, delete_preferences
 
 router = APIRouter(prefix="/trip", tags=["旅行规划"])
+discover_router = APIRouter(prefix="/discover", tags=["景点发现"])
 
 
 def _classify_http_error(e: Exception) -> int:
@@ -491,3 +496,24 @@ async def health_check():
             status_code=503,
             detail=f"服务不可用: {str(e)}"
         )
+
+
+@discover_router.post(
+    "/load_more",
+    response_model=LoadMoreAttractionsResponse,
+    summary="加载更多景点",
+    description="基于城市继续搜索景点，排除已展示的名字。返回新一批 batch_size 个。"
+)
+async def load_more_attractions(req: LoadMoreAttractionsRequest):
+    try:
+        categories = _preferences_to_categories(req.categories or [])
+        items = await _fetch_attractions_batch(
+            city=req.city,
+            exclude_names=set(req.exclude_names),
+            batch_size=req.batch_size,
+            categories=categories or None,
+        )
+        return LoadMoreAttractionsResponse(attractions=items)
+    except Exception as e:
+        print(f"❌ load_more_attractions 异常: {e}")
+        raise HTTPException(status_code=500, detail=f"加载更多失败: {str(e)[:200]}")

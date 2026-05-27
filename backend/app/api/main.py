@@ -47,6 +47,7 @@ app.add_middleware(
 
 # 注册路由 (LangGraph版本)
 app.include_router(trip_lg.router, prefix="/api")
+app.include_router(trip_lg.discover_router, prefix="/api")
 app.include_router(poi_lg.router, prefix="/api")
 app.include_router(map_lg.router, prefix="/api")
 app.include_router(trip_history.router, prefix="/api")
