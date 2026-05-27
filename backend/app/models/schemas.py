@@ -516,7 +516,7 @@ class LoadMoreAttractionsRequest(BaseModel):
     city: str = Field(..., min_length=1, description="目的地城市")
     exclude_names: List[str] = Field(default_factory=list, description="已展示的景点名，需排除")
     batch_size: int = Field(default=20, ge=1, le=50, description="单次返回数量")
-    categories: Optional[List[str]] = Field(default=None, description="可选的偏好类别过滤")
+    categories: Optional[List[str]] = Field(default=None, description="可选的规范类目过滤（与缓存层 category 字段对齐）")
 
 
 class LoadMoreAttractionsResponse(BaseModel):

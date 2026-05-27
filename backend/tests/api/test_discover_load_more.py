@@ -61,3 +61,22 @@ def test_load_more_rejects_empty_city():
         "exclude_names": [],
     })
     assert resp.status_code == 422
+
+
+def test_load_more_returns_500_on_helper_exception():
+    """helper 抛异常时，端点应返回 500 + 通用错误消息（不泄露内部错误）"""
+    with patch(
+        "app.api.routes.trip_lg._fetch_attractions_batch",
+        new=AsyncMock(side_effect=RuntimeError("database connection failed at /private/path")),
+    ):
+        resp = client.post("/api/discover/load_more", json={
+            "city": "北京",
+            "exclude_names": [],
+        })
+    assert resp.status_code == 500
+    body = resp.json()
+    # 不应该泄露原始异常细节
+    assert "/private/path" not in str(body)
+    assert "database" not in str(body).lower()
+    # 应该是通用错误消息
+    assert "加载更多" in body.get("detail", "") or "稍后重试" in body.get("detail", "")

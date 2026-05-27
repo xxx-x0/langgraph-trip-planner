@@ -18,6 +18,7 @@
 
 import json
 import asyncio
+import logging
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from ...models.schemas import (
@@ -43,12 +44,13 @@ from ...agents.langgraph_agent.utils.geo import (
     _rebalance_by_duration,
 )
 from ...agents.langgraph_agent.nodes.discovery import _fetch_attractions_batch
-from ...agents.langgraph_agent.nodes.search import _preferences_to_categories
 from ...services.langchain_amap_tools import get_langchain_amap_service
 from ...services.preferences_service import load_preferences, save_preferences, delete_preferences
 
 router = APIRouter(prefix="/trip", tags=["旅行规划"])
 discover_router = APIRouter(prefix="/discover", tags=["景点发现"])
+
+logger = logging.getLogger(__name__)
 
 
 def _classify_http_error(e: Exception) -> int:
@@ -506,14 +508,13 @@ async def health_check():
 )
 async def load_more_attractions(req: LoadMoreAttractionsRequest):
     try:
-        categories = _preferences_to_categories(req.categories or [])
         items = await _fetch_attractions_batch(
             city=req.city,
             exclude_names=set(req.exclude_names),
             batch_size=req.batch_size,
-            categories=categories or None,
+            categories=req.categories or None,
         )
         return LoadMoreAttractionsResponse(attractions=items)
-    except Exception as e:
-        print(f"❌ load_more_attractions 异常: {e}")
-        raise HTTPException(status_code=500, detail=f"加载更多失败: {str(e)[:200]}")
+    except Exception:
+        logger.exception("load_more_attractions failed")
+        raise HTTPException(status_code=500, detail="加载更多失败，请稍后重试")
