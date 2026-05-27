@@ -28,21 +28,39 @@ def _cached_attraction_to_discovery_item(attraction: CachedAttraction) -> dict[s
     }
 
 
+async def _fetch_attractions_batch(
+    city: str,
+    exclude_names: set[str],
+    batch_size: int,
+    categories: list[str] | None,
+) -> list[dict[str, Any]]:
+    """从缓存取一批景点，排除已知名字。"""
+    service = get_attractions_cache_service()
+    # 为了去重后还能取到 batch_size 个，min_count 应当大于 batch_size + exclude 数
+    target_min = max(batch_size + len(exclude_names), 40)
+    attractions = await service.get_attractions(
+        city=city,
+        min_count=target_min,
+        categories=categories,
+    )
+    filtered = [a for a in attractions if a.name not in exclude_names]
+    return [_cached_attraction_to_discovery_item(poi) for poi in filtered[:batch_size]]
+
+
 async def search_attractions_discovery_node(state: DiscoveryState) -> Dict[str, Any]:
-    """从共享景点缓存获取大量景点，供用户在发现页选择。"""
+    """从共享景点缓存获取首屏景点，供用户在发现页选择。"""
     print("🔍 执行节点: search_attractions_discovery_node (发现模式)")
     request = state["request"]
-    service = get_attractions_cache_service()
     categories = _preferences_to_categories(request.preferences or [])
 
     try:
-        attractions = await service.get_attractions(
+        # 首屏固定 30 个，与天数解耦
+        discovered = await _fetch_attractions_batch(
             city=request.city,
-            min_count=40,
+            exclude_names=set(),
+            batch_size=30,
             categories=categories,
         )
-        max_count = min(40, max(20, request.travel_days * 6))
-        discovered = [_cached_attraction_to_discovery_item(poi) for poi in attractions[:max_count]]
         with_location = sum(1 for item in discovered if item.get("location"))
         print(f"🔍 发现景点: {len(discovered)} 个 ({with_location} 个有坐标)")
         return {"discovered_attractions": discovered}
