@@ -522,3 +522,17 @@ class LoadMoreAttractionsRequest(BaseModel):
 class LoadMoreAttractionsResponse(BaseModel):
     """加载更多景点响应"""
     attractions: List[Dict[str, Any]] = Field(default_factory=list, description="新一批景点 (DiscoveredAttraction 结构的 dict)")
+
+
+class AISelectRequest(BaseModel):
+    """AI 从攻略选景请求"""
+    destination: str = Field(..., min_length=1, description="目的地城市")
+    days: int = Field(..., ge=1, le=30, description="行程天数")
+    attractions: List[Dict[str, Any]] = Field(default_factory=list, description="当前景点池")
+    preferences: Optional[Dict[str, Any]] = Field(default=None, description="可选偏好")
+
+
+class AISelectResponse(BaseModel):
+    """AI 从攻略选景响应"""
+    recommended_ids: List[str] = Field(default_factory=list, description="匹配到景点池的 poi_id 列表")
+    source_strategy_title: Optional[str] = Field(default=None, description="来源攻略的标题")

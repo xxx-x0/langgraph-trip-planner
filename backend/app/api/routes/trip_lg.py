@@ -35,6 +35,8 @@ from ...models.schemas import (
     DiscoveredAttraction,
     LoadMoreAttractionsRequest,
     LoadMoreAttractionsResponse,
+    AISelectRequest,
+    AISelectResponse,
 )
 from ...agents.langgraph_agent import get_trip_planner_agent, NonRetryableError
 from ...agents.langgraph_agent.utils.duration import estimate_durations_batch
@@ -44,6 +46,7 @@ from ...agents.langgraph_agent.utils.geo import (
     _rebalance_by_duration,
 )
 from ...agents.langgraph_agent.nodes.discovery import _fetch_attractions_batch
+from ...agents.langgraph_agent.utils.strategy_extract import extract_attractions_from_strategy
 from ...services.langchain_amap_tools import get_langchain_amap_service
 from ...services.preferences_service import load_preferences, save_preferences, delete_preferences
 
@@ -518,3 +521,22 @@ async def load_more_attractions(req: LoadMoreAttractionsRequest):
     except Exception:
         logger.exception("load_more_attractions failed")
         raise HTTPException(status_code=500, detail="加载更多失败，请稍后重试")
+
+
+@discover_router.post(
+    "/ai_select",
+    response_model=AISelectResponse,
+    summary="AI 从攻略选景",
+    description="基于 Bing 搜索经典攻略 + LLM 提取景点名 + 模糊匹配现有景点池。"
+)
+async def ai_select_attractions(req: AISelectRequest):
+    try:
+        result = await extract_attractions_from_strategy(
+            destination=req.destination,
+            days=req.days,
+            pool=req.attractions,
+        )
+        return AISelectResponse(**result)
+    except Exception:
+        logger.exception("ai_select_attractions failed")
+        raise HTTPException(status_code=500, detail="AI 选景失败，请稍后重试")
