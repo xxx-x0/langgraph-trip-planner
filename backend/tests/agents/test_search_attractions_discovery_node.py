@@ -87,8 +87,12 @@ async def test_fetch_attractions_batch_excludes_known_names():
         CachedAttraction(name="圆明园", longitude=116.299, latitude=40.008, category="公园"),
     ]
 
+    received_min_count = None
+
     class FakeService:
         async def get_attractions(self, city, min_count, categories=None):
+            nonlocal received_min_count
+            received_min_count = min_count
             return fake_pool
 
     with patch(
@@ -106,3 +110,32 @@ async def test_fetch_attractions_batch_excludes_known_names():
     assert "故宫" not in names
     assert "天坛" not in names
     assert len(result) == 2
+    # 验证 target_min = max(batch_size + len(exclude_names), 40) = max(2+2, 40) = 40
+    assert received_min_count == 40
+
+
+@pytest.mark.asyncio
+async def test_fetch_attractions_batch_target_min_grows_with_exclude_size():
+    """当 exclude 列表较大时，target_min 应该 = batch_size + len(exclude_names)"""
+    received_min_count = None
+
+    class FakeService:
+        async def get_attractions(self, city, min_count, categories=None):
+            nonlocal received_min_count
+            received_min_count = min_count
+            return []
+
+    with patch(
+        "app.agents.langgraph_agent.nodes.discovery.get_attractions_cache_service",
+        return_value=FakeService(),
+    ):
+        large_exclude = {f"景点{i}" for i in range(50)}
+        await _fetch_attractions_batch(
+            city="北京",
+            exclude_names=large_exclude,
+            batch_size=20,
+            categories=None,
+        )
+
+    # max(20 + 50, 40) = 70
+    assert received_min_count == 70

@@ -7,6 +7,10 @@ from .search import _preferences_to_categories
 from ....services.attractions_cache_service import CachedAttraction, get_attractions_cache_service
 
 
+# 缓存层最小候选池大小：保证 exclude_names 较大时仍有足够候选可过滤
+_MIN_POOL_SIZE = 40
+
+
 def _cached_attraction_to_discovery_item(attraction: CachedAttraction) -> dict[str, Any]:
     location = None
     if attraction.longitude is not None and attraction.latitude is not None:
@@ -37,7 +41,7 @@ async def _fetch_attractions_batch(
     """从缓存取一批景点，排除已知名字。"""
     service = get_attractions_cache_service()
     # 为了去重后还能取到 batch_size 个，min_count 应当大于 batch_size + exclude 数
-    target_min = max(batch_size + len(exclude_names), 40)
+    target_min = max(batch_size + len(exclude_names), _MIN_POOL_SIZE)
     attractions = await service.get_attractions(
         city=city,
         min_count=target_min,
