@@ -12,8 +12,10 @@ from ..utils.geo import (
     _order_cluster_by_tsp,
     _select_top_attractions,
     _format_cluster_info,
+    _rebalance_by_duration,
 )
 from ..utils.parsing import _extract_json_array, _extract_poi_names
+from ..utils.duration import estimate_durations_batch
 from ..nodes.search import _extract_must_visit_attractions, analyze_free_text
 from ....services.langchain_amap_tools import get_langchain_amap_service
 from ....services.llm_service import get_llm
@@ -276,6 +278,14 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
 
     for i in range(len(clusters)):
         clusters[i] = _order_cluster_by_tsp(clusters[i])
+
+    # 接入时长均衡：默认每景点 120 分钟（与 preview_day_assignment API 行为一致）
+    durations: Dict[str, int] = {a["name"]: 120 for a in valid_attractions}
+    try:
+        durations = await estimate_durations_batch(valid_attractions)
+    except Exception as e:
+        print(f"⚠️ 估时失败，使用默认 120 分钟: {e}")
+    clusters = _rebalance_by_duration(clusters, durations, max_minutes=480)
 
     trimmed = False
     total_attractions = sum(len(c) for c in clusters)
