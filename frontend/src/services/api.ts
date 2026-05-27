@@ -540,4 +540,27 @@ export async function previewDayAssignment(
   return response.data
 }
 
+export interface LoadMoreRequest {
+  city: string
+  exclude_names: string[]
+  batch_size?: number
+  categories?: string[]
+}
+
+export interface LoadMoreResponse {
+  attractions: DiscoveredAttraction[]
+}
+
+export async function loadMoreAttractions(req: LoadMoreRequest): Promise<LoadMoreResponse> {
+  const resp = await fetch(`${API_BASE_URL}/api/discover/load_more`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ batch_size: 20, ...req }),
+  })
+  if (!resp.ok) {
+    throw new Error(`加载更多失败: ${resp.status}`)
+  }
+  return resp.json() as Promise<LoadMoreResponse>
+}
+
 export default apiClient

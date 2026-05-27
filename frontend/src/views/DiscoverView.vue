@@ -71,6 +71,19 @@
             <p>{{ attractions.length === 0 ? '正在搜索景点...' : '该分类下暂无景点' }}</p>
           </div>
         </div>
+
+        <!-- 加载更多 -->
+        <div v-if="!loading && attractions.length > 0" class="load-more-bar">
+          <a-button
+            type="dashed"
+            block
+            :loading="loadMoreLoading"
+            :disabled="loadMoreReachedLimit"
+            @click="handleLoadMore"
+          >
+            {{ loadMoreReachedLimit ? '已达上限' : '加载更多 +20' }}
+          </a-button>
+        </div>
       </div>
 
       <!-- 右侧: 地图 -->
@@ -182,6 +195,7 @@ import PlanProgress from '@/components/PlanProgress.vue'
 import {
   discoverAttractionsStream, searchAttractionManual,
   createDraftFromSelectionsStream, previewDayAssignment,
+  loadMoreAttractions,
 } from '@/services/api'
 import type { DraftStreamEvent } from '@/services/api'
 import type { DiscoveredAttraction, TripFormData, DiscoveryStreamEvent, DayDurationInfo } from '@/types'
@@ -207,6 +221,10 @@ const smartAssignmentCache = ref<DiscoveredAttraction[][] | null>(null)
 const assignLoading = ref(false)
 const cardRefs: Record<string, any> = {}
 const mapRef = ref<any>(null)
+
+// Load more state
+const loadMoreLoading = ref(false)
+const loadMoreReachedLimit = ref(false)
 
 // Planning phase state
 const planningCurrentNode = ref('')
@@ -301,6 +319,38 @@ function addSearchResult(attr: DiscoveredAttraction) {
   attractions.push(attr)
   searchResults.value = searchResults.value.filter(a => a.name !== attr.name)
   message.success(`已添加: ${attr.name}`)
+}
+
+async function handleLoadMore() {
+  if (loadMoreLoading.value || loadMoreReachedLimit.value) return
+  if (!formData.value?.city) {
+    message.error('缺少城市信息，无法加载更多')
+    return
+  }
+  loadMoreLoading.value = true
+  try {
+    const existingNames = new Set(attractions.map(a => a.name))
+    const excludeNames = Array.from(existingNames)
+    const res = await loadMoreAttractions({
+      city: formData.value.city,
+      exclude_names: excludeNames,
+      batch_size: 20,
+    })
+    const newOnes = (res.attractions || []).filter(a => !existingNames.has(a.name))
+    if (newOnes.length > 0) {
+      attractions.push(...newOnes)
+      message.success(`已加载 ${newOnes.length} 个新景点`)
+    } else {
+      message.info('暂无更多景点')
+    }
+    if (attractions.length >= 100 || (res.attractions || []).length === 0) {
+      loadMoreReachedLimit.value = true
+    }
+  } catch (e: any) {
+    message.error(e?.message || '加载更多失败')
+  } finally {
+    loadMoreLoading.value = false
+  }
 }
 
 async function startDayAssignment() {
@@ -765,6 +815,11 @@ onMounted(() => {
   color: var(--foreground, #121212);
   font-weight: var(--font-bold, 700);
   text-transform: uppercase;
+}
+
+.load-more-bar {
+  padding: var(--space-4, 16px);
+  margin-top: var(--space-3, 12px);
 }
 
 /* === 底部操作栏 - Bauhaus Blue === */
