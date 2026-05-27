@@ -327,6 +327,9 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
             clusters = _select_top_attractions(clusters, max_per_day)
             trimmed = True
 
+    # 最终保险：trim/select 后再均衡一次，确保 final clusters 每天 ≤ 480
+    clusters = _rebalance_by_duration(clusters, durations, max_minutes=480)
+
     cluster_info = _format_cluster_info(clusters, valid_attractions, dist_matrix, trimmed)
 
     try:
