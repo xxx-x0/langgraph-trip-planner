@@ -73,7 +73,7 @@
         </div>
 
         <!-- 加载更多 -->
-        <div v-if="!loading && attractions.length > 0" class="load-more-bar">
+        <div v-if="!loading" class="load-more-bar">
           <a-button
             type="dashed"
             block
@@ -336,14 +336,15 @@ async function handleLoadMore() {
       exclude_names: excludeNames,
       batch_size: 20,
     })
-    const newOnes = (res.attractions || []).filter(a => !existingNames.has(a.name))
+    const returned = res.attractions || []
+    const newOnes = returned.filter(a => !existingNames.has(a.name))
     if (newOnes.length > 0) {
       attractions.push(...newOnes)
       message.success(`已加载 ${newOnes.length} 个新景点`)
     } else {
       message.info('暂无更多景点')
     }
-    if (attractions.length >= 100 || (res.attractions || []).length === 0) {
+    if (attractions.length >= 100 || returned.length === 0) {
       loadMoreReachedLimit.value = true
     }
   } catch (e: any) {
