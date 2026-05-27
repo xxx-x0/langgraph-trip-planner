@@ -11,7 +11,29 @@ from ....services.llm_service import get_llm, is_structured_output_supported
 logger = logging.getLogger(__name__)
 
 
-SUFFIXES = ["博物院", "博物馆", "景区", "公园", "广场", "园林", "胜地", "古镇"]
+# 按长度降序，确保更长的后缀优先匹配
+# 例：「九寨沟风景区」应被 "风景区" 而非 "景区" 剥离
+SUFFIXES = sorted([
+    "风景名胜区",
+    "自然保护区",
+    "森林公园",
+    "度假区",
+    "风景区",
+    "博物院",
+    "博物馆",
+    "动物园",
+    "植物园",
+    "景区",
+    "公园",
+    "广场",
+    "园林",
+    "胜地",
+    "古镇",
+], key=len, reverse=True)
+
+# Prompt 输入截断阈值（字符）：5 个 snippet × 500 字符 = 2500 上限，
+# 4000 留出 LLM 思考的 prompt 头/尾空间，对 DeepSeek 32K 上下文绰绰有余
+_MAX_PROMPT_CHARS = 4000
 
 
 def normalize_name(name: str) -> str:
@@ -33,30 +55,38 @@ def match_names_to_pool(
 ) -> List[Dict[str, Any]]:
     """把 LLM 提取出的景点名匹配到 pool 中的景点。
 
-    匹配规则：原名包含、normalize 后包含、双向 in。
-    防重复：同一个 pool 项最多被匹配一次。
+    匹配规则（按优先级）：
+    1. normalize 后完全相等（处理短名如 "故宫"）
+    2. cand 与 item_name 双向包含，但要求两侧 normalize 长度 >= 3，
+       避免 "故宫" 误匹配 "故宫小学"、"北京" 误匹配 "北京大学"。
+       注意：2 字符短名（"故宫"/"天坛"）只能通过规则 1 精确匹配，
+       不允许作为子串模糊匹配，因为它们极易嵌入到非景点名字中。
     """
     if not candidate_names or not pool:
         return []
     matched: List[Dict[str, Any]] = []
     seen_ids: set = set()
     for cand in candidate_names:
-        if not cand:
-            continue
         cand_norm = normalize_name(cand)
+        if not cand_norm:
+            continue
         for item in pool:
             item_id = item.get("poi_id") or item.get("name")
             if item_id in seen_ids:
                 continue
             item_name = item.get("name", "") or ""
             item_norm = normalize_name(item_name)
-            if not item_name:
+            if not item_norm:
                 continue
-            if (
-                cand in item_name
-                or item_name in cand
-                or (cand_norm and item_norm and (cand_norm in item_norm or item_norm in cand_norm))
-            ):
+            # 规则 1: normalize 后完全相等
+            if cand_norm == item_norm:
+                matched.append(item)
+                seen_ids.add(item_id)
+                break
+            # 规则 2: 双向部分包含，要求 normalize 后两侧 >= 3 字符
+            if len(cand_norm) < 3 or len(item_norm) < 3:
+                continue
+            if cand_norm in item_norm or item_norm in cand_norm:
                 matched.append(item)
                 seen_ids.add(item_id)
                 break
@@ -138,7 +168,7 @@ async def extract_attractions_from_strategy(
 输出 JSON：{{"attractions": ["景点1", "景点2", ...]}}
 
 攻略文本：
-{combined[:4000]}"""
+{combined[:_MAX_PROMPT_CHARS]}"""
 
     try:
         llm = get_llm()
@@ -162,7 +192,9 @@ async def extract_attractions_from_strategy(
         return {"recommended_ids": [], "source_strategy_title": None}
 
     matched = match_names_to_pool(names, pool)
+    recommended_ids = [m.get("poi_id") for m in matched if m.get("poi_id")]
+    source_title = results[0].get("title") if results else None
     return {
-        "recommended_ids": [m.get("poi_id") or m.get("name") for m in matched],
-        "source_strategy_title": (results or [{}])[0].get("title") or None,
+        "recommended_ids": recommended_ids,
+        "source_strategy_title": source_title,
     }
