@@ -8,6 +8,22 @@
       </a-result>
     </div>
 
+    <!-- SSE 流式生成期间的骨架屏：streaming 且 tripPlan 未填充时显示 -->
+    <div
+      v-if="isStreaming && !tripPlan && skeletonStage !== 'error'"
+      class="result-skeleton"
+    >
+      <div class="hero-skeleton">
+        <a-skeleton active :paragraph="{ rows: 2 }" />
+        <p class="skeleton-hint">AI 正在为你定制行程…</p>
+      </div>
+      <div class="cards-skeleton">
+        <a-skeleton active :paragraph="{ rows: 4 }" />
+        <a-skeleton active :paragraph="{ rows: 4 }" />
+        <a-skeleton active :paragraph="{ rows: 4 }" />
+      </div>
+    </div>
+
     <!-- Hero 区域 - 红色背景 -->
     <div v-if="tripPlan" class="result-hero">
       <div class="hero-content">
@@ -407,6 +423,39 @@ const exportAsPDF = async () => {
 
 .streaming-error {
   padding: 80px 16px;
+}
+
+/* SSE 期间的骨架屏 */
+.result-skeleton {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.hero-skeleton {
+  padding: 48px 24px;
+  margin-bottom: 32px;
+  background: var(--background-secondary, #fafafa);
+  border-radius: 16px;
+  text-align: center;
+}
+
+.skeleton-hint {
+  margin-top: 16px;
+  color: var(--color-text-secondary, #888);
+  font-size: 14px;
+}
+
+.cards-skeleton {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr;
+}
+
+.cards-skeleton :deep(.ant-skeleton) {
+  padding: 16px;
+  background: var(--background-secondary, #fafafa);
+  border-radius: 12px;
 }
 
 /* Hero 区域 - 红色背景 */
