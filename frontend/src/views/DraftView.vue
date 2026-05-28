@@ -27,8 +27,7 @@
       </div>
 
       <div class="finalize-bar">
-        <a-button type="primary" size="large" :loading="finalizing"
-                  @click="onFinalize">
+        <a-button type="primary" size="large" @click="onFinalize">
           定稿并保存
         </a-button>
       </div>
@@ -44,7 +43,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
   getDraft, assembleDay, recomputeDay, aiRearrangeDay,
-  rewriteNarrative, finalizeDraftStream,
+  rewriteNarrative,
 } from '@/services/api'
 import DayCard from '@/components/draft/DayCard.vue'
 
@@ -54,7 +53,6 @@ const draftId = computed(() => route.params.id as string)
 
 const draft = ref<any>(null)
 const loading = ref(true)
-const finalizing = ref(false)
 
 const dayBusy = reactive<Record<number, string>>({})
 
@@ -119,19 +117,10 @@ async function onRewriteNarrative(idx: number) {
 }
 
 async function onFinalize() {
-  finalizing.value = true
-  try {
-    await finalizeDraftStream(draftId.value, (event) => {
-      if (event.type === 'complete' && (event as any).trip_id) {
-        message.success('定稿成功')
-        router.replace(`/trip/${(event as any).trip_id}`)
-      } else if (event.type === 'error') {
-        message.error(event.message || '定稿失败')
-      }
-    })
-  } finally {
-    finalizing.value = false
-  }
+  router.push({
+    path: '/result',
+    query: { streaming: 'true', draft_id: draftId.value },
+  })
 }
 
 onMounted(loadDraft)

@@ -1,5 +1,13 @@
 <template>
   <div class="result-container">
+    <div v-if="isStreaming && skeletonStage === 'error'" class="streaming-error">
+      <a-result status="error" :title="streamError || '生成失败'">
+        <template #extra>
+          <a-button type="primary" @click="onRetry">重试</a-button>
+        </template>
+      </a-result>
+    </div>
+
     <!-- Hero 区域 - 红色背景 -->
     <div v-if="tripPlan" class="result-hero">
       <div class="hero-content">
@@ -101,7 +109,7 @@
       </Transition>
     </div>
 
-    <a-empty v-if="!tripPlan" description="没有找到旅行计划数据">
+    <a-empty v-if="!tripPlan && !isStreaming" description="没有找到旅行计划数据">
       <template #image>
         <div style="font-size: 80px;">🗺️</div>
       </template>
@@ -124,7 +132,7 @@ import { message } from 'ant-design-vue'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import type { TripPlan } from '@/types'
-import { saveTripToHistory, getTripDetail } from '@/services/api'
+import { saveTripToHistory, getTripDetail, finalizeDraftStream } from '@/services/api'
 import ResultHero from '@/components/result/ResultHero.vue'
 import TabOverview from '@/components/result/TabOverview.vue'
 import TabBudget from '@/components/result/TabBudget.vue'
@@ -178,6 +186,10 @@ const visibleTabs = computed(() => {
 })
 
 onMounted(async () => {
+  if (isStreaming.value) {
+    await startStreaming()
+    return
+  }
   const tripId = route.params.id
   if (tripId) {
     await loadTripFromHistory(Number(tripId))
@@ -195,6 +207,48 @@ onMounted(async () => {
     await loadAttractionPhotos()
   }
 })
+
+async function startStreaming() {
+  const draftId = route.query.draft_id as string
+  if (!draftId) {
+    streamError.value = '缺少 draft_id'
+    skeletonStage.value = 'error'
+    return
+  }
+  streamError.value = null
+  skeletonStage.value = 'init'
+
+  try {
+    let progressCount = 0
+    await finalizeDraftStream(draftId, async (event: any) => {
+      if (event.type === 'progress') {
+        progressCount++
+        if (progressCount === 1) skeletonStage.value = 'hero'
+        else if (progressCount === 2) skeletonStage.value = 'itinerary'
+      } else if (event.type === 'complete') {
+        tripPlan.value = event.trip_plan
+        skeletonStage.value = 'done'
+        // 把 URL 改成 /trip/:id 以便后续分享和刷新；但 tripPlan 已填充，无需重新加载
+        if (event.trip_id) {
+          await router.replace({ path: `/trip/${event.trip_id}` })
+        }
+        if (tripPlan.value) {
+          await loadAttractionPhotos()
+        }
+      } else if (event.type === 'error') {
+        streamError.value = event.message || '生成失败'
+        skeletonStage.value = 'error'
+      }
+    })
+  } catch (e: any) {
+    streamError.value = e?.message || '连接失败'
+    skeletonStage.value = 'error'
+  }
+}
+
+function onRetry() {
+  startStreaming()
+}
 
 const goBack = () => { router.push('/') }
 
@@ -349,6 +403,10 @@ const exportAsPDF = async () => {
 .result-container {
   min-height: 100vh;
   background: var(--background);
+}
+
+.streaming-error {
+  padding: 80px 16px;
 }
 
 /* Hero 区域 - 红色背景 */
