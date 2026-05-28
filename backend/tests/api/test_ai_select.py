@@ -7,13 +7,13 @@ from app.api.main import app
 client = TestClient(app)
 
 
-def test_ai_select_returns_matched_ids():
+def test_ai_select_returns_must_and_optional_ids():
     fake_result = {
-        "recommended_ids": ["1", "3"],
-        "source_strategy_title": "北京三日游精华路线",
+        "must_ids": ["1", "3"],
+        "optional_ids": ["2"],
     }
     with patch(
-        "app.api.routes.trip_lg.extract_attractions_from_strategy",
+        "app.api.routes.trip_lg.pick_attractions_from_pool",
         new=AsyncMock(return_value=fake_result),
     ):
         resp = client.post("/api/discover/ai_select", json={
@@ -28,8 +28,8 @@ def test_ai_select_returns_matched_ids():
 
     assert resp.status_code == 200
     body = resp.json()
-    assert body["recommended_ids"] == ["1", "3"]
-    assert body["source_strategy_title"] == "北京三日游精华路线"
+    assert body["must_ids"] == ["1", "3"]
+    assert body["optional_ids"] == ["2"]
 
 
 def test_ai_select_rejects_empty_destination():
@@ -43,7 +43,7 @@ def test_ai_select_rejects_empty_destination():
 
 def test_ai_select_returns_500_on_extract_exception():
     with patch(
-        "app.api.routes.trip_lg.extract_attractions_from_strategy",
+        "app.api.routes.trip_lg.pick_attractions_from_pool",
         new=AsyncMock(side_effect=RuntimeError("internal /private/error")),
     ):
         resp = client.post("/api/discover/ai_select", json={

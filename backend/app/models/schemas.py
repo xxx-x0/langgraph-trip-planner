@@ -534,5 +534,5 @@ class AISelectRequest(BaseModel):
 
 class AISelectResponse(BaseModel):
     """AI 从攻略选景响应"""
-    recommended_ids: List[str] = Field(default_factory=list, description="匹配到景点池的 poi_id 列表")
-    source_strategy_title: Optional[str] = Field(default=None, description="来源攻略的标题")
+    must_ids: List[str] = Field(default_factory=list, description="必去景点的 poi_id 列表")
+    optional_ids: List[str] = Field(default_factory=list, description="可选景点的 poi_id 列表")

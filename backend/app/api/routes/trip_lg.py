@@ -46,7 +46,10 @@ from ...agents.langgraph_agent.utils.geo import (
     _rebalance_by_duration,
 )
 from ...agents.langgraph_agent.nodes.discovery import _fetch_attractions_batch
-from ...agents.langgraph_agent.utils.strategy_extract import extract_attractions_from_strategy
+from ...agents.langgraph_agent.utils.strategy_extract import (
+    extract_attractions_from_strategy,  # 保留，v1 函数暂不删
+    pick_attractions_from_pool,
+)
 from ...services.langchain_amap_tools import get_langchain_amap_service
 from ...services.preferences_service import load_preferences, save_preferences, delete_preferences
 
@@ -531,10 +534,11 @@ async def load_more_attractions(req: LoadMoreAttractionsRequest):
 )
 async def ai_select_attractions(req: AISelectRequest):
     try:
-        result = await extract_attractions_from_strategy(
+        result = await pick_attractions_from_pool(
             destination=req.destination,
             days=req.days,
             pool=req.attractions,
+            preferences=None,  # 暂不传，后续可从 req.preferences 提取
         )
         return AISelectResponse(**result)
     except Exception:
