@@ -21,6 +21,14 @@
             :loading="searching"
             @search="handleManualSearch"
           />
+          <a-button
+            type="primary"
+            :loading="aiSelectLoading"
+            @click="handleAiSelect"
+          >
+            <template #icon><ThunderboltOutlined /></template>
+            AI 帮我选
+          </a-button>
         </div>
 
         <!-- 搜索结果下拉 -->
@@ -195,14 +203,14 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { InfoCircleOutlined } from '@ant-design/icons-vue'
+import { InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
 import SelectableAttractionCard from '@/components/SelectableAttractionCard.vue'
 import DiscoveryMap from '@/components/DiscoveryMap.vue'
 import PlanProgress from '@/components/PlanProgress.vue'
 import {
   discoverAttractionsStream, searchAttractionManual,
   createDraftFromSelectionsStream, previewDayAssignment,
-  loadMoreAttractions,
+  loadMoreAttractions, aiSelectAttractions,
 } from '@/services/api'
 import type { DraftStreamEvent } from '@/services/api'
 import type { DiscoveredAttraction, TripFormData, DiscoveryStreamEvent, DayDurationInfo } from '@/types'
@@ -232,6 +240,9 @@ const mapRef = ref<any>(null)
 // Load more state
 const loadMoreLoading = ref(false)
 const loadMoreReachedLimit = ref(false)
+
+// AI select state
+const aiSelectLoading = ref(false)
 
 // Planning phase state
 const planningCurrentNode = ref('')
@@ -326,6 +337,54 @@ function addSearchResult(attr: DiscoveredAttraction) {
   attractions.push(attr)
   searchResults.value = searchResults.value.filter(a => a.name !== attr.name)
   message.success(`已添加: ${attr.name}`)
+}
+
+async function handleAiSelect() {
+  if (aiSelectLoading.value) return
+  aiSelectLoading.value = true
+  try {
+    message.loading({ content: '正在分析攻略…', key: 'ai-select', duration: 0 })
+
+    const city = formData.value?.city
+    const days = formData.value?.travel_days
+    if (!city || !days) {
+      message.destroy('ai-select')
+      message.error('请先选择目的地和天数')
+      return
+    }
+
+    const res = await aiSelectAttractions({
+      destination: city,
+      days,
+      attractions: attractions.map((a: any) => ({
+        poi_id: a.poi_id,
+        name: a.name,
+      })),
+    })
+    message.destroy('ai-select')
+
+    if (!res.recommended_ids || res.recommended_ids.length === 0) {
+      message.warning('未找到适合的攻略，请手动选择')
+      return
+    }
+
+    // 自动勾选对应景点（兼容 poi_id 不存在的情况）
+    const idSet = new Set(res.recommended_ids)
+    let selectedCount = 0
+    attractions.forEach((a: any) => {
+      if (a.poi_id && idSet.has(a.poi_id)) {
+        a.selected = true
+        selectedCount++
+      }
+    })
+    message.success(`已根据攻略选好 ${selectedCount} 个景点`)
+    document.querySelector('.bottom-bar')?.scrollIntoView({ behavior: 'smooth' })
+  } catch (e: any) {
+    message.destroy('ai-select')
+    message.error(e?.message || 'AI 推荐失败，请手动选择')
+  } finally {
+    aiSelectLoading.value = false
+  }
 }
 
 async function handleLoadMore() {
@@ -670,7 +729,14 @@ onMounted(() => {
 }
 
 .search-bar {
-  max-width: 400px;
+  max-width: 560px;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.search-bar :deep(.ant-input-search) {
+  flex: 1;
 }
 
 /* Override Ant Design Input Search */

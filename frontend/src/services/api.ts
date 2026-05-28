@@ -563,4 +563,28 @@ export async function loadMoreAttractions(req: LoadMoreRequest): Promise<LoadMor
   return resp.json() as Promise<LoadMoreResponse>
 }
 
+export interface AISelectRequest {
+  destination: string
+  days: number
+  attractions: Array<{ poi_id?: string; name: string }>
+  preferences?: Record<string, any>
+}
+
+export interface AISelectResponse {
+  recommended_ids: string[]
+  source_strategy_title?: string
+}
+
+export async function aiSelectAttractions(req: AISelectRequest): Promise<AISelectResponse> {
+  const resp = await fetch(`${API_BASE_URL}/api/discover/ai_select`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  })
+  if (!resp.ok) {
+    throw new Error(`AI 选景失败: ${resp.status}`)
+  }
+  return resp.json() as Promise<AISelectResponse>
+}
+
 export default apiClient
