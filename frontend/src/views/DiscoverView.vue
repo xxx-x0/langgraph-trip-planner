@@ -368,16 +368,16 @@ async function handleAiSelect() {
       return
     }
 
-    // 自动勾选对应景点（兼容 poi_id 不存在的情况）
+    // 只匹配 poi_id（后端只返回有 poi_id 的项）
     const idSet = new Set(res.recommended_ids)
-    let selectedCount = 0
+    let appliedCount = 0
     attractions.forEach((a: any) => {
       if (a.poi_id && idSet.has(a.poi_id)) {
         a.selected = true
-        selectedCount++
+        appliedCount++
       }
     })
-    message.success(`已根据攻略选好 ${selectedCount} 个景点`)
+    message.success(`已根据攻略选好 ${appliedCount} 个景点`)
     document.querySelector('.bottom-bar')?.scrollIntoView({ behavior: 'smooth' })
   } catch (e: any) {
     message.destroy('ai-select')
