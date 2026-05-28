@@ -3,7 +3,7 @@
 import json
 import logging
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from ....services.llm_service import get_llm, is_structured_output_supported
 
@@ -198,3 +198,142 @@ async def extract_attractions_from_strategy(
         "recommended_ids": recommended_ids,
         "source_strategy_title": source_title,
     }
+
+
+# ============================================================================
+# v2: 池内 LLM 挑选（替代攻略提取）
+# ============================================================================
+
+from .duration import estimate_durations_batch
+
+
+def _parse_rating(value: Any) -> float:
+    """解析 rating 字段，失败返回 0"""
+    if value is None:
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _rating_based_fallback(
+    pool: List[Dict[str, Any]],
+    days: int,
+) -> Tuple[List[str], List[str]]:
+    """按 rating 降序兜底分配 must 和 optional。
+
+    must = top days * 3，optional = next days * 2。
+    缺 poi_id 的景点被跳过。
+    """
+    # 仅保留有 poi_id 的
+    valid = [p for p in pool if p.get("poi_id")]
+    sorted_pool = sorted(
+        valid,
+        key=lambda p: _parse_rating(p.get("rating")),
+        reverse=True,
+    )
+    must_count = days * 3
+    optional_count = days * 2
+    must_ids = [p["poi_id"] for p in sorted_pool[:must_count]]
+    optional_ids = [p["poi_id"] for p in sorted_pool[must_count:must_count + optional_count]]
+    return must_ids, optional_ids
+
+
+async def pick_attractions_from_pool(
+    destination: str,
+    days: int,
+    pool: List[Dict[str, Any]],
+    preferences: Optional[List[str]] = None,
+) -> Dict[str, List[str]]:
+    """从景点池中挑选推荐项，返回 {must_ids, optional_ids}。
+
+    流程：
+    1. estimate_durations_batch 估时（失败默认 120）
+    2. LLM 选 must / optional（时长预算驱动）
+    3. LLM 失败 / 无效输出 → rating 兜底
+    """
+    if not pool:
+        return {"must_ids": [], "optional_ids": []}
+
+    # Step 1: 估时（失败时默认 120）
+    try:
+        durations = await estimate_durations_batch(pool)
+    except Exception:
+        logger.exception("estimate_durations_batch failed; default to 120 min")
+        durations = {p.get("name", ""): 120 for p in pool}
+
+    # Step 2: LLM 选
+    must_target = days * 360  # 6h/天
+    optional_target = days * 120  # 2h/天
+
+    pool_lines = []
+    for p in pool:
+        poi_id = p.get("poi_id")
+        if not poi_id:
+            continue
+        name = p.get("name", "")
+        category = p.get("category", "")
+        rating = p.get("rating", "")
+        dur = durations.get(name, 120)
+        pool_lines.append(f"{poi_id} | {name} | {category} | {rating} | {dur}")
+
+    prefs_str = "、".join(preferences) if preferences else "无特别偏好"
+    prompt = f"""你是行程规划助手。请从下面这个 {destination} 的景点池里，
+为一个 {days} 天的行程挑选必去和备选景点。
+
+行程目标：
+- 必去景点（must）：总游览时长约 {must_target} 分钟（6 小时/天）
+- 备选景点（optional）：额外约 {optional_target} 分钟（2 小时/天）
+
+用户偏好：{prefs_str}
+
+景点池（poi_id | 名称 | 类别 | 评分 | 预估时长 min）：
+{chr(10).join(pool_lines)}
+
+仅输出 JSON，格式：
+{{"must": [{{"poi_id": "xxx", "reason": "..."}}], "optional": [{{"poi_id": "xxx", "reason": "..."}}]}}
+"""
+
+    try:
+        llm = get_llm()
+        if is_structured_output_supported():
+            from pydantic import BaseModel
+
+            class _PickItem(BaseModel):
+                poi_id: str
+                reason: Optional[str] = None
+
+            class _PickOut(BaseModel):
+                must: List[_PickItem]
+                optional: List[_PickItem]
+
+            resp = await llm.with_structured_output(
+                _PickOut, method="function_calling"
+            ).ainvoke(prompt)
+            must_ids = [m.poi_id for m in resp.must]
+            optional_ids = [o.poi_id for o in resp.optional]
+        else:
+            raw = await llm.ainvoke(prompt)
+            text = raw.content if hasattr(raw, "content") else str(raw)
+            m = re.search(r"\{.*\}", text, re.DOTALL)
+            if not m:
+                raise ValueError("LLM 响应不含 JSON")
+            data = json.loads(m.group(0))
+            must_ids = [item["poi_id"] for item in data.get("must", []) if item.get("poi_id")]
+            optional_ids = [item["poi_id"] for item in data.get("optional", []) if item.get("poi_id")]
+
+        # 验证：去除两边重复（must 优先）+ 去除不在池里的 id
+        valid_ids = {p.get("poi_id") for p in pool if p.get("poi_id")}
+        must_ids = [i for i in must_ids if i in valid_ids]
+        optional_ids = [i for i in optional_ids if i in valid_ids and i not in must_ids]
+
+        if not must_ids and not optional_ids:
+            raise ValueError("LLM 返回空集")
+
+        return {"must_ids": must_ids, "optional_ids": optional_ids}
+
+    except Exception:
+        logger.exception("pick_attractions_from_pool LLM call failed, falling back to rating")
+        must_ids, optional_ids = _rating_based_fallback(pool, days)
+        return {"must_ids": must_ids, "optional_ids": optional_ids}
