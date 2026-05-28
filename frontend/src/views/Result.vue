@@ -135,6 +135,10 @@ import TabWeather from '@/components/result/TabWeather.vue'
 const router = useRouter()
 const route = useRoute()
 
+const isStreaming = computed(() => route.query.streaming === 'true')
+const skeletonStage = ref<'init' | 'hero' | 'itinerary' | 'done' | 'error'>('init')
+const streamError = ref<string | null>(null)
+
 const tripPlan = ref<TripPlan | null>(null)
 const editMode = ref(false)
 const originalPlan = ref<TripPlan | null>(null)
