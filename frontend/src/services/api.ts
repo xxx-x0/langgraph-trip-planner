@@ -571,8 +571,8 @@ export interface AISelectRequest {
 }
 
 export interface AISelectResponse {
-  recommended_ids: string[]
-  source_strategy_title?: string
+  must_ids: string[]
+  optional_ids: string[]
 }
 
 export async function aiSelectAttractions(req: AISelectRequest): Promise<AISelectResponse> {

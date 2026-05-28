@@ -201,6 +201,7 @@ export interface DiscoveredAttraction {
   selected?: boolean
   manuallyAdded?: boolean
   visit_minutes?: number
+  recommendation?: 'must' | 'optional' | null
 }
 
 export interface DiscoveryStreamEvent {

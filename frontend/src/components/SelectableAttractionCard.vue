@@ -10,6 +10,13 @@
       </div>
     </div>
     <div v-if="attraction.manuallyAdded" class="manual-badge">手动添加</div>
+    <div
+      v-if="attraction.recommendation"
+      class="reco-badge"
+      :class="`reco-${attraction.recommendation}`"
+    >
+      {{ attraction.recommendation === 'must' ? '⭐' : '💡' }}
+    </div>
     <div class="card-content">
       <div class="card-image" :style="{ backgroundImage: `url(${imageUrl})` }">
         <div v-if="attraction.ticket_price" class="price-tag">¥{{ attraction.ticket_price }}</div>
@@ -121,6 +128,28 @@ const imageUrl = computed(() => {
   text-transform: uppercase;
   border: 2px solid var(--border);
   box-shadow: 2px 2px 0px 0px var(--border);
+}
+
+.reco-badge {
+  position: absolute;
+  top: 40px;
+  right: 8px;
+  z-index: 10;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.reco-must {
+  border: 1px solid #52c41a;
+}
+.reco-optional {
+  border: 1px solid #faad14;
 }
 
 .card-image {

@@ -66,19 +66,65 @@
         </div>
 
         <!-- 景点卡片网格 -->
-        <div class="attractions-grid">
-          <SelectableAttractionCard
-            v-for="attr in filteredAttractions"
-            :key="attr.name + (attr.poi_id || '')"
-            :attraction="attr"
-            :photo-url="attractionPhotos[attr.name]"
-            :ref="(el: any) => { if (el) cardRefs[attr.name] = el }"
-            @toggle="toggleAttraction"
-          />
+        <template v-if="aiSelectionActive">
+          <section v-if="mustAttractions.length > 0" class="reco-section">
+            <h3 class="section-title">⭐ AI 推荐必去</h3>
+            <div class="attractions-grid">
+              <SelectableAttractionCard
+                v-for="attr in mustAttractions"
+                :key="attr.name + (attr.poi_id || '')"
+                :attraction="attr"
+                :photo-url="attractionPhotos[attr.name]"
+                :ref="(el: any) => { if (el) cardRefs[attr.name] = el }"
+                @toggle="toggleAttraction"
+              />
+            </div>
+          </section>
+          <section v-if="optionalAttractions.length > 0" class="reco-section">
+            <h3 class="section-title">💡 备选推荐</h3>
+            <div class="attractions-grid">
+              <SelectableAttractionCard
+                v-for="attr in optionalAttractions"
+                :key="attr.name + (attr.poi_id || '')"
+                :attraction="attr"
+                :photo-url="attractionPhotos[attr.name]"
+                :ref="(el: any) => { if (el) cardRefs[attr.name] = el }"
+                @toggle="toggleAttraction"
+              />
+            </div>
+          </section>
+          <section v-if="otherAttractions.length > 0" class="reco-section">
+            <h3 class="section-title">其他景点</h3>
+            <div class="attractions-grid">
+              <SelectableAttractionCard
+                v-for="attr in otherAttractions"
+                :key="attr.name + (attr.poi_id || '')"
+                :attraction="attr"
+                :photo-url="attractionPhotos[attr.name]"
+                :ref="(el: any) => { if (el) cardRefs[attr.name] = el }"
+                @toggle="toggleAttraction"
+              />
+            </div>
+          </section>
           <div v-if="!loading && filteredAttractions.length === 0" class="empty-state">
             <p>{{ attractions.length === 0 ? '正在搜索景点...' : '该分类下暂无景点' }}</p>
           </div>
-        </div>
+        </template>
+        <template v-else>
+          <div class="attractions-grid">
+            <SelectableAttractionCard
+              v-for="attr in filteredAttractions"
+              :key="attr.name + (attr.poi_id || '')"
+              :attraction="attr"
+              :photo-url="attractionPhotos[attr.name]"
+              :ref="(el: any) => { if (el) cardRefs[attr.name] = el }"
+              @toggle="toggleAttraction"
+            />
+            <div v-if="!loading && filteredAttractions.length === 0" class="empty-state">
+              <p>{{ attractions.length === 0 ? '正在搜索景点...' : '该分类下暂无景点' }}</p>
+            </div>
+          </div>
+        </template>
 
         <!-- 加载更多 -->
         <div v-if="!loading" class="load-more-bar">
@@ -288,6 +334,20 @@ const filteredAttractions = computed(() => {
   return attractions.filter(a => a.category === activeCategory.value)
 })
 
+const aiSelectionActive = computed(
+  () => attractions.some((a: any) => a.recommendation)
+)
+
+const mustAttractions = computed(
+  () => filteredAttractions.value.filter((a: any) => a.recommendation === 'must')
+)
+const optionalAttractions = computed(
+  () => filteredAttractions.value.filter((a: any) => a.recommendation === 'optional')
+)
+const otherAttractions = computed(
+  () => filteredAttractions.value.filter((a: any) => !a.recommendation)
+)
+
 const selectedCount = computed(() => attractions.filter(a => a.selected).length)
 
 function goBack() {
@@ -363,21 +423,29 @@ async function handleAiSelect() {
     })
     message.destroy('ai-select')
 
-    if (!res.recommended_ids || res.recommended_ids.length === 0) {
-      message.warning('未找到适合的攻略，请手动选择')
+    const mustSet = new Set(res.must_ids || [])
+    const optionalSet = new Set(res.optional_ids || [])
+
+    if (mustSet.size === 0 && optionalSet.size === 0) {
+      message.warning('未找到适合的推荐，请手动选择')
       return
     }
 
-    // 只匹配 poi_id（后端只返回有 poi_id 的项）
-    const idSet = new Set(res.recommended_ids)
-    let appliedCount = 0
+    // 清除上一轮 recommendation 标记（兼容多次点击）
+    let mustCount = 0
+    let optionalCount = 0
     attractions.forEach((a: any) => {
-      if (a.poi_id && idSet.has(a.poi_id)) {
+      a.recommendation = null
+      if (a.poi_id && mustSet.has(a.poi_id)) {
+        a.recommendation = 'must'
         a.selected = true
-        appliedCount++
+        mustCount++
+      } else if (a.poi_id && optionalSet.has(a.poi_id)) {
+        a.recommendation = 'optional'
+        optionalCount++
       }
     })
-    message.success(`已根据攻略选好 ${appliedCount} 个景点`)
+    message.success(`已为你推荐 ${mustCount} 个必去 + ${optionalCount} 个备选`)
     document.querySelector('.bottom-bar')?.scrollIntoView({ behavior: 'smooth' })
   } catch (e: any) {
     message.destroy('ai-select')
@@ -880,6 +948,19 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--space-4, 16px);
+}
+
+.reco-section {
+  margin-bottom: 24px;
+}
+.reco-section + .reco-section {
+  margin-top: 24px;
+}
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 16px 0 12px;
+  color: var(--foreground, #1f1f1f);
 }
 
 .empty-state {
