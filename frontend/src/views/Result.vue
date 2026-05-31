@@ -64,7 +64,7 @@
       </div>
       <div class="stat-divider"></div>
       <div class="stat-item">
-        <div class="stat-value">¥{{ tripPlan.budget?.total_cost || 0 }}</div>
+        <div class="stat-value">¥{{ tripPlan.budget?.total || 0 }}</div>
         <div class="stat-label">预算</div>
       </div>
       <div class="stat-divider"></div>
@@ -149,7 +149,6 @@ import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import type { TripPlan } from '@/types'
 import { saveTripToHistory, getTripDetail, finalizeDraftStream } from '@/services/api'
-import ResultHero from '@/components/result/ResultHero.vue'
 import TabOverview from '@/components/result/TabOverview.vue'
 import TabBudget from '@/components/result/TabBudget.vue'
 import TabMap from '@/components/result/TabMap.vue'
@@ -182,7 +181,7 @@ const totalAttractions = computed(() => {
 
 const transportLabel = computed(() => {
   if (!tripPlan.value) return '-'
-  const transport = tripPlan.value.transport_mode || tripPlan.value.days?.[0]?.transport_mode
+  const transport = tripPlan.value.transport_mode || tripPlan.value.days?.[0]?.transport_mode || ''
   const labels: Record<string, string> = {
     'driving': '自驾',
     'transit': '公交',

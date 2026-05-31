@@ -92,6 +92,7 @@ export interface DayPlan {
   route_segments: RouteSegment[]
   timeline_order?: TimelineOrderItem[]
   day_start_time?: string
+  transport_mode?: string
 }
 
 export interface TimelineOrderItem {
@@ -121,6 +122,8 @@ export interface TripPlan {
   companions?: CompanionInfo
   trip_tagline?: string
   weather_summary?: string
+  title?: string
+  transport_mode?: string
 }
 
 export interface TripFormData {

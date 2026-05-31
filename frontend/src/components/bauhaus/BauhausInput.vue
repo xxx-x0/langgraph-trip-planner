@@ -6,7 +6,7 @@ interface Props {
   type?: 'text' | 'number' | 'email'
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   placeholder: '',
   disabled: false,
   type: 'text'

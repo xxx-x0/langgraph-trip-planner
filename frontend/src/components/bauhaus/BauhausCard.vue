@@ -4,7 +4,7 @@ interface Props {
   accentColor?: 'red' | 'blue' | 'yellow'
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   decoration: 'circle',
   accentColor: 'blue'
 })
