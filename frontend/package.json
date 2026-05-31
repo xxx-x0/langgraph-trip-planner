@@ -6,13 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.7.9",
     "echarts": "^6.0.0",
+    "gsap": "^3.15.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.3",
     "marked": "^18.0.4",
@@ -24,8 +27,11 @@
   "devDependencies": {
     "@types/node": "^22.10.5",
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.4.10",
+    "happy-dom": "^20.9.0",
     "typescript": "^5.7.3",
     "vite": "^6.0.7",
+    "vitest": "^4.1.7",
     "vue-tsc": "^2.2.0"
   }
 }

@@ -15,6 +15,12 @@ import Home from './views/Home.vue'
 import Result from './views/Result.vue'
 import MyTrips from './views/MyTrips.vue'
 import DiscoverView from './views/DiscoverView.vue'
+import { gsap } from 'gsap'
+import { Flip } from 'gsap/Flip'
+import { SplitText } from 'gsap/SplitText'
+
+// GSAP 插件应在 app 级注册一次
+gsap.registerPlugin(Flip, SplitText)
 
 const router = createRouter({
   history: createWebHistory(),
