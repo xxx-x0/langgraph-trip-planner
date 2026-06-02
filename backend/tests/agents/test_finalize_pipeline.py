@@ -158,3 +158,18 @@ async def test_finalize_preserves_timeline_order_and_day_start_time():
         {"kind": "attraction", "ref_name": "A"},
         {"kind": "meal", "ref_name": "自选正餐"},
     ]
+
+
+from app.agents.langgraph_agent.finalize.pipeline import _parse_ticket_price
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("60", 60),
+    ("免费", 0),
+    (None, 0),
+    ("￥80起", 80),
+    (120, 120),
+    ("", 0),
+])
+def test_parse_ticket_price(raw, expected):
+    assert _parse_ticket_price(raw) == expected

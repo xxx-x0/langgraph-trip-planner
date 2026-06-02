@@ -1,5 +1,6 @@
 """定稿流水线：草稿 → TripPlan → 全局综合 + 偏好提取 → trip_history"""
 import json
+import re
 from typing import Tuple, Optional
 
 from ....models.schemas import (
@@ -28,6 +29,19 @@ async def _run_global_synthesizer(trip_plan: TripPlan, free_text: str) -> Tuple[
     except Exception as e:
         print(f"⚠️ global_synthesizer 失败，使用兜底: {e}")
         return "", "", _generate_weather_summary_fallback(trip_plan)
+
+
+def _parse_ticket_price(val) -> int:
+    """把发现页门票字段转成 int 元。
+
+    "60"->60, "免费"->0, "￥80起"->80, None/""/无数字 ->0, 数字原样取整。
+    """
+    if val is None:
+        return 0
+    if isinstance(val, (int, float)):
+        return int(val)
+    m = re.search(r"\d+", str(val))
+    return int(m.group()) if m else 0
 
 
 def _make_pseudo_request(plan: TripPlan, free_text: str):
