@@ -25,7 +25,7 @@
     </div>
 
     <!-- Hero 区域 - 红色背景 -->
-    <div v-if="tripPlan" class="result-hero">
+    <div v-if="tripPlan" class="result-hero" data-flip-id="loader-hero">
       <div class="hero-content">
         <h1 class="hero-title">{{ tripPlan.title || tripPlan.city + '旅行计划' }}</h1>
         <div class="hero-actions">
@@ -149,6 +149,7 @@ import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import type { TripPlan } from '@/types'
 import { saveTripToHistory, getTripDetail, finalizeDraftStream } from '@/services/api'
+import { useTripLoader } from '@/composables/useTripLoader'
 import TabOverview from '@/components/result/TabOverview.vue'
 import TabBudget from '@/components/result/TabBudget.vue'
 import TabMap from '@/components/result/TabMap.vue'
@@ -157,6 +158,7 @@ import TabWeather from '@/components/result/TabWeather.vue'
 
 const router = useRouter()
 const route = useRoute()
+const tripLoader = useTripLoader()
 
 const isStreaming = computed(() => route.query.streaming === 'true')
 const skeletonStage = ref<'init' | 'hero' | 'itinerary' | 'done' | 'error'>('init')
@@ -240,6 +242,8 @@ async function startStreaming() {
         progressCount++
         if (progressCount === 1) skeletonStage.value = 'hero'
         else if (progressCount === 2) skeletonStage.value = 'itinerary'
+        // 驱动 Poster B 底部状态条真实 SSE 文案（progress=0：不确定态，不显示百分比）
+        tripLoader.updateProgress(event.step, event.message, 0)
       } else if (event.type === 'complete') {
         tripPlan.value = event.trip_plan
         skeletonStage.value = 'done'
@@ -250,14 +254,20 @@ async function startStreaming() {
         if (tripPlan.value) {
           await loadAttractionPhotos()
         }
+        // tripPlan 已填充且路由已切换：.result-hero 此刻才在 DOM 中，
+        // 等下一帧 DOM 落定后再 markReady()，Flip 才找得到 [data-flip-id="loader-hero"] 落点
+        await nextTick()
+        tripLoader.markReady()
       } else if (event.type === 'error') {
         streamError.value = event.message || '生成失败'
         skeletonStage.value = 'error'
+        tripLoader.dismiss() // 直接撤场，露出 error skeleton + 重试按钮
       }
     })
   } catch (e: any) {
     streamError.value = e?.message || '连接失败'
     skeletonStage.value = 'error'
+    tripLoader.dismiss() // 含 finalizeDraftStream 180s fetch 超时：撤场露出 error skeleton
   }
 }
 
