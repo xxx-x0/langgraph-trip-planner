@@ -45,11 +45,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onUnmounted, nextTick } from 'vue'
+import { gsap } from 'gsap'
+import { Flip } from 'gsap/Flip'
+import { SplitText } from 'gsap/SplitText'
 import { useTripLoader, type LoaderContext } from '@/composables/useTripLoader'
 import { labelForNode, progressForNode, CONSTRUCTION_STEPS, CONSTRUCTION_TOTAL } from './constructionSteps'
 
-const { state } = useTripLoader()
+const { state, setSteady, finishFlip } = useTripLoader()
 
 // 元素 ref（GSAP Task 用得到，先声明）
 const posterRef = ref<HTMLElement | null>(null)
@@ -80,6 +83,137 @@ const stepIndexLabel = computed(() => {
   const human = idx < 0 ? 0 : idx + 1
   return `${String(human).padStart(2, '0')}/${String(CONSTRUCTION_TOTAL).padStart(2, '0')}`
 })
+
+// ===== GSAP 动画句柄与清理 =====
+let entranceTl: gsap.core.Timeline | null = null
+let steadyTl: gsap.core.Timeline | null = null
+let splitInstance: SplitText | null = null
+// 用 ReturnType 推导，避免依赖具体类型名（不同 gsap 版本类型导出名不一）
+let mm: ReturnType<typeof gsap.matchMedia> | null = null
+
+function killAll() {
+  entranceTl?.kill(); entranceTl = null
+  steadyTl?.kill(); steadyTl = null
+  splitInstance?.revert(); splitInstance = null
+  mm?.revert(); mm = null
+}
+
+onUnmounted(killAll)
+
+// ===== 幕1-4：入场 + steady =====
+function playEntrance() {
+  killAll()
+  if (!posterRef.value) return
+
+  mm = gsap.matchMedia()
+
+  mm.add('(prefers-reduced-motion: no-preference)', () => {
+    const tl = gsap.timeline({
+      defaults: { ease: 'power3.out' },
+      onComplete: () => {
+        setSteady()
+        startSteady()
+      },
+    })
+    entranceTl = tl
+
+    // 幕1 SCAFFOLD：轴线划下
+    tl.from(axisRef.value, { scaleY: 0, transformOrigin: 'top', duration: 0.6 })
+
+    // 幕2 SHAPES IN：几何件入场
+    tl.from(circleRef.value, { y: -120, opacity: 0, duration: 0.5, ease: 'back.out(1.7)' }, 0.5)
+      .from(triangleRef.value, { rotation: -90, opacity: 0, duration: 0.5 }, 0.6)
+      .from(squareRef.value, { x: 120, y: 120, opacity: 0, duration: 0.5 }, 0.7)
+      .from(cornerRef.value, { opacity: 0, y: -10, duration: 0.4 }, 0.7)
+
+    // 幕3 DATA REVEAL：大数字、红块、城市名、状态条
+    tl.from(megaRef.value, { scale: 0.6, opacity: 0, duration: 0.6, ease: 'back.out(1.7)' }, 1.0)
+      .from(heroRef.value, { x: 160, opacity: 0, duration: 0.6 }, 1.2)
+      .from(statusRef.value, { y: 60, opacity: 0, duration: 0.5 }, 1.3)
+
+    // 城市名字符级浮现
+    if (heroRef.value) {
+      const cnEl = heroRef.value.querySelector('.bh-hero-cn')
+      if (cnEl) {
+        splitInstance = SplitText.create(cnEl as HTMLElement, { type: 'chars' })
+        tl.from(splitInstance.chars, { opacity: 0, y: 20, stagger: 0.05, duration: 0.4 }, 1.5)
+      }
+    }
+
+    return () => { tl.kill(); entranceTl = null }
+  })
+
+  // reduced-motion：直接静态显示，立刻 steady
+  mm.add('(prefers-reduced-motion: reduce)', () => {
+    setSteady()
+    return () => {}
+  })
+}
+
+function startSteady() {
+  if (!circleRef.value) return
+  // 红块极轻微 breathing + 三角 floaty（仅 no-preference 下；reduce 模式不调用此函数路径动画）
+  steadyTl = gsap.timeline({ repeat: -1, yoyo: true })
+  steadyTl.to(heroRef.value, { scale: 1.005, duration: 3, ease: 'sine.inOut' })
+    .to(triangleRef.value, { y: -8, duration: 2.4, ease: 'sine.inOut' }, 0)
+}
+
+// ===== 幕5：Flip 收束 =====
+async function playFlipDismiss() {
+  const dest = document.querySelector<HTMLElement>('[data-flip-id="loader-hero"]')
+
+  // 找不到目标（异常）：直接结束
+  if (!dest || !heroRef.value) {
+    finishFlip()
+    return
+  }
+
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  if (reduce) {
+    // 降级：整屏淡出，不做位置变形
+    gsap.to('.bh-loader', { opacity: 0, duration: 0.2, onComplete: finishFlip })
+    return
+  }
+
+  steadyTl?.kill(); steadyTl = null
+
+  // 装饰元素先飞散/淡出
+  const decor = [axisRef.value, circleRef.value, cornerRef.value, megaRef.value, triangleRef.value, squareRef.value, statusRef.value].filter(Boolean)
+  await gsap.to(decor, { opacity: 0, scale: 0.9, duration: 0.3, stagger: 0.04, ease: 'power2.in' })
+
+  // 让 loader 背景透出底层草稿页
+  gsap.to('.bh-loader', { backgroundColor: 'rgba(250,248,243,0)', duration: 0.4 })
+
+  // 把 loader 红块吸附到草稿页锚点（FLIP fit）
+  Flip.fit(heroRef.value, dest, {
+    duration: 0.7,
+    ease: 'power3.inOut',
+    absolute: true,
+    scale: true,
+    onComplete: () => {
+      gsap.to(heroRef.value, {
+        opacity: 0,
+        duration: 0.2,
+        onComplete: finishFlip,
+      })
+    },
+  })
+}
+
+// ===== phase 驱动动画 =====
+watch(
+  () => state.phase,
+  async (phase, prev) => {
+    if (phase === 'entering' && prev === 'idle') {
+      await nextTick()
+      playEntrance()
+    } else if (phase === 'flipping') {
+      await nextTick()
+      playFlipDismiss()
+    }
+  },
+)
 </script>
 
 <style scoped>
