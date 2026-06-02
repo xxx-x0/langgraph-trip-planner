@@ -7,7 +7,8 @@ export interface LoaderContext {
   city: string
   days: number
   attractionCount: number
-  weatherSummary?: string
+  /** 海报 hero 下方的小字 meta 行（如日期区间）。展示用，缺省回退 'YOUR TRIP'。 */
+  metaLine?: string
 }
 
 interface LoaderStore {

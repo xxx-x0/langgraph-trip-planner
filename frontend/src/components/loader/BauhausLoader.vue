@@ -19,7 +19,7 @@
         <div class="bh-hero-cn">{{ ctx.city }}</div>
         <div class="bh-hero-en">{{ cityEn }}</div>
         <div class="bh-hero-line"></div>
-        <div class="bh-hero-meta">{{ ctx.weatherSummary || 'YOUR TRIP' }}</div>
+        <div class="bh-hero-meta">{{ ctx.metaLine || 'YOUR TRIP' }}</div>
       </div>
 
       <!-- 左下：蓝三角 -->

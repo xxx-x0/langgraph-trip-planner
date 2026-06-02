@@ -570,7 +570,12 @@ async function confirmAndPlan() {
     city: formData.value.city,
     days: formData.value.travel_days,
     attractionCount: selected.length,
-    weatherSummary: weatherInfo.value || undefined,
+    // 注：weatherInfo 是后端原始天气载荷（Python str 化的 MCP content blocks，无法在前端可靠解析），
+    // 仅作为 createDraftFromSelectionsStream 的入参透传给后端；海报 meta 用干净的日期区间。
+    metaLine:
+      formData.value.start_date && formData.value.end_date
+        ? `${formData.value.start_date} – ${formData.value.end_date}`
+        : undefined,
   })
 
   // 保险看门狗：仅提示、不强制撤场（后端可能仍在正常出结果）
