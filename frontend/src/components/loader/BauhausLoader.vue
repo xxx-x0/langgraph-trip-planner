@@ -39,8 +39,65 @@
       </div>
     </div>
 
-    <!-- REFINEMENT 海报：Phase B 实现，暂留占位 -->
-    <div v-else class="bh-poster bh-poster--placeholder"></div>
+    <!-- REFINEMENT 海报：定稿打磨 / FINAL PROOF -->
+    <div v-else ref="posterRef" class="bh-poster bh-poster--refine">
+      <!-- ① 顶部红横幅（Flip 源） -->
+      <div ref="bannerRef" class="pb-banner" data-flip-source="loader-hero">
+        <span class="pb-banner-cn">{{ ctx.city }}</span>
+        <span v-if="cityEnRefine" class="pb-banner-en">{{ cityEnRefine }} · {{ ctx.days }}日</span>
+        <span class="pb-banner-badge">FINAL PROOF</span>
+        <div class="pb-crop tl"></div>
+        <div class="pb-crop tr"></div>
+      </div>
+
+      <!-- ② 左栏 日程校样台账 -->
+      <div ref="ledgerRef" class="pb-ledger">
+        <div class="pb-ledger-hd">DAYS · 日程校样</div>
+        <div
+          v-for="(num, i) in ledgerRows"
+          :key="num"
+          class="pb-dayrow"
+          :style="{ '--d': rowDelay(i) }"
+        >
+          <span class="pb-dayrow-num">{{ String(num).padStart(2, '0') }}</span>
+          <span class="pb-dayrow-ln"></span>
+          <span class="pb-dayrow-chk"></span>
+        </div>
+        <div v-if="foldedCount > 0" class="pb-dayrow pb-dayrow--fold">
+          <span class="pb-dayrow-num">…</span>
+          <span class="pb-fold-label">+{{ foldedCount }}</span>
+        </div>
+      </div>
+
+      <!-- 几何三件（Poster A 几何件的「归位」回响） -->
+      <div ref="geoRef" class="pb-geo">
+        <span class="pb-geo-tri"></span>
+        <span class="pb-geo-cir"></span>
+        <span class="pb-geo-sq"></span>
+      </div>
+
+      <!-- ③ 右栏 总体建议排版区 -->
+      <div ref="spreadRef" class="pb-spread">
+        <div class="pb-spread-hd">
+          <span class="pb-spread-t">OVERVIEW · 总体建议</span>
+          <span class="pb-mark">✳</span>
+        </div>
+        <div class="pb-lines">
+          <div v-for="n in 6" :key="n" class="pb-line">
+            <span class="pb-line-cap"></span>
+            <span class="pb-line-bar"></span>
+          </div>
+        </div>
+        <div class="pb-stamp">定稿中<small>FINALIZING</small></div>
+        <div class="pb-sweep"></div>
+      </div>
+
+      <!-- ④ 底部黑色状态条 -->
+      <div ref="statusRefB" class="pb-status">
+        <span class="pb-status-lbl">▶ {{ statusTextRefine }}</span>
+        <span class="pb-barber"></span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -51,6 +108,7 @@ import { Flip } from 'gsap/Flip'
 import { SplitText } from 'gsap/SplitText'
 import { useTripLoader, type LoaderContext } from '@/composables/useTripLoader'
 import { labelForNode, progressForNode, CONSTRUCTION_STEPS, CONSTRUCTION_TOTAL } from './constructionSteps'
+import { romanizeCity } from './cityRomanization'
 
 const { state, setSteady, finishFlip } = useTripLoader()
 
@@ -64,6 +122,13 @@ const heroRef = ref<HTMLElement | null>(null)
 const triangleRef = ref<HTMLElement | null>(null)
 const squareRef = ref<HTMLElement | null>(null)
 const statusRef = ref<HTMLElement | null>(null)
+
+// refinement 专用 ref（Flip 源 + 收束前淡出的装饰组）
+const bannerRef = ref<HTMLElement | null>(null)   // 顶部红横幅 = Flip 源
+const ledgerRef = ref<HTMLElement | null>(null)
+const spreadRef = ref<HTMLElement | null>(null)
+const statusRefB = ref<HTMLElement | null>(null)
+const geoRef = ref<HTMLElement | null>(null)
 
 // context 兜底，避免 null 解构崩溃
 const ctx = computed<LoaderContext>(() => state.context ?? { city: '', days: 0, attractionCount: 0 })
@@ -83,6 +148,31 @@ const stepIndexLabel = computed(() => {
   const human = idx < 0 ? 0 : idx + 1
   return `${String(human).padStart(2, '0')}/${String(CONSTRUCTION_TOTAL).padStart(2, '0')}`
 })
+
+// ===== REFINEMENT 海报数据 =====
+const REFINE_CYCLE = 5      // 绿勾点亮循环周期（秒），与 pbCheck/pbTick 一致
+const MAX_LEDGER_ROWS = 8   // 台账最多渲染行数，超出折叠
+
+// refinement 英文副标题：命中映射显示，未命中（中文）返回 null → 模板省略英文行
+const cityEnRefine = computed(() => romanizeCity(ctx.value.city))
+
+// 状态条文案：绑定后端真实 SSE step 文案，缺省回退「定稿中…」
+const statusTextRefine = computed(() => state.currentMessage || '定稿中…')
+
+const dayCount = computed(() => Math.max(0, ctx.value.days || 0))
+const shownDayCount = computed(() => Math.min(dayCount.value, MAX_LEDGER_ROWS))
+// 渲染的台账行号 [1..shownDayCount]
+const ledgerRows = computed(() =>
+  Array.from({ length: shownDayCount.value }, (_, i) => i + 1),
+)
+// N>8 时折叠的剩余天数（用于「…+N」行）；N<=8 时为 0
+const foldedCount = computed(() => Math.max(0, dayCount.value - MAX_LEDGER_ROWS))
+
+// 绿勾逐行点亮的 animation-delay（按行号在一个循环周期内等分）
+function rowDelay(i: number): string {
+  const n = shownDayCount.value || 1
+  return `${((i / n) * REFINE_CYCLE).toFixed(2)}s`
+}
 
 // ===== GSAP 动画句柄与清理 =====
 let entranceTl: gsap.core.Timeline | null = null
@@ -239,6 +329,10 @@ watch(
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  /* Poster B 扩展色：绿（精修/通过）、橙（旋转校样标）、奶油（排版区底） */
+  --bh-green: #0E9F6E;
+  --bh-orange: #E8772E;
+  --bh-cream: #f1ece0;
 }
 
 .bh-poster {
@@ -377,4 +471,114 @@ watch(
   .bh-circle { width: 52px; height: 52px; }
   .bh-square { width: 76px; height: 76px; }
 }
+
+/* ===== REFINEMENT (Poster B) ===== */
+.bh-poster--refine { background: #faf8f3; }
+
+/* ① 顶部红横幅（Flip 源） */
+.pb-banner {
+  position: absolute; top: 0; left: 0; right: 0; height: 17%;
+  background: var(--primary-red); border-bottom: 4px solid var(--foreground);
+  color: #fff; display: flex; align-items: center; gap: 18px; padding: 0 5vw; z-index: 6;
+}
+.pb-banner-cn { font-size: clamp(28px, 4vw, 56px); font-weight: 900; line-height: 1; letter-spacing: -0.02em; }
+.pb-banner-en { font-size: clamp(11px, 1vw, 15px); letter-spacing: 0.4em; opacity: 0.92; }
+.pb-banner-badge {
+  margin-left: auto; font-size: clamp(10px, 0.9vw, 13px); font-weight: 800; letter-spacing: 0.18em;
+  border: 2px solid #fff; padding: 4px 12px;
+}
+.pb-crop { position: absolute; width: 16px; height: 16px; z-index: 7; }
+.pb-crop::before, .pb-crop::after { content: ''; position: absolute; background: var(--foreground); }
+.pb-crop::before { width: 16px; height: 2px; top: 7px; }
+.pb-crop::after { width: 2px; height: 16px; left: 7px; }
+.pb-crop.tl { top: 4px; left: 4px; }
+.pb-crop.tr { top: 4px; right: 4px; }
+
+/* ② 左栏 日程校样台账 */
+.pb-ledger {
+  position: absolute; left: 0; top: 17%; width: 37%; bottom: 12%;
+  border-right: 3px solid var(--foreground); padding: 2vh 2vw 0; box-sizing: border-box; overflow: hidden;
+}
+.pb-ledger-hd {
+  font-size: clamp(10px, 1vw, 14px); font-weight: 800; letter-spacing: 0.2em; color: var(--foreground);
+  border-bottom: 2px solid var(--foreground); padding-bottom: 8px; margin-bottom: 2vh;
+}
+.pb-dayrow { display: flex; align-items: center; gap: 12px; margin-bottom: clamp(6px, 1.6vh, 16px); }
+.pb-dayrow-num { font-size: clamp(14px, 1.7vw, 22px); font-weight: 900; width: 34px; color: var(--foreground); }
+.pb-dayrow-ln { flex: 1; height: 8px; background: rgba(18, 18, 18, .12); }
+.pb-dayrow-chk {
+  position: relative; width: 20px; height: 20px; border: 2px solid var(--foreground); background: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; font-weight: 900; flex: 0 0 auto;
+}
+.pb-dayrow-chk::after { content: '✓'; position: absolute; opacity: 0; }
+.pb-dayrow--fold .pb-dayrow-num { width: auto; }
+.pb-fold-label { font-size: clamp(12px, 1.3vw, 16px); font-weight: 800; letter-spacing: 0.1em; color: var(--foreground); opacity: 0.7; }
+
+/* 几何三件 */
+.pb-geo { position: absolute; left: 2vw; bottom: 13.5%; display: flex; align-items: flex-end; gap: 14px; z-index: 4; }
+.pb-geo-tri {
+  width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent;
+  border-bottom: 26px solid var(--primary-blue); filter: drop-shadow(2px 2px 0 var(--foreground));
+}
+.pb-geo-cir { width: 26px; height: 26px; border-radius: 50%; background: var(--bh-green); border: 2px solid var(--foreground); box-shadow: 2px 2px 0 var(--foreground); }
+.pb-geo-sq { width: 24px; height: 24px; background: var(--primary-yellow); border: 2px solid var(--foreground); box-shadow: 2px 2px 0 var(--foreground); }
+
+/* ③ 右栏 总体建议排版区 */
+.pb-spread { position: absolute; left: 37%; right: 0; top: 17%; bottom: 12%; background: var(--bh-cream); overflow: hidden; }
+.pb-spread-hd { display: flex; align-items: center; justify-content: space-between; padding: 2vh 2vw 1vh; }
+.pb-spread-t { font-size: clamp(10px, 1vw, 14px); font-weight: 800; letter-spacing: 0.2em; color: var(--foreground); }
+.pb-mark { width: 28px; height: 28px; color: var(--bh-orange); font-size: 28px; line-height: 28px; text-align: center; font-weight: 900; }
+.pb-lines { padding: 1vh 2vw; }
+.pb-line { height: 11px; margin-bottom: clamp(6px, 1.6vh, 14px); display: flex; align-items: center; gap: 10px; }
+.pb-line-cap { width: 16px; height: 11px; flex: 0 0 auto; }
+.pb-line-bar { height: 9px; background: rgba(18, 18, 18, .16); }
+.pb-line:nth-child(1) .pb-line-cap { background: var(--foreground); } .pb-line:nth-child(1) .pb-line-bar { width: 88%; }
+.pb-line:nth-child(2) .pb-line-cap { background: var(--primary-blue); } .pb-line:nth-child(2) .pb-line-bar { width: 70%; }
+.pb-line:nth-child(3) .pb-line-cap { background: var(--bh-green); } .pb-line:nth-child(3) .pb-line-bar { width: 80%; }
+.pb-line:nth-child(4) .pb-line-cap { background: var(--primary-yellow); } .pb-line:nth-child(4) .pb-line-bar { width: 62%; }
+.pb-line:nth-child(5) .pb-line-cap { background: var(--foreground); } .pb-line:nth-child(5) .pb-line-bar { width: 76%; }
+.pb-line:nth-child(6) .pb-line-cap { background: var(--primary-blue); } .pb-line:nth-child(6) .pb-line-bar { width: 54%; }
+.pb-sweep {
+  position: absolute; top: 0; bottom: 0; width: 42%; left: -55%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .9) 46%, rgba(14, 159, 110, .35) 56%, transparent);
+  transform: skewX(-12deg); pointer-events: none; z-index: 3;
+}
+.pb-stamp {
+  position: absolute; right: 8%; bottom: 16%; transform: rotate(-9deg);
+  border: 3px solid var(--bh-green); color: var(--bh-green); padding: 6px 14px;
+  font-size: clamp(13px, 1.4vw, 18px); font-weight: 900; letter-spacing: 0.12em; opacity: 0.85; z-index: 4;
+}
+.pb-stamp small { display: block; font-size: 0.6em; letter-spacing: 0.3em; text-align: center; }
+
+/* ④ 底部黑色状态条 */
+.pb-status {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 12%; background: var(--foreground); color: #fff;
+  display: flex; align-items: center; padding: 0 5vw; gap: 18px; z-index: 6;
+}
+.pb-status-lbl { font-size: clamp(12px, 1.2vw, 16px); font-weight: 700; letter-spacing: 0.12em; white-space: nowrap; }
+.pb-barber {
+  flex: 1; height: 10px;
+  background: repeating-linear-gradient(45deg, var(--primary-yellow) 0 9px, transparent 9px 18px);
+  background-size: 25px 100%; opacity: 0.85;
+}
+
+/* 循环 / 入场动画：仅在允许动效时启用（reduce 用户看到静止海报） */
+@media (prefers-reduced-motion: no-preference) {
+  .pb-banner { animation: pbBannerIn 0.7s cubic-bezier(.16, 1, .3, 1) both; }
+  .pb-dayrow-chk { animation: pbCheck 5s infinite; animation-delay: var(--d, 0s); }
+  .pb-dayrow-chk::after { animation: pbTick 5s infinite; animation-delay: var(--d, 0s); }
+  .pb-mark { animation: pbSpin 6s linear infinite; }
+  .pb-sweep { animation: pbSweep 2.4s infinite linear; }
+  .pb-stamp { animation: pbStamp 5s infinite; }
+  .pb-barber { animation: pbBarber 0.7s infinite linear; }
+}
+
+@keyframes pbBannerIn { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+@keyframes pbCheck { 0%, 8% { background: #fff; } 14%, 84% { background: var(--bh-green); } 90%, 100% { background: #fff; } }
+@keyframes pbTick { 0%, 10% { opacity: 0; } 16%, 84% { opacity: 1; } 90%, 100% { opacity: 0; } }
+@keyframes pbSpin { to { transform: rotate(360deg); } }
+@keyframes pbSweep { 0% { left: -55%; } 100% { left: 115%; } }
+@keyframes pbStamp { 0%, 100% { transform: rotate(-9deg) scale(1); } 50% { transform: rotate(-9deg) scale(1.05); } }
+@keyframes pbBarber { from { background-position: 0 0; } to { background-position: 25px 0; } }
+
 </style>
