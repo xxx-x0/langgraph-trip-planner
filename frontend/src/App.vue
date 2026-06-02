@@ -37,11 +37,13 @@
         <span>Let's Go! 智能旅行助手 ©2025</span>
       </a-layout-footer>
     </a-layout>
+    <BauhausLoader />
   </div>
 </template>
 
 <script setup lang="ts">
 import { useTheme } from '@/composables/useTheme'
+import BauhausLoader from '@/components/loader/BauhausLoader.vue'
 
 const { resolvedTheme, toggleTheme } = useTheme()
 </script>
