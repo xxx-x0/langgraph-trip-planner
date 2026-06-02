@@ -200,7 +200,7 @@ function doFinish() {
 }
 
 // ===== 幕1-4：入场 + steady =====
-function playEntrance() {
+function playEntranceConstruction() {
   killAll()
   if (!posterRef.value) return
 
@@ -249,6 +249,13 @@ function playEntrance() {
   })
 }
 
+// REFINEMENT 入场为纯 CSS（pbBannerIn 等 keyframes），GSAP 不参与；
+// 这里只把状态机从 entering 推进到 steady。reduce 与 no-preference 共用本路径，
+// 动/静差异完全由 CSS @media 决定。
+function playEntranceRefinement() {
+  setSteady()
+}
+
 function startSteady() {
   if (!circleRef.value) return
   // 红块极轻微 breathing + 三角 floaty（仅 no-preference 下；reduce 模式不调用此函数路径动画）
@@ -263,10 +270,18 @@ async function playFlipDismiss() {
   // 正常链路 ≈ 装饰淡出(~0.54s)+Flip(0.7s)+淡出(0.2s)≈1.44s，2.5s 留足余量不误杀。
   flipSafety = window.setTimeout(doFinish, 2500)
 
+  // 按海报选择 Flip 源（顶部红块）与收束前先淡出的装饰组
+  const isRefine = state.poster === 'refinement'
+  const src = isRefine ? bannerRef.value : heroRef.value
+  const decor = (isRefine
+    ? [ledgerRef.value, spreadRef.value, statusRefB.value, geoRef.value]
+    : [axisRef.value, circleRef.value, cornerRef.value, megaRef.value, triangleRef.value, squareRef.value, statusRef.value]
+  ).filter(Boolean)
+
   const dest = document.querySelector<HTMLElement>('[data-flip-id="loader-hero"]')
 
-  // 找不到目标（异常）：直接结束
-  if (!dest || !heroRef.value) {
+  // 找不到目标或源（异常）：直接结束
+  if (!dest || !src) {
     doFinish()
     return
   }
@@ -282,20 +297,19 @@ async function playFlipDismiss() {
   steadyTl?.kill(); steadyTl = null
 
   // 装饰元素先飞散/淡出
-  const decor = [axisRef.value, circleRef.value, cornerRef.value, megaRef.value, triangleRef.value, squareRef.value, statusRef.value].filter(Boolean)
   await gsap.to(decor, { opacity: 0, scale: 0.9, duration: 0.3, stagger: 0.04, ease: 'power2.in' })
 
-  // 让 loader 背景透出底层草稿页
+  // 让 loader 背景透出底层页面
   gsap.to('.bh-loader', { backgroundColor: 'rgba(250,248,243,0)', duration: 0.4 })
 
-  // 把 loader 红块吸附到草稿页锚点（FLIP fit）
-  Flip.fit(heroRef.value, dest, {
+  // 把 loader 红块吸附到目标页锚点（FLIP fit）
+  Flip.fit(src, dest, {
     duration: 0.7,
     ease: 'power3.inOut',
     absolute: true,
     scale: true,
     onComplete: () => {
-      gsap.to(heroRef.value, {
+      gsap.to(src, {
         opacity: 0,
         duration: 0.2,
         onComplete: doFinish,
@@ -310,7 +324,8 @@ watch(
   async (phase, prev) => {
     if (phase === 'entering' && prev === 'idle') {
       await nextTick()
-      playEntrance()
+      if (state.poster === 'refinement') playEntranceRefinement()
+      else playEntranceConstruction()
     } else if (phase === 'flipping') {
       await nextTick()
       playFlipDismiss()
