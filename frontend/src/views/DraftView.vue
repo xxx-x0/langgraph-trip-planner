@@ -1,16 +1,17 @@
 <template>
   <div class="draft-page">
     <header class="draft-hero">
-      <h1>{{ draft?.city || '加载中...' }}</h1>
+      <div class="draft-hero-anchor" data-flip-id="loader-hero">
+        <span class="draft-hero-city">{{ draft?.city || '行程' }}</span>
+        <span class="draft-hero-days">{{ draft?.request?.travel_days || '' }} 日</span>
+      </div>
       <div class="meta" v-if="draft">
         {{ draft.request.start_date }} 至 {{ draft.request.end_date }} ·
         {{ draft.request.travel_days }} 天
       </div>
     </header>
 
-    <a-spin v-if="loading" tip="加载草稿中..." />
-
-    <main v-else-if="draft" class="draft-content">
+    <main v-if="draft" class="draft-content">
       <div class="days-container">
         <DayCard
           v-for="(ctx, idx) in draft.days"
@@ -38,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -46,6 +47,7 @@ import {
   rewriteNarrative,
 } from '@/services/api'
 import DayCard from '@/components/draft/DayCard.vue'
+import { useTripLoader } from '@/composables/useTripLoader'
 
 const route = useRoute()
 const router = useRouter()
@@ -53,6 +55,7 @@ const draftId = computed(() => route.params.id as string)
 
 const draft = ref<any>(null)
 const loading = ref(true)
+const tripLoader = useTripLoader()
 
 const dayBusy = reactive<Record<number, string>>({})
 
@@ -77,11 +80,17 @@ async function loadDraft() {
   loading.value = true
   try {
     draft.value = await getDraft(draftId.value)
-    // 自动展开第 1 天
+    // 自动展开并装配第 1 天
     if (draft.value && !draft.value.days_detail[0]) {
       await onAssemble(0, {})
     }
+    // 草稿与第一天内容已就绪：若从 Discover 接力来的 loader 仍在，触发 Flip 收束
+    if (tripLoader.state.phase !== 'idle') {
+      await nextTick()
+      tripLoader.markReady()
+    }
   } catch (e: any) {
+    tripLoader.dismiss() // 直接撤场，露出下方错误/空态
     message.error(e?.response?.data?.detail || '加载草稿失败')
   } finally {
     loading.value = false
@@ -136,4 +145,16 @@ onMounted(loadDraft)
   position: sticky; bottom: 0; background: white;
   padding: 16px; border-top: 1px solid #eee; text-align: right;
 }
+.draft-hero-anchor {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  background: var(--primary-red);
+  color: #fff;
+  padding: 16px 24px;
+  border: 3px solid var(--foreground);
+  box-shadow: 6px 6px 0 var(--foreground);
+}
+.draft-hero-city { font-size: 32px; font-weight: 900; line-height: 1; letter-spacing: -0.02em; }
+.draft-hero-days { font-size: 16px; font-weight: 700; letter-spacing: 0.1em; opacity: 0.9; }
 </style>
