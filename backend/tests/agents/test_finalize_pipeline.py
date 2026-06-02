@@ -173,3 +173,49 @@ from app.agents.langgraph_agent.finalize.pipeline import _parse_ticket_price
 ])
 def test_parse_ticket_price(raw, expected):
     assert _parse_ticket_price(raw) == expected
+
+
+from app.agents.langgraph_agent.finalize.pipeline import _build_day_context
+
+
+def _pool_two_days():
+    return [DiningPoolDay().model_dump(mode="json"),
+            DiningPoolDay().model_dump(mode="json")]
+
+
+def test_build_day_context_maps_all_attraction_fields():
+    clusters_data = [[{
+        "name": "故宫", "longitude": 116.397, "latitude": 39.916,
+        "address": "东城区景山前街4号", "category": "博物馆", "rating": 4.8,
+        "ticket_price": "60", "description": "皇家宫殿",
+        "poi_id": "P1", "visit_minutes": 180, "image_url": "http://img/1.jpg",
+    }], []]
+    ctx = _build_day_context(
+        0, _sample_macro(), clusters_data, [[], []],
+        _pool_two_days(), [], "08:00",
+    )
+    a = ctx.attractions[0]
+    assert a.name == "故宫"
+    assert a.address == "东城区景山前街4号"
+    assert a.category == "博物馆"
+    assert a.rating == 4.8
+    assert a.ticket_price == 60          # "60" -> int
+    assert a.description == "皇家宫殿"
+    assert a.visit_duration == 180       # 来自 visit_minutes
+    assert a.image_url == "http://img/1.jpg"
+    assert a.poi_id == "P1"
+    assert a.location.longitude == 116.397
+
+
+def test_build_day_context_defaults_when_fields_missing():
+    clusters_data = [[{"name": "X", "longitude": 116.4, "latitude": 39.9}], []]
+    ctx = _build_day_context(
+        0, _sample_macro(), clusters_data, [[], []],
+        _pool_two_days(), [], "08:00",
+    )
+    a = ctx.attractions[0]
+    assert a.address == ""
+    assert a.description == ""
+    assert a.visit_duration == 120       # 默认
+    assert a.ticket_price == 0
+    assert a.category == "景点"

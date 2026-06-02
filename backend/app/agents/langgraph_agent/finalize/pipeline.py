@@ -98,9 +98,14 @@ def _build_day_context(
             loc = Location(longitude=c["longitude"], latitude=c["latitude"])
         attractions.append(Attraction(
             name=c["name"],
-            address=c.get("address", ""),
-            visit_duration=120,
-            description="",
+            address=c.get("address") or "",
+            visit_duration=c.get("visit_minutes") or 120,
+            description=c.get("description") or "",
+            category=c.get("category") or "景点",
+            rating=c.get("rating"),
+            ticket_price=_parse_ticket_price(c.get("ticket_price")),
+            image_url=c.get("image_url"),
+            poi_id=c.get("poi_id") or "",
             location=loc,
         ))
     hotel: Optional[Hotel] = None
