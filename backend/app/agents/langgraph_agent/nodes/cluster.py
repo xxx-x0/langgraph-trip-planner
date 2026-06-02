@@ -377,6 +377,28 @@ async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
     return {"cluster_info": cluster_info, "clusters_data": clusters}
 
 
+def _selection_to_cluster_dict(attr: dict) -> dict:
+    """把发现页已选景点（DiscoveredAttraction 形状的 dict）映射成下游用的
+    cluster dict，保留全部展示字段（不再只留 name + 坐标）。
+
+    坐标从 location 取，缺失则 0（沿用旧行为，便于无坐标兜底）。
+    """
+    loc = attr.get("location") or {}
+    return {
+        "name": attr.get("name", ""),
+        "longitude": loc.get("longitude", 0),
+        "latitude": loc.get("latitude", 0),
+        "address": attr.get("address", ""),
+        "category": attr.get("category"),
+        "rating": attr.get("rating"),
+        "ticket_price": attr.get("ticket_price"),
+        "description": attr.get("description", ""),
+        "poi_id": attr.get("poi_id"),
+        "visit_minutes": attr.get("visit_minutes"),
+        "image_url": attr.get("image_url"),
+    }
+
+
 async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any]:
     """基于用户选择的景点进行聚类（结构化输入，已有坐标）"""
     print("🗺️ 执行节点: cluster_from_selections_node")
@@ -392,28 +414,14 @@ async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any
         print(f"📊 使用用户自定义日程分配: {len(day_assignments)} 天")
         clusters = []
         for day_attrs in day_assignments:
-            day_cluster = []
-            for attr in day_attrs:
-                loc = attr.get("location")
-                if loc:
-                    day_cluster.append({
-                        "name": attr["name"],
-                        "longitude": loc.get("longitude", 0),
-                        "latitude": loc.get("latitude", 0),
-                    })
-                else:
-                    day_cluster.append({"name": attr["name"], "longitude": 0, "latitude": 0})
+            day_cluster = [_selection_to_cluster_dict(attr) for attr in day_attrs]
             clusters.append(day_cluster)
     else:
         valid_attractions = []
         for attr in selected_attractions:
             loc = attr.get("location")
             if loc and loc.get("longitude") and loc.get("latitude"):
-                valid_attractions.append({
-                    "name": attr["name"],
-                    "longitude": loc["longitude"],
-                    "latitude": loc["latitude"],
-                })
+                valid_attractions.append(_selection_to_cluster_dict(attr))
 
         if not valid_attractions:
             names = [a["name"] for a in selected_attractions]
