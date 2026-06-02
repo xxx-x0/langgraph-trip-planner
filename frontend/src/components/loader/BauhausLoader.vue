@@ -90,15 +90,24 @@ let steadyTl: gsap.core.Timeline | null = null
 let splitInstance: SplitText | null = null
 // 用 ReturnType 推导，避免依赖具体类型名（不同 gsap 版本类型导出名不一）
 let mm: ReturnType<typeof gsap.matchMedia> | null = null
+// Flip 收束安全兜底计时器：进入 flipping 后若超时仍未完成（如目标锚点意外缺失），强制复位
+let flipSafety: number | null = null
 
 function killAll() {
   entranceTl?.kill(); entranceTl = null
   steadyTl?.kill(); steadyTl = null
   splitInstance?.revert(); splitInstance = null
   mm?.revert(); mm = null
+  if (flipSafety !== null) { window.clearTimeout(flipSafety); flipSafety = null }
 }
 
 onUnmounted(killAll)
+
+// finishFlip 包装：清掉安全兜底计时器后再复位，避免兜底与正常完成重复触发
+function doFinish() {
+  if (flipSafety !== null) { window.clearTimeout(flipSafety); flipSafety = null }
+  finishFlip()
+}
 
 // ===== 幕1-4：入场 + steady =====
 function playEntrance() {
@@ -160,11 +169,15 @@ function startSteady() {
 
 // ===== 幕5：Flip 收束 =====
 async function playFlipDismiss() {
+  // 安全兜底：进入收束后若 2.5s 仍未完成（如目标锚点意外缺失），强制复位。
+  // 正常链路 ≈ 装饰淡出(~0.54s)+Flip(0.7s)+淡出(0.2s)≈1.44s，2.5s 留足余量不误杀。
+  flipSafety = window.setTimeout(doFinish, 2500)
+
   const dest = document.querySelector<HTMLElement>('[data-flip-id="loader-hero"]')
 
   // 找不到目标（异常）：直接结束
   if (!dest || !heroRef.value) {
-    finishFlip()
+    doFinish()
     return
   }
 
@@ -172,7 +185,7 @@ async function playFlipDismiss() {
 
   if (reduce) {
     // 降级：整屏淡出，不做位置变形
-    gsap.to('.bh-loader', { opacity: 0, duration: 0.2, onComplete: finishFlip })
+    gsap.to('.bh-loader', { opacity: 0, duration: 0.2, onComplete: doFinish })
     return
   }
 
@@ -195,7 +208,7 @@ async function playFlipDismiss() {
       gsap.to(heroRef.value, {
         opacity: 0,
         duration: 0.2,
-        onComplete: finishFlip,
+        onComplete: doFinish,
       })
     },
   })

@@ -573,6 +573,13 @@ async function confirmAndPlan() {
     weatherSummary: weatherInfo.value || undefined,
   })
 
+  // 保险看门狗：仅提示、不强制撤场（后端可能仍在正常出结果）
+  const watchdog = window.setTimeout(() => {
+    if (tripLoader.state.phase !== 'idle' && tripLoader.state.phase !== 'flipping') {
+      message.warning('生成耗时较长，请耐心等待…')
+    }
+  }, 90000)
+
   try {
     await createDraftFromSelectionsStream(
       formData.value,
@@ -613,8 +620,10 @@ async function confirmAndPlan() {
           )
         } else if (event.type === 'complete' && event.draft_id) {
           // 立即切路由；loader 保持显示，由 DraftView 在第一天装配后 markReady 触发 Flip
+          window.clearTimeout(watchdog)
           router.push(`/draft/${event.draft_id}`)
         } else if (event.type === 'error') {
+          window.clearTimeout(watchdog)
           tripLoader.dismiss()
           message.error(event.message || '骨架生成失败')
           phase.value = 'assign'
@@ -622,6 +631,7 @@ async function confirmAndPlan() {
       }
     )
   } catch (e: any) {
+    window.clearTimeout(watchdog)
     tripLoader.dismiss()
     message.error('规划失败: ' + (e.message || '未知错误'))
     phase.value = 'assign'
