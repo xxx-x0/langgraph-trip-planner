@@ -230,18 +230,8 @@
       </div>
     </div>
 
-    <!-- 阶段3: 规划中 -->
-    <div v-else-if="phase === 'planning'" class="planning-layout">
-      <div class="planning-container">
-        <h3>正在生成行程计划...</h3>
-        <PlanProgress
-          :steps="planningSteps"
-          :current-node="planningCurrentNode"
-          :completed-nodes="planningCompletedNodes"
-          :current-message="planningMessage"
-        />
-      </div>
-    </div>
+    <!-- 阶段3: 规划中（由全局 BauhausLoader 覆盖展示） -->
+    <div v-else-if="phase === 'planning'" class="planning-layout"></div>
   </div>
 </template>
 
@@ -252,7 +242,8 @@ import { message } from 'ant-design-vue'
 import { InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
 import SelectableAttractionCard from '@/components/SelectableAttractionCard.vue'
 import DiscoveryMap from '@/components/DiscoveryMap.vue'
-import PlanProgress from '@/components/PlanProgress.vue'
+import { useTripLoader } from '@/composables/useTripLoader'
+import { labelForNode, progressForNode } from '@/components/loader/constructionSteps'
 import {
   discoverAttractionsStream, searchAttractionManual,
   createDraftFromSelectionsStream, previewDayAssignment,
@@ -262,6 +253,7 @@ import type { DraftStreamEvent } from '@/services/api'
 import type { DiscoveredAttraction, TripFormData, DiscoveryStreamEvent, DayDurationInfo } from '@/types'
 
 const router = useRouter()
+const tripLoader = useTripLoader()
 
 const formData = ref<TripFormData | null>(null)
 const attractions = reactive<DiscoveredAttraction[]>([])
@@ -289,21 +281,6 @@ const loadMoreReachedLimit = ref(false)
 
 // AI select state
 const aiSelectLoading = ref(false)
-
-// Planning phase state
-const planningCurrentNode = ref('')
-const planningCompletedNodes = ref<Set<string>>(new Set())
-const planningMessage = ref('')
-const planningSteps = [
-  { key: 'cluster_from_selections', label: '📊 聚类分析景点' },
-  { key: 'search_food', label: '🍜 搜索美食' },
-  { key: 'search_hotel', label: '🏨 搜索酒店' },
-  { key: 'plan_route', label: '🗺️ 规划路线' },
-  { key: 'macro_planner', label: '🏗️ 编排行程骨架' },
-  { key: 'day_plan_subgraph', label: '📝 生成每日行程' },
-  { key: 'reduce_assemble', label: '🔧 合并行程数据' },
-  { key: 'global_synthesizer', label: '💡 生成全局建议' },
-]
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -585,11 +562,16 @@ async function confirmAndPlan() {
   }
 
   phase.value = 'planning'
-  planningCurrentNode.value = ''
-  planningCompletedNodes.value = new Set()
-  planningMessage.value = ''
 
   const selected = attractions.filter(a => a.selected)
+
+  // 启动全局 Bauhaus 加载海报（CONSTRUCTION）
+  tripLoader.begin('construction', {
+    city: formData.value.city,
+    days: formData.value.travel_days,
+    attractionCount: selected.length,
+    weatherSummary: weatherInfo.value || undefined,
+  })
 
   try {
     await createDraftFromSelectionsStream(
@@ -623,19 +605,24 @@ async function confirmAndPlan() {
       weatherInfo.value,
       (event: DraftStreamEvent) => {
         if (event.type === 'node_complete' && event.node) {
-          planningCompletedNodes.value = new Set([...planningCompletedNodes.value, event.node])
-          planningCurrentNode.value = event.node
-          planningMessage.value = event.message || ''
+          tripLoader.setSteady()
+          tripLoader.updateProgress(
+            event.node,
+            event.message || labelForNode(event.node),
+            progressForNode(event.node),
+          )
         } else if (event.type === 'complete' && event.draft_id) {
-          message.success('骨架生成完成!')
-          setTimeout(() => router.push(`/draft/${event.draft_id}`), 500)
+          // 立即切路由；loader 保持显示，由 DraftView 在第一天装配后 markReady 触发 Flip
+          router.push(`/draft/${event.draft_id}`)
         } else if (event.type === 'error') {
+          tripLoader.dismiss()
           message.error(event.message || '骨架生成失败')
           phase.value = 'assign'
         }
       }
     )
   } catch (e: any) {
+    tripLoader.dismiss()
     message.error('规划失败: ' + (e.message || '未知错误'))
     phase.value = 'assign'
   }
