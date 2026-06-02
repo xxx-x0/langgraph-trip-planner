@@ -478,8 +478,6 @@ watch(
 .bh-status-bar { flex: 1; height: 4px; background: rgba(255,255,255,0.18); margin: 0 24px; }
 .bh-status-fill { height: 100%; background: var(--primary-yellow); transition: width 0.4s ease; }
 
-.bh-poster--placeholder { background: #faf8f3; }
-
 @media (max-width: 640px) {
   .bh-hero { right: 5vw; padding: 20px 24px; min-width: 180px; }
   .bh-hero-cn { font-size: 34px; }
