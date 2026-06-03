@@ -126,6 +126,23 @@ async function onRewriteNarrative(idx: number) {
 }
 
 async function onFinalize() {
+  // 前置拉起全局 Bauhaus 加载海报（REFINEMENT / 定稿打磨）
+  const d = draft.value
+  if (d) {
+    tripLoader.begin('refinement', {
+      city: d.city,
+      days: d.request.travel_days,
+      // 各天景点数之和，与 Poster A（selected.length）口径一致
+      attractionCount: (d.days ?? []).reduce(
+        (sum: number, day: any) => sum + (day.attractions?.length ?? 0),
+        0,
+      ),
+      metaLine:
+        d.request.start_date && d.request.end_date
+          ? `${d.request.start_date} – ${d.request.end_date}`
+          : undefined,
+    })
+  }
   router.push({
     path: '/result',
     query: { streaming: 'true', draft_id: draftId.value },
