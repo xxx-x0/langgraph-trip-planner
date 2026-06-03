@@ -142,7 +142,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import html2canvas from 'html2canvas'
@@ -198,6 +198,12 @@ const visibleTabs = computed(() => {
   tabs.push({ key: 'itinerary', icon: '📅', label: '每日行程' })
   if (tripPlan.value?.weather_info?.length) tabs.push({ key: 'weather', icon: '🌤️', label: '天气信息' })
   return tabs
+})
+
+// 切换标签时回到顶部（标签栏已不再固定，避免停在上一个标签的滚动位置）
+watch(activeTab, () => {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' })
 })
 
 onMounted(async () => {
@@ -558,9 +564,6 @@ const exportAsPDF = async () => {
 
 /* Tab 导航 - 包豪斯风格 */
 .tab-bar {
-  position: sticky;
-  top: 64px;
-  z-index: var(--z-sticky);
   background: var(--white);
   border-bottom: var(--border-main) solid var(--border);
   padding: var(--space-4) var(--space-6);
