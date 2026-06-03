@@ -396,6 +396,8 @@ def _selection_to_cluster_dict(attr: dict) -> dict:
         "poi_id": attr.get("poi_id"),
         "visit_minutes": attr.get("visit_minutes"),
         "image_url": attr.get("image_url"),
+        "open_hours": attr.get("open_hours"),
+        "tel": attr.get("tel"),
     }
 
 

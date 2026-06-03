@@ -27,10 +27,13 @@ class CachedAttraction:
     category: Optional[str] = None
     rating: Optional[float] = None
     ticket_price: Optional[str] = None
+    open_hours: Optional[str] = None
+    tel: Optional[str] = None
     image_url: Optional[str] = None
     poi_id: Optional[str] = None
     amap_type: Optional[str] = None
     description: Optional[str] = None
+    last_updated: Optional[datetime] = None
 
 
 AMAP_SEARCH_KEYWORDS = ["景点", "公园", "博物馆", "古迹", "广场", "寺庙", "购物中心", "美食街"]
@@ -136,6 +139,28 @@ def _extract_biz_ext_value(poi: dict[str, Any], key: str) -> Any:
     return poi.get(key)
 
 
+def _clean_optional_str(value: Any) -> Optional[str]:
+    if value in (None, "", [], {}):
+        return None
+    return str(value).strip() or None
+
+
+def _extract_open_hours(poi: dict[str, Any]) -> Optional[str]:
+    return (
+        _clean_optional_str(_extract_biz_ext_value(poi, "opentime_today"))
+        or _clean_optional_str(_extract_biz_ext_value(poi, "opentime_week"))
+        or _clean_optional_str(poi.get("open_hours"))
+    )
+
+
+def _extract_tel(poi: dict[str, Any]) -> Optional[str]:
+    return (
+        _clean_optional_str(_extract_biz_ext_value(poi, "tel"))
+        or _clean_optional_str(poi.get("telephone"))
+        or _clean_optional_str(poi.get("phone"))
+    )
+
+
 def _normalize_poi(city: str, poi: dict[str, Any]) -> Optional[dict[str, Any]]:
     name = str(poi.get("name") or "").strip()
     if not name:
@@ -169,6 +194,8 @@ def _normalize_poi(city: str, poi: dict[str, Any]) -> Optional[dict[str, Any]]:
         "category": _normalize_category(amap_type, typecode),
         "rating": rating,
         "ticket_price": ticket_price,
+        "open_hours": _extract_open_hours(poi),
+        "tel": _extract_tel(poi),
         "image_url": _extract_photo(poi),
         "last_updated": datetime.utcnow(),
     }
@@ -220,6 +247,16 @@ def _extract_pois_from_result(result: Any) -> list[dict[str, Any]]:
 
 
 def _extract_detail_from_result(result: Any) -> Optional[dict[str, Any]]:
+    def normalize_detail(detail: dict[str, Any]) -> dict[str, Any]:
+        out = dict(detail)
+        open_hours = _extract_open_hours(out)
+        tel = _extract_tel(out)
+        if open_hours:
+            out["open_hours"] = open_hours
+        if tel:
+            out["tel"] = tel
+        return out
+
     parsed = _coerce_jsonish(result)
     if isinstance(parsed, list):
         for item in parsed:
@@ -227,13 +264,13 @@ def _extract_detail_from_result(result: Any) -> Optional[dict[str, Any]]:
                 if "text" in item:
                     inner = _coerce_jsonish(item["text"])
                     if isinstance(inner, dict) and inner.get("id"):
-                        return inner
+                        return normalize_detail(inner)
                 elif item.get("id") and item.get("name"):
-                    return item
+                    return normalize_detail(item)
         return None
     if isinstance(parsed, dict):
         if parsed.get("id") and parsed.get("name"):
-            return parsed
+            return normalize_detail(parsed)
         if "raw_result" in parsed:
             return _extract_detail_from_result(parsed["raw_result"])
         if "text" in parsed:
@@ -250,10 +287,13 @@ def _row_to_cached(row: AttractionCache) -> CachedAttraction:
         category=row.category,
         rating=row.rating,
         ticket_price=row.ticket_price,
+        open_hours=row.open_hours,
+        tel=row.tel,
         image_url=row.image_url,
         poi_id=row.poi_id,
         amap_type=row.amap_type,
         description=row.description,
+        last_updated=row.last_updated,
     )
 
 
@@ -266,10 +306,26 @@ def _dict_to_cached(data: dict[str, Any]) -> CachedAttraction:
         category=data.get("category"),
         rating=data.get("rating"),
         ticket_price=data.get("ticket_price"),
+        open_hours=data.get("open_hours"),
+        tel=data.get("tel"),
         image_url=data.get("image_url"),
         poi_id=data.get("poi_id"),
         amap_type=data.get("amap_type"),
         description=data.get("description"),
+        last_updated=data.get("last_updated"),
+    )
+
+
+def _needs_detail_backfill(attractions: list[CachedAttraction]) -> bool:
+    """Old cache rows predate Phase 2 detail fields; refresh them opportunistically."""
+    if not attractions:
+        return False
+    return any(
+        item.poi_id
+        and not (item.open_hours or item.tel)
+        and item.last_updated is not None
+        and item.last_updated < datetime(2026, 6, 3)
+        for item in attractions
     )
 
 
@@ -307,11 +363,17 @@ class AttractionsCacheService:
         city = city.strip()
         cached = await self._safe_query_db(city, categories)
         if len(cached) >= min_count:
+            refreshed = await self._backfill_details_if_needed(city, cached, categories, min_count)
+            if refreshed:
+                return refreshed
             return cached
 
         all_cached = await self._safe_query_db(city, None)
         if categories and len(cached) < min_count and len(all_cached) >= min_count:
             print(f"⚠️ 景点缓存按分类过滤不足({len(cached)} < {min_count})，返回城市全量缓存")
+            refreshed = await self._backfill_details_if_needed(city, all_cached, None, min_count)
+            if refreshed:
+                return refreshed
             return all_cached
 
         fetched: list[dict[str, Any]] = []
@@ -386,6 +448,25 @@ class AttractionsCacheService:
             attractions = await session.scalar(select(func.count(AttractionCache.id)))
             cities = await session.scalar(select(func.count(func.distinct(AttractionCache.city))))
             return {"cities": int(cities or 0), "attractions": int(attractions or 0)}
+
+    async def _backfill_details_if_needed(
+        self,
+        city: str,
+        cached: list[CachedAttraction],
+        categories: Optional[list[str]],
+        min_count: int,
+    ) -> Optional[list[CachedAttraction]]:
+        if not _needs_detail_backfill(cached):
+            return None
+        try:
+            fetched = await self._fetch_from_amap(city)
+            await self._persist(city, fetched)
+            refreshed = await self._safe_query_db(city, categories)
+            if len(refreshed) >= min_count:
+                return refreshed
+        except Exception as e:
+            print(f"⚠️ 景点缓存详情回填失败，继续使用现有缓存: {e}")
+        return None
 
     async def _safe_query_db(self, city: str, categories: Optional[list[str]]) -> list[CachedAttraction]:
         try:
@@ -503,6 +584,10 @@ class AttractionsCacheService:
                 poi["rating"] = detail["rating"]
             if detail.get("cost") and not poi.get("cost"):
                 poi["cost"] = detail["cost"]
+            if detail.get("open_hours") and not poi.get("open_hours"):
+                poi["open_hours"] = detail["open_hours"]
+            if detail.get("tel") and not poi.get("tel"):
+                poi["tel"] = detail["tel"]
             if detail.get("address") and not poi.get("address"):
                 poi["address"] = detail["address"]
             if detail.get("photo") and not poi.get("photo"):
@@ -534,6 +619,8 @@ class AttractionsCacheService:
                     "category": stmt.excluded.category,
                     "rating": stmt.excluded.rating,
                     "ticket_price": stmt.excluded.ticket_price,
+                    "open_hours": stmt.excluded.open_hours,
+                    "tel": stmt.excluded.tel,
                     "image_url": stmt.excluded.image_url,
                     "last_updated": datetime.utcnow(),
                 }

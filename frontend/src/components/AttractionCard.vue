@@ -43,6 +43,14 @@
           </span>
         </div>
         <p class="attraction-address">{{ attraction.address }}</p>
+        <p v-if="attraction.open_hours" class="attraction-detail">
+          <span class="detail-icon">🕐</span>{{ attraction.open_hours }}
+        </p>
+        <p v-if="attraction.tel" class="attraction-detail">
+          <span class="detail-icon">📞</span>
+          <a v-if="isCoarsePointer" class="tel-link" :href="`tel:${attraction.tel}`">{{ attraction.tel }}</a>
+          <span v-else>{{ attraction.tel }}</span>
+        </p>
         <p class="attraction-desc">{{ attraction.description }}</p>
       </template>
     </div>
@@ -59,6 +67,10 @@ const props = defineProps<{
   editMode?: boolean
   photoUrl?: string
 }>()
+
+const isCoarsePointer = computed(() => {
+  return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+})
 
 const imageUrl = computed(() => {
   if (props.photoUrl) return props.photoUrl
@@ -229,6 +241,26 @@ const handleImageError = (event: Event) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.attraction-detail {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  margin: 0 0 var(--space-2);
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  line-height: var(--line-height-relaxed);
+}
+
+.detail-icon {
+  flex-shrink: 0;
+}
+
+.tel-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .attraction-desc {

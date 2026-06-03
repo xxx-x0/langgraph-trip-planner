@@ -106,6 +106,8 @@ def _build_day_context(
             ticket_price=_parse_ticket_price(c.get("ticket_price")),
             image_url=c.get("image_url"),
             poi_id=c.get("poi_id") or "",
+            open_hours=c.get("open_hours"),
+            tel=c.get("tel"),
             location=loc,
         ))
     hotel: Optional[Hotel] = None

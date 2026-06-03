@@ -112,6 +112,8 @@ class Attraction(BaseModel):
     poi_id: Optional[str] = Field(default="", description="POI ID")
     image_url: Optional[str] = Field(default=None, description="图片URL")
     ticket_price: int = Field(default=0, description="门票价格(元)")
+    open_hours: Optional[str] = Field(default=None, description="开放时间")
+    tel: Optional[str] = Field(default=None, description="联系电话")
 
 
 class DiningCategory(str, Enum):
@@ -369,6 +371,8 @@ class DiscoveredAttraction(BaseModel):
     location: Optional[Location] = Field(default=None, description="经纬度坐标")
     poi_id: Optional[str] = Field(default=None, description="高德POI ID")
     visit_minutes: Optional[int] = Field(default=None, description="预估游玩时长(分钟)")
+    open_hours: Optional[str] = Field(default=None, description="开放时间")
+    tel: Optional[str] = Field(default=None, description="联系电话")
 
 
 class ManualSearchRequest(BaseModel):

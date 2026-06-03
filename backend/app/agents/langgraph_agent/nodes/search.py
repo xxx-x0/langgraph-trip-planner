@@ -201,6 +201,8 @@ def _format_pois_as_attractions_info(pois: List[CachedAttraction]) -> str:
                 "biz_ext": {
                     "rating": "" if poi.rating is None else str(poi.rating),
                     "cost": poi.ticket_price or "",
+                    "opentime_today": poi.open_hours or "",
+                    "tel": poi.tel or "",
                 },
                 "photos": [{"url": poi.image_url}] if poi.image_url else [],
             }
@@ -215,6 +217,8 @@ def _poi_to_selected(poi: CachedAttraction) -> dict[str, Any]:
         "name": poi.name,
         "description": poi.description or poi.category or poi.address or "",
         "category": poi.category or "其他",
+        "open_hours": poi.open_hours,
+        "tel": poi.tel,
     }
 
 

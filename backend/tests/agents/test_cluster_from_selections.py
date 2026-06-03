@@ -63,6 +63,8 @@ def test_selection_to_cluster_dict_preserves_fields():
         "image_url": "http://img/gugong.jpg", "poi_id": "B000A8UIN8",
         "location": {"longitude": 116.397, "latitude": 39.916},
         "visit_minutes": 180,
+        "open_hours": "08:30-17:00",
+        "tel": "010-85007421",
     }
     d = _selection_to_cluster_dict(attr)
     assert d["name"] == "故宫"
@@ -76,6 +78,8 @@ def test_selection_to_cluster_dict_preserves_fields():
     assert d["poi_id"] == "B000A8UIN8"
     assert d["visit_minutes"] == 180
     assert d["image_url"] == "http://img/gugong.jpg"
+    assert d["open_hours"] == "08:30-17:00"
+    assert d["tel"] == "010-85007421"
 
 
 def test_selection_to_cluster_dict_missing_location_defaults_zero():
@@ -95,7 +99,7 @@ async def test_clusters_data_preserves_rich_fields():
              "ticket_price": "60", "category": "博物馆", "description": "皇家宫殿",
              "poi_id": "P1", "image_url": "http://img/1.jpg",
              "location": {"longitude": 116.397, "latitude": 39.916},
-             "visit_minutes": 180},
+             "visit_minutes": 180, "open_hours": "08:30-17:00", "tel": "010-85007421"},
             {"name": "颐和园", "address": "海淀区", "rating": 4.7,
              "ticket_price": "30", "category": "公园", "description": "皇家园林",
              "poi_id": "P2", "image_url": "http://img/2.jpg",
@@ -115,3 +119,5 @@ async def test_clusters_data_preserves_rich_fields():
     assert by_name["故宫"]["poi_id"] == "P1"
     assert by_name["故宫"]["visit_minutes"] == 180
     assert by_name["故宫"]["image_url"] == "http://img/1.jpg"
+    assert by_name["故宫"]["open_hours"] == "08:30-17:00"
+    assert by_name["故宫"]["tel"] == "010-85007421"

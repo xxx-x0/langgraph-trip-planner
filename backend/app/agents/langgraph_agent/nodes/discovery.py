@@ -29,6 +29,8 @@ def _cached_attraction_to_discovery_item(attraction: CachedAttraction) -> dict[s
         "image_url": attraction.image_url,
         "location": location,
         "poi_id": attraction.poi_id,
+        "open_hours": attraction.open_hours,
+        "tel": attraction.tel,
     }
 
 

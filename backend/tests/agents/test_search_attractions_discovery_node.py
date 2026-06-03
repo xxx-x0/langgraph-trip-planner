@@ -32,6 +32,8 @@ def cached_attractions():
             category="历史文化",
             rating=4.8,
             poi_id="B000A8UIN8",
+            open_hours="08:30-17:00",
+            tel="010-85007421",
         ),
         CachedAttraction(
             name="天坛公园",
@@ -56,6 +58,8 @@ async def test_search_attractions_discovery_node_returns_service_attractions(moc
     assert len(result["discovered_attractions"]) == 2
     assert result["discovered_attractions"][0]["name"] == "故宫博物院"
     assert result["discovered_attractions"][0]["location"] == {"longitude": 116.397128, "latitude": 39.916527}
+    assert result["discovered_attractions"][0]["open_hours"] == "08:30-17:00"
+    assert result["discovered_attractions"][0]["tel"] == "010-85007421"
     service.get_attractions.assert_awaited_once_with(city="北京", min_count=40, categories=["历史文化"])
 
 

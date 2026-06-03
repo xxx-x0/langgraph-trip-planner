@@ -1,3 +1,4 @@
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,6 +9,7 @@ from app.database import Base
 from app.models.db_models import AttractionCache
 from app.services.attractions_cache_service import (
     AttractionsCacheService,
+    _extract_detail_from_result,
     _extract_location,
     _is_valid_coordinate,
     _normalize_category,
@@ -106,10 +108,80 @@ def test_normalize_poi_keeps_core_fields():
     assert normalized["image_url"] == "https://example.com/gugong.jpg"
 
 
+def test_normalize_poi_keeps_open_hours_and_tel_from_biz_ext():
+    poi = {
+        "id": "B000A8UIN8",
+        "name": "故宫博物院",
+        "location": "116.397128,39.916527",
+        "biz_ext": {
+            "opentime_today": "08:30-17:00",
+            "opentime_week": "周二至周日08:30-17:00",
+            "tel": "010-85007421",
+        },
+    }
+
+    normalized = _normalize_poi("北京", poi)
+
+    assert normalized["open_hours"] == "08:30-17:00"
+    assert normalized["tel"] == "010-85007421"
+
+
+def test_extract_detail_from_result_normalizes_open_hours_and_tel():
+    detail = _extract_detail_from_result({
+        "raw_result": {
+            "id": "B000A8UIN8",
+            "name": "故宫博物院",
+            "biz_ext": {
+                "opentime_week": "周二至周日08:30-17:00",
+                "tel": "010-85007421",
+            },
+        },
+    })
+
+    assert detail["open_hours"] == "周二至周日08:30-17:00"
+    assert detail["tel"] == "010-85007421"
+
+
 @pytest.mark.asyncio
 async def test_get_attractions_returns_cache_hit(service_with_rows):
     result = await service_with_rows.get_attractions("北京", min_count=2)
     assert [p.name for p in result] == ["故宫博物院", "天坛公园"]
+
+
+@pytest.mark.asyncio
+async def test_get_attractions_backfills_old_cache_detail_fields(session_factory):
+    async with session_factory() as session:
+        session.add(AttractionCache(
+            city="北京",
+            name="故宫博物院",
+            address="北京市东城区景山前街4号",
+            longitude=116.397128,
+            latitude=39.916527,
+            category="历史文化",
+            amap_type="风景名胜;风景名胜",
+            poi_id="B000A8UIN8",
+            last_updated=datetime(2026, 6, 2, 12, 0, 0),
+        ))
+        await session.commit()
+
+    service = AttractionsCacheService(session_factory=session_factory)
+    service._fetch_from_amap = AsyncMock(return_value=[{
+        "id": "B000A8UIN8",
+        "name": "故宫博物院",
+        "address": "北京市东城区景山前街4号",
+        "location": "116.397128,39.916527",
+        "type": "风景名胜",
+        "biz_ext": {
+            "opentime_today": "08:30-17:00",
+            "tel": "010-85007421",
+        },
+    }])
+
+    result = await service.get_attractions("北京", min_count=1)
+
+    service._fetch_from_amap.assert_awaited_once()
+    assert result[0].open_hours == "08:30-17:00"
+    assert result[0].tel == "010-85007421"
 
 
 @pytest.mark.asyncio

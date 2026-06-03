@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 
@@ -30,6 +31,18 @@ class Base(DeclarativeBase):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        if engine.url.get_backend_name() == "sqlite":
+            await _ensure_sqlite_columns(conn)
+
+
+async def _ensure_sqlite_columns(conn):
+    """Add lightweight SQLite columns that create_all cannot backfill."""
+    result = await conn.execute(text("PRAGMA table_info(attractions_cache)"))
+    existing = {row[1] for row in result.fetchall()}
+    if "open_hours" not in existing:
+        await conn.execute(text("ALTER TABLE attractions_cache ADD COLUMN open_hours VARCHAR(500)"))
+    if "tel" not in existing:
+        await conn.execute(text("ALTER TABLE attractions_cache ADD COLUMN tel VARCHAR(100)"))
 
 
 async def get_db():

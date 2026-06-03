@@ -599,6 +599,8 @@ async function confirmAndPlan() {
         location: a.location,
         poi_id: a.poi_id,
         visit_minutes: a.visit_minutes,
+        open_hours: a.open_hours,
+        tel: a.tel,
       })),
       dayAssignments.value.map(day =>
         day.map(a => ({
@@ -612,6 +614,8 @@ async function confirmAndPlan() {
           location: a.location,
           poi_id: a.poi_id,
           visit_minutes: a.visit_minutes,
+          open_hours: a.open_hours,
+          tel: a.tel,
         }))
       ),
       weatherInfo.value,

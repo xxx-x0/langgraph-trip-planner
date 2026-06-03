@@ -15,6 +15,8 @@ export interface Attraction {
   rating?: number
   image_url?: string
   ticket_price?: number
+  open_hours?: string
+  tel?: string
 }
 
 export interface Meal {
@@ -199,6 +201,8 @@ export interface DiscoveredAttraction {
   rating?: number
   ticket_price?: string
   image_url?: string
+  open_hours?: string
+  tel?: string
   location?: Location
   poi_id?: string
   selected?: boolean

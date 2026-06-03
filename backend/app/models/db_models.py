@@ -64,6 +64,8 @@ class AttractionCache(Base):
     category: Mapped[str | None] = mapped_column(String(50), nullable=True)
     rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     ticket_price: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    open_hours: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    tel: Mapped[str | None] = mapped_column(String(100), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

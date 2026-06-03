@@ -189,6 +189,7 @@ def test_build_day_context_maps_all_attraction_fields():
         "address": "东城区景山前街4号", "category": "博物馆", "rating": 4.8,
         "ticket_price": "60", "description": "皇家宫殿",
         "poi_id": "P1", "visit_minutes": 180, "image_url": "http://img/1.jpg",
+        "open_hours": "08:30-17:00", "tel": "010-85007421",
     }], []]
     ctx = _build_day_context(
         0, _sample_macro(), clusters_data, [[], []],
@@ -204,6 +205,8 @@ def test_build_day_context_maps_all_attraction_fields():
     assert a.visit_duration == 180       # 来自 visit_minutes
     assert a.image_url == "http://img/1.jpg"
     assert a.poi_id == "P1"
+    assert a.open_hours == "08:30-17:00"
+    assert a.tel == "010-85007421"
     assert a.location.longitude == 116.397
 
 
