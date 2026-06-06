@@ -74,6 +74,7 @@ const isCoarsePointer = computed(() => {
 
 const imageUrl = computed(() => {
   if (props.photoUrl) return props.photoUrl
+  if (props.attraction.image_url) return props.attraction.image_url
   const colors = [
     { start: '#667eea', end: '#764ba2' },
     { start: '#f093fb', end: '#f5576c' },

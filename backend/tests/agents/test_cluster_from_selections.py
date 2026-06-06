@@ -2,6 +2,7 @@ import pytest
 
 from app.agents.langgraph_agent.nodes.cluster import cluster_from_selections_node
 from app.models.schemas import TripRequest
+from app.services.attractions_cache_service import CachedAttraction
 
 
 def _make_request():
@@ -121,3 +122,46 @@ async def test_clusters_data_preserves_rich_fields():
     assert by_name["故宫"]["image_url"] == "http://img/1.jpg"
     assert by_name["故宫"]["open_hours"] == "08:30-17:00"
     assert by_name["故宫"]["tel"] == "010-85007421"
+
+
+@pytest.mark.asyncio
+async def test_cluster_from_selections_backfills_missing_rich_fields_from_cache(monkeypatch):
+    class FakeCacheService:
+        async def find_by_name(self, city, name):
+            assert city == "北京"
+            assert name == "故宫"
+            return CachedAttraction(
+                name="故宫",
+                address="东城区景山前街4号",
+                category="历史文化",
+                rating=4.8,
+                image_url="http://img/gugong.jpg",
+                open_hours="08:30-17:00",
+                tel="010-85007421",
+                poi_id="P1",
+            )
+
+    monkeypatch.setattr(
+        "app.agents.langgraph_agent.nodes.cluster.get_attractions_cache_service",
+        lambda: FakeCacheService(),
+    )
+
+    selection = {
+        "name": "故宫",
+        "address": "东城区",
+        "category": "景点",
+        "location": {"longitude": 116.397, "latitude": 39.916},
+    }
+    state = {
+        "request": _make_request(),
+        "user_selected_attractions": [dict(selection)],
+        "user_day_assignments": [[dict(selection)]],
+    }
+
+    result = await cluster_from_selections_node(state)
+
+    attr = result["clusters_data"][0][0]
+    assert attr["rating"] == 4.8
+    assert attr["image_url"] == "http://img/gugong.jpg"
+    assert attr["open_hours"] == "08:30-17:00"
+    assert attr["tel"] == "010-85007421"

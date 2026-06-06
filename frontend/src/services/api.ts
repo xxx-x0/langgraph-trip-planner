@@ -566,13 +566,16 @@ export async function loadMoreAttractions(req: LoadMoreRequest): Promise<LoadMor
 export interface AISelectRequest {
   destination: string
   days: number
-  attractions: Array<{ poi_id?: string; name: string }>
+  attractions: Array<Partial<DiscoveredAttraction> & { name: string }>
   preferences?: Record<string, any>
 }
 
 export interface AISelectResponse {
   must_ids: string[]
   optional_ids: string[]
+  reasons?: Record<string, string>
+  tags?: Record<string, string[]>
+  summary?: string | null
 }
 
 export async function aiSelectAttractions(req: AISelectRequest): Promise<AISelectResponse> {

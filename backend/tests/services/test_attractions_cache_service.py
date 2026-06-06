@@ -142,6 +142,21 @@ def test_extract_detail_from_result_normalizes_open_hours_and_tel():
     assert detail["tel"] == "010-85007421"
 
 
+def test_extract_detail_from_result_normalizes_amap_open_time_aliases():
+    detail = _extract_detail_from_result([
+        {
+            "type": "text",
+            "text": (
+                '{"id":"B023B02842","name":"灵隐寺",'
+                '"open_time":"07:30-17:30",'
+                '"opentime2":"周一至周日 07:30-17:30"}'
+            ),
+        }
+    ])
+
+    assert detail["open_hours"] == "07:30-17:30"
+
+
 @pytest.mark.asyncio
 async def test_get_attractions_returns_cache_hit(service_with_rows):
     result = await service_with_rows.get_attractions("北京", min_count=2)

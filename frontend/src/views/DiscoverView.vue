@@ -13,22 +13,51 @@
     <div v-if="phase === 'discover'" class="discover-layout">
       <!-- 左侧: 景点列表 -->
       <div class="left-panel">
+        <!-- AI 选景入口 -->
+        <div class="ai-select-panel" :class="{ loading: aiSelectLoading }">
+          <div class="ai-select-copy">
+            <span class="ai-select-kicker">AI PICK</span>
+            <h3>{{ aiSelectLoading ? 'AI 正在筛选景点' : 'AI 帮你先选一版' }}</h3>
+            <p>
+              {{
+                aiSelectLoading
+                  ? '正在根据天数、偏好和景点距离生成推荐，完成前暂时锁定选择。'
+                  : '根据你的旅行偏好自动选出必去景点和备选景点，之后仍可手动微调。'
+              }}
+            </p>
+          </div>
+          <a-button
+            class="ai-select-main-btn"
+            type="primary"
+            size="large"
+            :loading="aiSelectLoading"
+            :disabled="aiSelectDisabled"
+            @click="handleAiSelect"
+          >
+            <template #icon><ThunderboltOutlined /></template>
+            {{ aiSelectLoading ? '筛选中...' : 'AI 帮我选' }}
+          </a-button>
+        </div>
+
+        <div v-if="aiSelectLoading" class="ai-select-loading-strip">
+          <span>AI 正在筛选景点，请稍候</span>
+          <div class="ai-select-loading-track">
+            <div class="ai-select-loading-fill"></div>
+          </div>
+        </div>
+        <div v-else-if="aiSelectSummary" class="ai-select-summary">
+          {{ aiSelectSummary }}
+        </div>
+
         <!-- 搜索栏 -->
         <div class="search-bar">
           <a-input-search
             v-model:value="searchKeyword"
             placeholder="手动搜索添加景点..."
             :loading="searching"
+            :disabled="selectionLocked"
             @search="handleManualSearch"
           />
-          <a-button
-            type="primary"
-            :loading="aiSelectLoading"
-            @click="handleAiSelect"
-          >
-            <template #icon><ThunderboltOutlined /></template>
-            AI 帮我选
-          </a-button>
         </div>
 
         <!-- 搜索结果下拉 -->
@@ -37,7 +66,8 @@
             v-for="result in searchResults"
             :key="result.name + (result.poi_id || '')"
             class="search-result-item"
-            @click="addSearchResult(result)"
+            :class="{ disabled: selectionLocked }"
+            @click="!selectionLocked && addSearchResult(result)"
           >
             <span class="result-name">{{ result.name }}</span>
             <span class="result-address">{{ result.address }}</span>
@@ -53,6 +83,7 @@
             :key="cat"
             class="filter-btn"
             :class="{ active: activeCategory === cat }"
+            :disabled="selectionLocked"
             @click="activeCategory = cat"
           >
             {{ cat }}
@@ -75,6 +106,7 @@
                 :key="attr.name + (attr.poi_id || '')"
                 :attraction="attr"
                 :photo-url="attractionPhotos[attr.name]"
+                :disabled="selectionLocked"
                 :ref="(el: any) => { if (el) cardRefs[attr.name] = el }"
                 @toggle="toggleAttraction"
               />
@@ -88,6 +120,7 @@
                 :key="attr.name + (attr.poi_id || '')"
                 :attraction="attr"
                 :photo-url="attractionPhotos[attr.name]"
+                :disabled="selectionLocked"
                 :ref="(el: any) => { if (el) cardRefs[attr.name] = el }"
                 @toggle="toggleAttraction"
               />
@@ -101,6 +134,7 @@
                 :key="attr.name + (attr.poi_id || '')"
                 :attraction="attr"
                 :photo-url="attractionPhotos[attr.name]"
+                :disabled="selectionLocked"
                 :ref="(el: any) => { if (el) cardRefs[attr.name] = el }"
                 @toggle="toggleAttraction"
               />
@@ -117,6 +151,7 @@
               :key="attr.name + (attr.poi_id || '')"
               :attraction="attr"
               :photo-url="attractionPhotos[attr.name]"
+              :disabled="selectionLocked"
               :ref="(el: any) => { if (el) cardRefs[attr.name] = el }"
               @toggle="toggleAttraction"
             />
@@ -132,7 +167,7 @@
             type="dashed"
             block
             :loading="loadMoreLoading"
-            :disabled="loadMoreReachedLimit"
+            :disabled="selectionLocked || loadMoreReachedLimit"
             @click="handleLoadMore"
           >
             {{ loadMoreReachedLimit ? '已达上限' : '加载更多 +20' }}
@@ -153,17 +188,22 @@
       <!-- 底部操作栏 -->
       <div class="bottom-bar">
         <div class="selection-info">
-          已选择 <strong>{{ selectedCount }}</strong> 个景点
-          <span v-if="selectedCount < 2" class="hint">（至少选择2个景点）</span>
+          <template v-if="aiSelectLoading">
+            AI 正在筛选景点，请稍候
+          </template>
+          <template v-else>
+            已选择 <strong>{{ selectedCount }}</strong> 个景点
+            <span v-if="selectedCount < 2" class="hint">（至少选择2个景点）</span>
+          </template>
         </div>
         <a-button
           type="primary"
           size="large"
           :loading="assignLoading"
-          :disabled="selectedCount < 2"
+          :disabled="selectionLocked || selectedCount < 2"
           @click="startDayAssignment"
         >
-          开始规划 ({{ selectedCount }}个景点) →
+          {{ aiSelectLoading ? '等待 AI 选择完成' : `开始规划 (${selectedCount}个景点) →` }}
         </a-button>
       </div>
     </div>
@@ -244,6 +284,12 @@ import SelectableAttractionCard from '@/components/SelectableAttractionCard.vue'
 import DiscoveryMap from '@/components/DiscoveryMap.vue'
 import { useTripLoader } from '@/composables/useTripLoader'
 import { labelForNode, progressForNode } from '@/components/loader/constructionSteps'
+import { sortAttractionsByRating } from '@/utils/discoverySort'
+import { mergeDayAssignmentsWithSelected } from '@/utils/dayAssignmentMerge'
+import {
+  applyAiSelectionRecommendations,
+  isCurrentAiSelectionRequest,
+} from '@/utils/aiSelectionState'
 import {
   discoverAttractionsStream, searchAttractionManual,
   createDraftFromSelectionsStream, previewDayAssignment,
@@ -281,6 +327,8 @@ const loadMoreReachedLimit = ref(false)
 
 // AI select state
 const aiSelectLoading = ref(false)
+const aiSelectRequestId = ref(0)
+const aiSelectSummary = ref('')
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -307,8 +355,10 @@ const categories = computed(() => {
 })
 
 const filteredAttractions = computed(() => {
-  if (activeCategory.value === '全部') return attractions
-  return attractions.filter(a => a.category === activeCategory.value)
+  const items = activeCategory.value === '全部'
+    ? attractions
+    : attractions.filter(a => a.category === activeCategory.value)
+  return sortAttractionsByRating(items)
 })
 
 const aiSelectionActive = computed(
@@ -326,15 +376,27 @@ const otherAttractions = computed(
 )
 
 const selectedCount = computed(() => attractions.filter(a => a.selected).length)
+const selectionLocked = computed(() => aiSelectLoading.value)
+const aiSelectDisabled = computed(
+  () => aiSelectLoading.value || loading.value || attractions.length === 0
+)
+
+function clearAssignmentPreview() {
+  dayAssignments.value = []
+  dayDurations.value = []
+  smartAssignmentCache.value = null
+}
 
 function goBack() {
   router.push('/')
 }
 
 function toggleAttraction(attr: DiscoveredAttraction) {
+  if (selectionLocked.value) return
   const found = attractions.find(a => a.name === attr.name)
   if (found) {
     found.selected = !found.selected
+    clearAssignmentPreview()
   }
 }
 
@@ -347,6 +409,7 @@ function handleMarkerClick(attr: DiscoveredAttraction) {
 }
 
 async function handleManualSearch() {
+  if (selectionLocked.value) return
   if (!searchKeyword.value.trim() || !formData.value) return
   searching.value = true
   try {
@@ -369,70 +432,115 @@ async function handleManualSearch() {
 }
 
 function addSearchResult(attr: DiscoveredAttraction) {
+  if (selectionLocked.value) return
   attr.selected = true
   attr.manuallyAdded = true
   attractions.push(attr)
   searchResults.value = searchResults.value.filter(a => a.name !== attr.name)
+  clearAssignmentPreview()
   message.success(`已添加: ${attr.name}`)
+}
+
+function toAiSelectAttractionPayload(a: DiscoveredAttraction) {
+  return {
+    poi_id: a.poi_id,
+    name: a.name,
+    description: a.description,
+    address: a.address,
+    category: a.category,
+    rating: a.rating,
+    ticket_price: a.ticket_price,
+    image_url: a.image_url,
+    location: a.location,
+    open_hours: a.open_hours,
+    visit_minutes: a.visit_minutes,
+  }
+}
+
+function buildAiSelectPreferences(data: TripFormData) {
+  return {
+    interests: data.preferences,
+    food_preference: data.food_preference,
+    free_text_input: data.free_text_input,
+    transportation: data.transportation,
+    accommodation: data.accommodation,
+    budget: data.budget,
+    companions: data.companions,
+  }
 }
 
 async function handleAiSelect() {
   if (aiSelectLoading.value) return
-  aiSelectLoading.value = true
-  try {
-    message.loading({ content: '正在分析攻略…', key: 'ai-select', duration: 0 })
+  const data = formData.value
 
-    const city = formData.value?.city
-    const days = formData.value?.travel_days
-    if (!city || !days) {
-      message.destroy('ai-select')
-      message.error('请先选择目的地和天数')
-      return
-    }
+  if (!data?.city || !data.travel_days) {
+    message.error('请先选择目的地和天数')
+    return
+  }
+  const city = data.city
+  const days = data.travel_days
+  if (attractions.length === 0) {
+    message.info('景点加载后即可使用 AI 推荐')
+    return
+  }
+
+  const requestId = aiSelectRequestId.value + 1
+  aiSelectRequestId.value = requestId
+  aiSelectLoading.value = true
+  aiSelectSummary.value = ''
+  searchResults.value = []
+
+  try {
+    message.loading({ content: 'AI 正在筛选景点…', key: 'ai-select', duration: 0 })
 
     const res = await aiSelectAttractions({
       destination: city,
       days,
-      attractions: attractions.map((a: any) => ({
-        poi_id: a.poi_id,
-        name: a.name,
-      })),
+      attractions: attractions.map(toAiSelectAttractionPayload),
+      preferences: buildAiSelectPreferences(data),
     })
-    message.destroy('ai-select')
+
+    if (!isCurrentAiSelectionRequest(requestId, aiSelectRequestId.value, aiSelectLoading.value)) {
+      return
+    }
 
     const mustSet = new Set(res.must_ids || [])
     const optionalSet = new Set(res.optional_ids || [])
 
     if (mustSet.size === 0 && optionalSet.size === 0) {
+      message.destroy('ai-select')
       message.warning('未找到适合的推荐，请手动选择')
       return
     }
 
-    // 清除上一轮 recommendation 标记（兼容多次点击）
-    let mustCount = 0
-    let optionalCount = 0
-    attractions.forEach((a: any) => {
-      a.recommendation = null
-      if (a.poi_id && mustSet.has(a.poi_id)) {
-        a.recommendation = 'must'
-        a.selected = true
-        mustCount++
-      } else if (a.poi_id && optionalSet.has(a.poi_id)) {
-        a.recommendation = 'optional'
-        optionalCount++
-      }
-    })
+    const { mustCount, optionalCount } = applyAiSelectionRecommendations(
+      attractions,
+      mustSet,
+      optionalSet,
+      res.reasons || {},
+      res.tags || {},
+    )
+    aiSelectSummary.value = res.summary || '已根据你的旅行偏好、景点类型和预计游玩时长生成推荐。'
+    clearAssignmentPreview()
+    message.destroy('ai-select')
     message.success(`已为你推荐 ${mustCount} 个必去 + ${optionalCount} 个备选`)
     document.querySelector('.bottom-bar')?.scrollIntoView({ behavior: 'smooth' })
   } catch (e: any) {
+    if (!isCurrentAiSelectionRequest(requestId, aiSelectRequestId.value, aiSelectLoading.value)) {
+      return
+    }
     message.destroy('ai-select')
     message.error(e?.message || 'AI 推荐失败，请手动选择')
   } finally {
-    aiSelectLoading.value = false
+    if (isCurrentAiSelectionRequest(requestId, aiSelectRequestId.value, aiSelectLoading.value)) {
+      message.destroy('ai-select')
+      aiSelectLoading.value = false
+    }
   }
 }
 
 async function handleLoadMore() {
+  if (selectionLocked.value) return
   if (loadMoreLoading.value || loadMoreReachedLimit.value) return
   if (!formData.value?.city) {
     message.error('缺少城市信息，无法加载更多')
@@ -466,6 +574,10 @@ async function handleLoadMore() {
 }
 
 async function startDayAssignment() {
+  if (selectionLocked.value) {
+    message.info('AI 正在筛选景点，请稍候')
+    return
+  }
   const selected = attractions.filter(a => a.selected)
   if (selected.length < 2) return
 
@@ -483,9 +595,9 @@ async function startDayAssignment() {
     for (const a of attractions) {
       if (nameToMinutes[a.name]) a.visit_minutes = nameToMinutes[a.name]
     }
-    dayAssignments.value = resp.day_assignments
+    dayAssignments.value = mergeDayAssignmentsWithSelected(resp.day_assignments, selected)
     dayDurations.value = resp.day_durations
-    smartAssignmentCache.value = JSON.parse(JSON.stringify(resp.day_assignments))
+    smartAssignmentCache.value = JSON.parse(JSON.stringify(dayAssignments.value))
     phase.value = 'assign'
   } catch (e: any) {
     message.warning('智能分配失败，使用均分方案')
@@ -802,6 +914,132 @@ onMounted(() => {
   overflow: hidden;
 }
 
+.ai-select-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: var(--space-5, 20px);
+  background: var(--primary-yellow, #F0C020);
+  border: var(--border-main, 4px) solid var(--border, #121212);
+  box-shadow: var(--shadow-main, 8px 8px 0px 0px #121212);
+}
+
+.ai-select-panel.loading {
+  background: var(--primary-blue, #1040C0);
+  color: var(--white, #fff);
+}
+
+.ai-select-copy {
+  min-width: 0;
+}
+
+.ai-select-kicker {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 3px 8px;
+  background: var(--white, #fff);
+  border: 2px solid var(--border, #121212);
+  color: var(--foreground, #121212);
+  font-size: 11px;
+  font-weight: var(--font-black, 900);
+  letter-spacing: 0;
+}
+
+.ai-select-copy h3 {
+  margin: 0;
+  font-size: var(--text-2xl, 20px);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  letter-spacing: 0;
+  color: inherit;
+}
+
+.ai-select-copy p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: var(--font-bold, 700);
+  line-height: 1.5;
+  color: inherit;
+}
+
+:deep(.ai-select-main-btn) {
+  flex-shrink: 0;
+  min-width: 160px;
+  height: auto;
+  padding: 12px 20px;
+  border-radius: 0;
+  border: 2px solid var(--border, #121212);
+  background: var(--primary-red, #D02020);
+  color: var(--white, #fff);
+  box-shadow: 4px 4px 0px 0px var(--border, #121212);
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+}
+
+:deep(.ai-select-main-btn:hover) {
+  background: var(--primary-red, #D02020);
+  color: var(--white, #fff);
+  transform: translate(1px, 1px);
+  box-shadow: 3px 3px 0px 0px var(--border, #121212);
+}
+
+:deep(.ai-select-main-btn:disabled) {
+  background: var(--background, #F0F0F0);
+  color: #777;
+  border-color: #777;
+  box-shadow: none;
+  transform: none;
+}
+
+.ai-select-loading-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--white, #fff);
+  border: 2px solid var(--border, #121212);
+  font-size: 13px;
+  font-weight: var(--font-black, 900);
+  text-transform: uppercase;
+  color: var(--foreground, #121212);
+}
+
+.ai-select-loading-track {
+  flex: 1;
+  height: 10px;
+  overflow: hidden;
+  border: 2px solid var(--border, #121212);
+  background: var(--background, #F0F0F0);
+}
+
+.ai-select-loading-fill {
+  width: 45%;
+  height: 100%;
+  background: var(--primary-blue, #1040C0);
+  animation: ai-select-loading 1.2s ease-in-out infinite;
+}
+
+.ai-select-summary {
+  padding: 12px 14px;
+  background: var(--white, #fff);
+  border: 2px solid var(--border, #121212);
+  border-left: 8px solid var(--primary-blue, #1040C0);
+  color: var(--foreground, #121212);
+  font-size: 13px;
+  font-weight: var(--font-bold, 700);
+  line-height: 1.5;
+}
+
+@keyframes ai-select-loading {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(230%);
+  }
+}
+
 .search-bar {
   max-width: 560px;
   display: flex;
@@ -859,6 +1097,11 @@ onMounted(() => {
 
 .search-result-item:hover {
   background: var(--primary-yellow, #F0C020);
+}
+
+.search-result-item.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .result-name {
@@ -933,6 +1176,13 @@ onMounted(() => {
 .filter-btn.active {
   background: var(--primary-blue, #1040C0);
   color: var(--white, #fff);
+}
+
+.filter-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
 }
 
 .loading-bar {
@@ -1281,6 +1531,20 @@ onMounted(() => {
     top: 0;
     height: 300px;
     order: -1;
+  }
+
+  .ai-select-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  :deep(.ai-select-main-btn) {
+    width: 100%;
+  }
+
+  .ai-select-loading-strip {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .attractions-grid {

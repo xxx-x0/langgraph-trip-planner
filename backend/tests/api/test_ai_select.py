@@ -32,6 +32,43 @@ def test_ai_select_returns_must_and_optional_ids():
     assert body["optional_ids"] == ["2"]
 
 
+def test_ai_select_passes_preferences_to_picker():
+    fake_result = {
+        "must_ids": ["1"],
+        "optional_ids": [],
+        "reasons": {"1": "符合历史文化偏好"},
+        "tags": {"1": ["历史文化"]},
+        "summary": "已根据历史文化偏好筛选",
+    }
+    preferences = {
+        "interests": ["历史文化"],
+        "food_preference": "本地特色",
+        "free_text_input": "节奏不要太赶",
+        "transportation": "公共交通",
+    }
+
+    with patch(
+        "app.api.routes.trip_lg.pick_attractions_from_pool",
+        new=AsyncMock(return_value=fake_result),
+    ) as picker:
+        resp = client.post("/api/discover/ai_select", json={
+            "destination": "北京",
+            "days": 3,
+            "attractions": [
+                {"poi_id": "1", "name": "故宫", "category": "历史文化"},
+            ],
+            "preferences": preferences,
+        })
+
+    assert resp.status_code == 200
+    picker.assert_awaited_once()
+    assert picker.await_args.kwargs["preferences"] == preferences
+    body = resp.json()
+    assert body["reasons"] == {"1": "符合历史文化偏好"}
+    assert body["tags"] == {"1": ["历史文化"]}
+    assert body["summary"] == "已根据历史文化偏好筛选"
+
+
 def test_ai_select_rejects_empty_destination():
     resp = client.post("/api/discover/ai_select", json={
         "destination": "",

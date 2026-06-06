@@ -240,17 +240,71 @@ def _rating_based_fallback(
     return must_ids, optional_ids
 
 
+def _format_preferences(preferences: Optional[Any]) -> str:
+    if not preferences:
+        return "无特别偏好"
+    if isinstance(preferences, dict):
+        parts = []
+        label_map = {
+            "interests": "兴趣类型",
+            "preferences": "兴趣类型",
+            "food_preference": "美食偏好",
+            "free_text_input": "额外要求",
+            "transportation": "交通方式",
+            "accommodation": "住宿偏好",
+            "budget": "预算",
+            "companions": "同伴",
+        }
+        for key, label in label_map.items():
+            value = preferences.get(key)
+            if value in (None, "", [], {}):
+                continue
+            if isinstance(value, list):
+                value_text = "、".join(str(v) for v in value)
+            else:
+                value_text = str(value)
+            parts.append(f"{label}: {value_text}")
+        return "；".join(parts) if parts else json.dumps(preferences, ensure_ascii=False)
+    if isinstance(preferences, list):
+        return "、".join(str(p) for p in preferences)
+    return str(preferences)
+
+
+def _collect_explanations(
+    items: List[Dict[str, Any]],
+    valid_ids: set[str],
+) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
+    reasons: Dict[str, str] = {}
+    tags: Dict[str, List[str]] = {}
+    for item in items:
+        poi_id = item.get("poi_id")
+        if not poi_id or poi_id not in valid_ids:
+            continue
+        reason = item.get("reason")
+        if reason:
+            reasons[poi_id] = str(reason)
+        raw_tags = item.get("tags") or []
+        if isinstance(raw_tags, list):
+            tags[poi_id] = [str(tag) for tag in raw_tags if str(tag).strip()][:4]
+    return reasons, tags
+
+
+def _short_text(value: Any, limit: int = 80) -> str:
+    text = str(value or "").replace("\n", " ").strip()
+    return text[:limit]
+
+
 async def pick_attractions_from_pool(
     destination: str,
     days: int,
     pool: List[Dict[str, Any]],
-    preferences: Optional[List[str]] = None,
-) -> Dict[str, List[str]]:
-    """从景点池中挑选推荐项，返回 {must_ids, optional_ids}。
+    preferences: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """从景点池中挑选推荐项，返回 ids 和解释信息。
 
     流程：
     1. estimate_durations_batch 估时（失败默认 120）
-    2. LLM 选 must / optional（时长预算驱动）
+    2. LLM 选 must / optional（时长预算 + 用户偏好驱动）
     3. LLM 失败 / 无效输出 → rating 兜底
     """
     if not pool:
@@ -275,10 +329,18 @@ async def pick_attractions_from_pool(
         name = p.get("name", "")
         category = p.get("category", "")
         rating = p.get("rating", "")
+        address = _short_text(p.get("address"), 60)
+        description = _short_text(p.get("description"), 90)
+        open_hours = _short_text(p.get("open_hours"), 50)
+        ticket_price = p.get("ticket_price", "")
         dur = durations.get(name, 120)
-        pool_lines.append(f"{poi_id} | {name} | {category} | {rating} | {dur}")
+        pool_lines.append(
+            f"{poi_id} | {name} | 类别:{category} | 评分:{rating} | "
+            f"时长:{dur}min | 地址:{address} | 开放:{open_hours} | "
+            f"门票:{ticket_price} | 简介:{description}"
+        )
 
-    prefs_str = "、".join(preferences) if preferences else "无特别偏好"
+    prefs_str = _format_preferences(preferences)
     prompt = f"""你是行程规划助手。请从下面这个 {destination} 的景点池里，
 为一个 {days} 天的行程挑选必去和备选景点。
 
@@ -288,31 +350,36 @@ async def pick_attractions_from_pool(
 
 用户偏好：{prefs_str}
 
-景点池（poi_id | 名称 | 类别 | 评分 | 预估时长 min）：
+景点池（poi_id | 名称 | 类别 | 评分 | 预估时长 | 地址 | 开放时间 | 门票 | 简介）：
 {chr(10).join(pool_lines)}
 
 仅输出 JSON，格式：
-{{"must": [{{"poi_id": "xxx", "reason": "..."}}], "optional": [{{"poi_id": "xxx", "reason": "..."}}]}}
+{{"summary": "一句话说明选择策略", "must": [{{"poi_id": "xxx", "reason": "...", "tags": ["..."]}}], "optional": [{{"poi_id": "xxx", "reason": "...", "tags": ["..."]}}]}}
 """
 
     try:
         llm = get_llm()
         if is_structured_output_supported():
-            from pydantic import BaseModel
+            from pydantic import BaseModel, Field
 
             class _PickItem(BaseModel):
                 poi_id: str
                 reason: Optional[str] = None
+                tags: List[str] = Field(default_factory=list)
 
             class _PickOut(BaseModel):
-                must: List[_PickItem]
-                optional: List[_PickItem]
+                summary: Optional[str] = None
+                must: List[_PickItem] = Field(default_factory=list)
+                optional: List[_PickItem] = Field(default_factory=list)
 
             resp = await llm.with_structured_output(
                 _PickOut, method="function_calling"
             ).ainvoke(prompt)
             must_ids = [m.poi_id for m in resp.must]
             optional_ids = [o.poi_id for o in resp.optional]
+            summary = resp.summary
+            raw_must = [m.model_dump() for m in resp.must]
+            raw_optional = [o.model_dump() for o in resp.optional]
         else:
             raw = await llm.ainvoke(prompt)
             text = raw.content if hasattr(raw, "content") else str(raw)
@@ -322,6 +389,9 @@ async def pick_attractions_from_pool(
             data = json.loads(m.group(0))
             must_ids = [item["poi_id"] for item in data.get("must", []) if item.get("poi_id")]
             optional_ids = [item["poi_id"] for item in data.get("optional", []) if item.get("poi_id")]
+            summary = data.get("summary")
+            raw_must = data.get("must", [])
+            raw_optional = data.get("optional", [])
 
         # 验证：去除两边重复（must 优先）+ 去除不在池里的 id
         valid_ids = {p.get("poi_id") for p in pool if p.get("poi_id")}
@@ -331,9 +401,28 @@ async def pick_attractions_from_pool(
         if not must_ids and not optional_ids:
             raise ValueError("LLM 返回空集")
 
-        return {"must_ids": must_ids, "optional_ids": optional_ids}
+        must_reasons, must_tags = _collect_explanations(raw_must, valid_ids)
+        optional_reasons, optional_tags = _collect_explanations(raw_optional, valid_ids)
+        reasons = {**must_reasons, **optional_reasons}
+        tags = {**must_tags, **optional_tags}
+
+        return {
+            "must_ids": must_ids,
+            "optional_ids": optional_ids,
+            "reasons": reasons,
+            "tags": tags,
+            "summary": summary,
+        }
 
     except Exception:
         logger.exception("pick_attractions_from_pool LLM call failed, falling back to rating")
         must_ids, optional_ids = _rating_based_fallback(pool, days)
-        return {"must_ids": must_ids, "optional_ids": optional_ids}
+        reasons = {poi_id: "按评分和行程天数自动推荐" for poi_id in must_ids}
+        tags = {poi_id: ["高评分"] for poi_id in must_ids}
+        return {
+            "must_ids": must_ids,
+            "optional_ids": optional_ids,
+            "reasons": reasons,
+            "tags": tags,
+            "summary": "AI 推荐暂不可用，已按评分排序生成推荐",
+        }

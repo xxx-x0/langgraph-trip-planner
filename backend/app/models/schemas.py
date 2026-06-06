@@ -529,7 +529,7 @@ class LoadMoreAttractionsResponse(BaseModel):
 
 
 class AISelectRequest(BaseModel):
-    """AI 从攻略选景请求"""
+    """AI 从当前景点池选景请求"""
     destination: str = Field(..., min_length=1, description="目的地城市")
     days: int = Field(..., ge=1, le=30, description="行程天数")
     attractions: List[Dict[str, Any]] = Field(default_factory=list, description="当前景点池")
@@ -537,6 +537,9 @@ class AISelectRequest(BaseModel):
 
 
 class AISelectResponse(BaseModel):
-    """AI 从攻略选景响应"""
+    """AI 从当前景点池选景响应"""
     must_ids: List[str] = Field(default_factory=list, description="必去景点的 poi_id 列表")
     optional_ids: List[str] = Field(default_factory=list, description="可选景点的 poi_id 列表")
+    reasons: Dict[str, str] = Field(default_factory=dict, description="poi_id 到推荐理由的映射")
+    tags: Dict[str, List[str]] = Field(default_factory=dict, description="poi_id 到推荐标签列表的映射")
+    summary: Optional[str] = Field(default=None, description="本次 AI 选景的总体说明")

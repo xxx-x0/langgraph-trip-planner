@@ -66,6 +66,61 @@ async def test_get_draft_returns_payload(client):
 
 
 @pytest.mark.asyncio
+async def test_get_draft_preserves_rich_attraction_fields_from_clusters(client):
+    request = TripRequest(
+        city="苏州", start_date="2026-06-13", end_date="2026-06-13",
+        travel_days=1, transportation="公共交通", accommodation="经济型酒店",
+    )
+    macro = MacroPlan(
+        city="苏州", total_days=1,
+        days=[
+            DaySkeleton(day_index=0, date="2026-06-13", attraction_names=["寒山寺"]),
+        ],
+    )
+    draft_id = await trip_draft_service.create_draft(
+        user_id="u1",
+        request=request,
+        selected_attractions=[],
+        macro_plan=macro,
+        clusters_data=[
+            [{
+                "name": "寒山寺",
+                "longitude": 120.568391,
+                "latitude": 31.310469,
+                "address": "枫桥路16号",
+                "category": "历史文化",
+                "rating": 4.8,
+                "ticket_price": "20",
+                "description": "江南名寺",
+                "poi_id": "B020001C0E",
+                "visit_minutes": 45,
+                "image_url": "http://store.is.autonavi.com/showpic/hanshan",
+                "open_hours": "08:00-17:00",
+                "tel": "0512-00000000",
+            }],
+        ],
+        hotels_by_day=[[]],
+        dining_pool=[DiningPoolDay().model_dump(mode="json")],
+        weather_info=[],
+    )
+
+    resp = await client.get(f"/api/trip/draft/{draft_id}")
+
+    assert resp.status_code == 200
+    attr = resp.json()["days"][0]["attractions"][0]
+    assert attr["name"] == "寒山寺"
+    assert attr["visit_duration"] == 45
+    assert attr["description"] == "江南名寺"
+    assert attr["category"] == "历史文化"
+    assert attr["rating"] == 4.8
+    assert attr["ticket_price"] == 20
+    assert attr["poi_id"] == "B020001C0E"
+    assert attr["image_url"] == "http://store.is.autonavi.com/showpic/hanshan"
+    assert attr["open_hours"] == "08:00-17:00"
+    assert attr["tel"] == "0512-00000000"
+
+
+@pytest.mark.asyncio
 async def test_get_draft_404(client):
     resp = await client.get("/api/trip/draft/does-not-exist")
     assert resp.status_code == 404

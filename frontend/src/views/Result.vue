@@ -364,6 +364,10 @@ const loadAttractionPhotos = async () => {
   const promises: Promise<void>[] = []
   tripPlan.value.days.forEach(day => {
     day.attractions.forEach(attraction => {
+      if (attraction.image_url) {
+        attractionPhotos.value[attraction.name] = attraction.image_url
+        return
+      }
       const promise = fetch(`/api/poi/photo?name=${encodeURIComponent(attraction.name)}`)
         .then(res => res.json())
         .then(data => {

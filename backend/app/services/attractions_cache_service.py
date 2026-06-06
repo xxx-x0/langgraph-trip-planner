@@ -149,6 +149,9 @@ def _extract_open_hours(poi: dict[str, Any]) -> Optional[str]:
     return (
         _clean_optional_str(_extract_biz_ext_value(poi, "opentime_today"))
         or _clean_optional_str(_extract_biz_ext_value(poi, "opentime_week"))
+        or _clean_optional_str(_extract_biz_ext_value(poi, "open_time"))
+        or _clean_optional_str(_extract_biz_ext_value(poi, "opentime2"))
+        or _clean_optional_str(_extract_biz_ext_value(poi, "opentime"))
         or _clean_optional_str(poi.get("open_hours"))
     )
 

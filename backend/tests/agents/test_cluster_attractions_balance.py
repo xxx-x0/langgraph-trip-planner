@@ -102,3 +102,4 @@ async def test_cluster_attractions_balances_long_days():
         f"D 应被 _rebalance_by_duration 搬到包含 E 的那天；实际 clusters: "
         f"{[[a['name'] for a in c] for c in clusters]}"
     )
+

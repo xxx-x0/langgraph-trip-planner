@@ -19,6 +19,7 @@ from ..utils.duration import estimate_durations_batch
 from ..nodes.search import _extract_must_visit_attractions, analyze_free_text
 from ....services.langchain_amap_tools import get_langchain_amap_service
 from ....services.llm_service import get_llm
+from ....services.attractions_cache_service import CachedAttraction, get_attractions_cache_service
 
 
 async def cluster_attractions_node(state: TripPlannerState) -> Dict[str, Any]:
@@ -401,6 +402,34 @@ def _selection_to_cluster_dict(attr: dict) -> dict:
     }
 
 
+def _merge_cached_attraction_fields(attr: dict, cached: CachedAttraction) -> dict:
+    enriched = dict(attr)
+    for field in ("address", "category", "rating", "ticket_price", "description", "poi_id", "image_url", "open_hours", "tel"):
+        value = getattr(cached, field, None)
+        if value and not enriched.get(field):
+            enriched[field] = value
+    if not enriched.get("location") and cached.longitude and cached.latitude:
+        enriched["location"] = {"longitude": cached.longitude, "latitude": cached.latitude}
+    return enriched
+
+
+async def _backfill_selected_attractions_from_cache(city: str, attrs: list[dict]) -> list[dict]:
+    service = get_attractions_cache_service()
+    enriched: list[dict] = []
+    for attr in attrs:
+        name = attr.get("name")
+        if not name:
+            enriched.append(attr)
+            continue
+        try:
+            cached = await service.find_by_name(city, name)
+        except Exception as e:
+            print(f"  ⚠️ 景点缓存补全失败 [{name}]: {str(e)[:100]}")
+            cached = None
+        enriched.append(_merge_cached_attraction_fields(attr, cached) if cached else attr)
+    return enriched
+
+
 async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any]:
     """基于用户选择的景点进行聚类（结构化输入，已有坐标）"""
     print("🗺️ 执行节点: cluster_from_selections_node")
@@ -411,6 +440,13 @@ async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any
 
     if not selected_attractions:
         return {"cluster_info": "未选择任何景点，无法生成行程。", "clusters_data": []}
+
+    selected_attractions = await _backfill_selected_attractions_from_cache(request.city, selected_attractions)
+    if day_assignments:
+        day_assignments = [
+            await _backfill_selected_attractions_from_cache(request.city, day_attrs)
+            for day_attrs in day_assignments
+        ]
 
     if day_assignments:
         print(f"📊 使用用户自定义日程分配: {len(day_assignments)} 天")

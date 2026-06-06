@@ -1,6 +1,7 @@
 """草稿（骨架/详细分离）API 路由"""
 import asyncio
 import json
+import re
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -21,6 +22,15 @@ from ...services.llm_service import get_llm
 from ...models.schemas import PlanFromSelectionsRequest
 
 router = APIRouter(prefix="/trip/draft", tags=["trip_draft"])
+
+
+def _parse_ticket_price(value) -> int:
+    if value is None:
+        return 0
+    if isinstance(value, (int, float)):
+        return int(value)
+    match = re.search(r"\d+", str(value))
+    return int(match.group()) if match else 0
 
 
 @router.post(
@@ -93,8 +103,18 @@ def _load_payload(record) -> TripDraftPayload:
             if c.get("longitude") and c.get("latitude"):
                 loc = Location(longitude=c["longitude"], latitude=c["latitude"])
             attractions.append(Attraction(
-                name=c.get("name", ""), address=c.get("address", ""),
-                visit_duration=120, description="", location=loc,
+                name=c.get("name", ""),
+                address=c.get("address", ""),
+                visit_duration=c.get("visit_minutes") or c.get("visit_duration") or 120,
+                description=c.get("description") or "",
+                category=c.get("category") or "景点",
+                rating=c.get("rating"),
+                poi_id=c.get("poi_id") or "",
+                image_url=c.get("image_url"),
+                ticket_price=_parse_ticket_price(c.get("ticket_price")),
+                open_hours=c.get("open_hours"),
+                tel=c.get("tel"),
+                location=loc,
             ))
         hotel = None
         if idx < len(hotels_by_day) and hotels_by_day[idx]:

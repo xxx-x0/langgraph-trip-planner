@@ -1,8 +1,9 @@
 <template>
   <div
     class="selectable-card-wrapper"
-    :class="{ selected: attraction.selected }"
-    @click="$emit('toggle', attraction)"
+    :class="{ selected: attraction.selected, disabled }"
+    :aria-disabled="disabled ? 'true' : 'false'"
+    @click="handleClick"
   >
     <div class="selection-checkbox">
       <div class="checkbox-inner" :class="{ checked: attraction.selected }">
@@ -31,6 +32,18 @@
           <span v-if="attraction.address" class="address">{{ attraction.address }}</span>
         </div>
         <p v-if="attraction.description" class="card-desc">{{ attraction.description }}</p>
+        <div v-if="attraction.recommendation_reason" class="reco-reason">
+          {{ attraction.recommendation_reason }}
+        </div>
+        <div v-if="attraction.recommendation_tags?.length" class="reco-tags">
+          <span
+            v-for="tag in attraction.recommendation_tags"
+            :key="tag"
+            class="reco-tag"
+          >
+            {{ tag }}
+          </span>
+        </div>
       </div>
     </div>
   </div>
@@ -43,11 +56,17 @@ import type { DiscoveredAttraction } from '@/types'
 const props = defineProps<{
   attraction: DiscoveredAttraction
   photoUrl?: string
+  disabled?: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   toggle: [attraction: DiscoveredAttraction]
 }>()
+
+function handleClick() {
+  if (props.disabled) return
+  emit('toggle', props.attraction)
+}
 
 const gradientColors = ['#667eea,#764ba2', '#f093fb,#f5576c', '#4facfe,#00f2fe', '#43e97b,#38f9d7', '#fa709a,#fee140']
 
@@ -81,6 +100,17 @@ const imageUrl = computed(() => {
 .selectable-card-wrapper.selected {
   border-color: var(--primary-blue);
   box-shadow: 0 0 0 3px var(--primary-blue), 8px 8px 0px 0px var(--border);
+}
+
+.selectable-card-wrapper.disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
+}
+
+.selectable-card-wrapper.disabled:hover {
+  transform: none;
+  box-shadow: var(--shadow-main, 8px 8px 0px 0px var(--border));
 }
 
 .selection-checkbox {
@@ -228,5 +258,37 @@ const imageUrl = computed(() => {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+.reco-reason {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: var(--background, #F0F0F0);
+  border-left: 3px solid var(--primary-blue, #1040C0);
+  color: var(--foreground, #121212);
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: var(--font-bold, 700);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.reco-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.reco-tag {
+  padding: 2px 6px;
+  border: 1px solid var(--border, #121212);
+  background: var(--white, #fff);
+  color: var(--foreground, #121212);
+  font-size: 11px;
+  font-weight: var(--font-bold, 700);
+  line-height: 1.3;
 }
 </style>

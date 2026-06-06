@@ -529,8 +529,8 @@ async def load_more_attractions(req: LoadMoreAttractionsRequest):
 @discover_router.post(
     "/ai_select",
     response_model=AISelectResponse,
-    summary="AI 从攻略选景",
-    description="基于 Bing 搜索经典攻略 + LLM 提取景点名 + 模糊匹配现有景点池。"
+    summary="AI 从当前景点池选景",
+    description="基于当前景点池、用户偏好、评分和预计游玩时长挑选必去与备选景点。"
 )
 async def ai_select_attractions(req: AISelectRequest):
     try:
@@ -538,7 +538,7 @@ async def ai_select_attractions(req: AISelectRequest):
             destination=req.destination,
             days=req.days,
             pool=req.attractions,
-            preferences=None,  # 暂不传，后续可从 req.preferences 提取
+            preferences=req.preferences,
         )
         return AISelectResponse(**result)
     except Exception:

@@ -115,6 +115,67 @@ async def test_pick_from_pool_returns_llm_result_on_success():
 
 
 @pytest.mark.asyncio
+async def test_pick_from_pool_preserves_llm_reasons_tags_and_summary():
+    """LLM 解释信息应保留下来供前端展示"""
+    pool = [
+        {
+            "poi_id": "1",
+            "name": "故宫",
+            "rating": "4.8",
+            "category": "历史文化",
+            "description": "明清皇家宫殿",
+            "address": "景山前街4号",
+        },
+        {
+            "poi_id": "2",
+            "name": "天坛",
+            "rating": "4.7",
+            "category": "古迹",
+            "description": "皇家祭天建筑群",
+            "address": "天坛东里甲1号",
+        },
+    ]
+
+    fake_llm = AsyncMock()
+    fake_llm.ainvoke = AsyncMock(return_value=type("R", (), {
+        "content": (
+            '{"summary": "根据历史文化和慢节奏偏好筛选", '
+            '"must": [{"poi_id": "1", "reason": "北京经典历史地标", "tags": ["历史文化", "经典必去"]}], '
+            '"optional": [{"poi_id": "2", "reason": "时间充裕时顺路参观", "tags": ["古迹", "备选"]}]}'
+        )
+    })())
+
+    with patch(
+        "app.agents.langgraph_agent.utils.strategy_extract.estimate_durations_batch",
+        new=AsyncMock(return_value={"故宫": 120, "天坛": 90}),
+    ), patch(
+        "app.agents.langgraph_agent.utils.strategy_extract.get_llm",
+        return_value=fake_llm,
+    ), patch(
+        "app.agents.langgraph_agent.utils.strategy_extract.is_structured_output_supported",
+        return_value=False,
+    ):
+        result = await pick_attractions_from_pool(
+            destination="北京",
+            days=1,
+            pool=pool,
+            preferences={"interests": ["历史文化"], "free_text_input": "节奏不要太赶"},
+        )
+
+    assert result["must_ids"] == ["1"]
+    assert result["optional_ids"] == ["2"]
+    assert result["reasons"] == {
+        "1": "北京经典历史地标",
+        "2": "时间充裕时顺路参观",
+    }
+    assert result["tags"] == {
+        "1": ["历史文化", "经典必去"],
+        "2": ["古迹", "备选"],
+    }
+    assert result["summary"] == "根据历史文化和慢节奏偏好筛选"
+
+
+@pytest.mark.asyncio
 async def test_pick_from_pool_falls_back_when_llm_returns_invalid_json():
     """LLM 返回无效 JSON 时也应兜底"""
     pool = [
