@@ -382,6 +382,7 @@ class ManualSearchRequest(BaseModel):
 
 
 class PlanFromSelectionsRequest(BaseModel):
+    request_id: Optional[str] = Field(default=None, min_length=1, max_length=80, pattern=r'^[a-zA-Z0-9-]+$')
     """基于用户选择的景点进行规划的请求"""
     request: TripRequest = Field(..., description="旅行基本请求")
     selected_attractions: List[DiscoveredAttraction] = Field(..., description="用户选中的景点列表")

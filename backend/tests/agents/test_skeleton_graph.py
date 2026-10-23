@@ -25,7 +25,6 @@ async def test_skeleton_graph_runs_and_persists_draft():
             {"name": "颐和园", "location": {"longitude": 116.273, "latitude": 39.999}},
         ],
         "user_day_assignments": None,
-        "user_preferences": None,
         "attractions_info": "",
         "weather_info": "",
         "hotels_info": "",
@@ -66,9 +65,6 @@ async def test_skeleton_graph_runs_and_persists_draft():
                 DaySkeleton(day_index=1, date="2026-06-02", attraction_names=["颐和园"]),
             ],
         )}),
-    ), patch(
-        "app.agents.langgraph_agent.graph.load_user_preferences_node",
-        new=AsyncMock(return_value={"user_preferences": None}),
     ):
         app = create_planning_graph()
         final = await app.ainvoke(initial_state)

@@ -12,7 +12,6 @@ from ..state import TripPlannerState
 from ....services.attractions_cache_service import CachedAttraction, get_attractions_cache_service
 from ....services.langchain_amap_tools import get_langchain_amap_service
 from ....services.llm_service import get_llm
-from ....services.preferences_service import format_preference_hint
 
 
 class FreeTextAnalysis(BaseModel):
@@ -157,13 +156,6 @@ def _extract_must_visit_attractions(free_text: str) -> List[str]:
     return list(names)
 
 
-def _get_preference_hint(state: TripPlannerState) -> str:
-    preferences = state.get("user_preferences")
-    if preferences:
-        return "\n\n" + format_preference_hint(preferences)
-    return ""
-
-
 def _preferences_to_categories(preferences: List[str]) -> List[str] | None:
     rules = [
         (("历史", "文化", "博物馆", "古迹", "人文", "艺术", "美术"), "历史文化"),
@@ -299,7 +291,7 @@ async def search_weather_node(state: TripPlannerState) -> Dict[str, Any]:
         llm = get_llm()
         llm_with_tools = llm.bind_tools([weather_tool])
 
-        prompt = WEATHER_AGENT_PROMPT + f"\n请查询城市: {request.city} 的天气。" + _get_preference_hint(state)
+        prompt = WEATHER_AGENT_PROMPT + f"\n请查询城市: {request.city} 的天气。"
         response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=WEATHER_AGENT_PROMPT), HumanMessage(content=prompt)])
 
         results = []
@@ -408,7 +400,6 @@ async def search_hotel_node(state: TripPlannerState) -> Dict[str, Any]:
             hotel_hint += f", 住宿天数: {request.travel_days}晚"
         if star_ratings:
             hotel_hint += f", 请务必设置 starRatings={star_ratings}"
-        hotel_hint += _get_preference_hint(state)
 
         prompt = HOTEL_AGENT_PROMPT + hotel_hint
         response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=HOTEL_AGENT_PROMPT), HumanMessage(content=prompt)])

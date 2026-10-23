@@ -3,7 +3,6 @@ from typing import Dict, Any, List
 
 from ..state import TripPlannerState
 from ....services import trip_draft_service
-from ....models.schemas import WeatherInfo
 
 
 async def save_draft_node(state: TripPlannerState) -> Dict[str, Any]:
@@ -15,14 +14,10 @@ async def save_draft_node(state: TripPlannerState) -> Dict[str, Any]:
         raise RuntimeError("save_draft_node: macro_plan 缺失，无法保存草稿")
 
     # 把 weather_info（可能是字符串/列表）规范化为 List[WeatherInfo] dict
-    weather_info_raw = state.get("weather_info", "")
-    weather_list: List[Dict[str, Any]] = []
-    if isinstance(weather_info_raw, list):
-        for w in weather_info_raw:
-            if isinstance(w, WeatherInfo):
-                weather_list.append(w.model_dump(mode="json"))
-            elif isinstance(w, dict):
-                weather_list.append(w)
+    from .generate import _parse_weather_payload
+    weather_list = [weather.model_dump(mode="json") for weather in _parse_weather_payload(
+        state.get("weather_info", ""), request.start_date, request.end_date
+    )]
 
     draft_id = await trip_draft_service.create_draft(
         user_id=user_id,

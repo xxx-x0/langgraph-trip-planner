@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { postSSE } from './sse'
 import type { TripFormData, TripPlanResponse, TripPlan, TripListResponse, TripRecord, UserPreference, DiscoveredAttraction, DiscoveryStreamEvent, PlanFromSelectionsPayload, PreviewDayAssignmentResponse } from '@/types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
@@ -57,77 +58,8 @@ export interface StreamOptions {
   signal?: AbortSignal
 }
 
-export async function generateTripPlanStream(
-  formData: TripFormData,
-  onEvent: (event: StreamEvent) => void,
-  options?: StreamOptions
-): Promise<void> {
-  const timeout = options?.timeout || 180000
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-  const signal = options?.signal
-    ? AbortSignal.any([options.signal, controller.signal])
-    : controller.signal
-
-  let response: Response
-  try {
-    response = await fetch(`${API_BASE_URL}/api/trip/plan/stream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-      signal,
-    })
-  } catch (error: any) {
-    clearTimeout(timeoutId)
-    if (error.name === 'AbortError') {
-      throw new Error('请求已取消或超时')
-    }
-    throw error
-  }
-
-  clearTimeout(timeoutId)
-
-  if (!response.ok) {
-    throw new Error(`请求失败: ${response.status}`)
-  }
-
-  const reader = response.body?.getReader()
-  if (!reader) {
-    throw new Error('无法获取响应流')
-  }
-
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (trimmed.startsWith('data: ')) {
-          try {
-            const event: StreamEvent = JSON.parse(trimmed.slice(6))
-            onEvent(event)
-            if (event.type === 'complete' || event.type === 'error') {
-              return
-            }
-          } catch (e) {
-            console.warn('解析SSE事件失败:', trimmed, e)
-          }
-        }
-      }
-    }
-  } finally {
-    reader.cancel().catch(() => {})
-  }
+export async function generateTripPlanStream(formData: TripFormData, onEvent: (event: StreamEvent) => void, options?: StreamOptions): Promise<void> {
+  return postSSE(`${API_BASE_URL}/api/trip/plan/stream`, formData, onEvent, options)
 }
 
 export async function healthCheck(): Promise<any> {
@@ -186,79 +118,9 @@ export async function deleteUserPreferences(userId: string = 'default'): Promise
 }
 
 
-export async function discoverAttractionsStream(
-  formData: TripFormData,
-  onEvent: (event: DiscoveryStreamEvent) => void,
-  options?: StreamOptions
-): Promise<void> {
-  const timeout = options?.timeout || 300000
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-  const signal = options?.signal
-    ? AbortSignal.any([options.signal, controller.signal])
-    : controller.signal
-
-  let response: Response
-  try {
-    response = await fetch(`${API_BASE_URL}/api/trip/discover/stream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-      signal,
-    })
-  } catch (error: any) {
-    clearTimeout(timeoutId)
-    if (error.name === 'AbortError') {
-      throw new Error('请求已取消或超时')
-    }
-    throw error
-  }
-
-  clearTimeout(timeoutId)
-
-  if (!response.ok) {
-    throw new Error(`请求失败: ${response.status}`)
-  }
-
-  const reader = response.body?.getReader()
-  if (!reader) {
-    throw new Error('无法获取响应流')
-  }
-
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (trimmed.startsWith('data: ')) {
-          try {
-            const event: DiscoveryStreamEvent = JSON.parse(trimmed.slice(6))
-            onEvent(event)
-            if (event.type === 'complete' || event.type === 'error') {
-              return
-            }
-          } catch (e) {
-            console.warn('解析SSE事件失败:', trimmed, e)
-          }
-        }
-      }
-    }
-  } finally {
-    reader.cancel().catch(() => {})
-  }
+export async function discoverAttractionsStream(formData: TripFormData, onEvent: (event: DiscoveryStreamEvent) => void, options?: StreamOptions): Promise<void> {
+  return postSSE(`${API_BASE_URL}/api/trip/discover/stream`, formData, onEvent, options, 300000)
 }
-
 
 export async function searchAttractionManual(
   keywords: string,
@@ -269,79 +131,9 @@ export async function searchAttractionManual(
 }
 
 
-export async function planFromSelectionsStream(
-  payload: PlanFromSelectionsPayload,
-  onEvent: (event: StreamEvent) => void,
-  options?: StreamOptions
-): Promise<void> {
-  const timeout = options?.timeout || 300000
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-  const signal = options?.signal
-    ? AbortSignal.any([options.signal, controller.signal])
-    : controller.signal
-
-  let response: Response
-  try {
-    response = await fetch(`${API_BASE_URL}/api/trip/plan/from-selections/stream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal,
-    })
-  } catch (error: any) {
-    clearTimeout(timeoutId)
-    if (error.name === 'AbortError') {
-      throw new Error('请求已取消或超时')
-    }
-    throw error
-  }
-
-  clearTimeout(timeoutId)
-
-  if (!response.ok) {
-    throw new Error(`请求失败: ${response.status}`)
-  }
-
-  const reader = response.body?.getReader()
-  if (!reader) {
-    throw new Error('无法获取响应流')
-  }
-
-  const decoder = new TextDecoder()
-  let buffer = ''
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (trimmed.startsWith('data: ')) {
-          try {
-            const event: StreamEvent = JSON.parse(trimmed.slice(6))
-            onEvent(event)
-            if (event.type === 'complete' || event.type === 'error') {
-              return
-            }
-          } catch (e) {
-            console.warn('解析SSE事件失败:', trimmed, e)
-          }
-        }
-      }
-    }
-  } finally {
-    reader.cancel().catch(() => {})
-  }
+export async function planFromSelectionsStream(payload: PlanFromSelectionsPayload, onEvent: (event: StreamEvent) => void, options?: StreamOptions): Promise<void> {
+  return postSSE(`${API_BASE_URL}/api/trip/plan/from-selections/stream`, payload, onEvent, options, 300000)
 }
-
 
 // ============ 草稿（骨架/详细分离）API ============
 
@@ -355,69 +147,23 @@ export interface DraftStreamEvent {
 }
 
 export async function createDraftFromSelectionsStream(
-  formData: TripFormData,
-  selectedAttractions: any[],
-  dayAssignments: any[][] | null,
-  weatherInfo: string,
-  onEvent: (event: DraftStreamEvent) => void,
-  options?: StreamOptions,
+  formData: TripFormData, selectedAttractions: any[], dayAssignments: any[][] | null,
+  weatherInfo: string, onEvent: (event: DraftStreamEvent) => void, options?: StreamOptions,
 ): Promise<void> {
-  const timeout = options?.timeout || 240000
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
-  const signal = options?.signal
-    ? AbortSignal.any([options.signal, controller.signal])
-    : controller.signal
-
-  let response: Response
-  try {
-    response = await fetch(`${API_BASE_URL}/api/trip/draft/from-selections/stream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        request: formData,
-        selected_attractions: selectedAttractions,
-        day_assignments: dayAssignments,
-        weather_info: weatherInfo,
-        user_id: 'default',
-      }),
-      signal,
-    })
-  } catch (error: any) {
-    clearTimeout(timeoutId)
-    if (error.name === 'AbortError') throw new Error('请求已取消或超时')
-    throw error
+  const payload = { request: formData, selected_attractions: selectedAttractions,
+    day_assignments: dayAssignments, weather_info: weatherInfo, user_id: 'default' }
+  const fingerprint = JSON.stringify(payload)
+  let pending: { fingerprint: string; requestId: string } | null = null
+  try { pending = JSON.parse(sessionStorage.getItem('pendingDraftCreation') || 'null') } catch {}
+  if (pending?.fingerprint !== fingerprint) {
+    pending = { fingerprint, requestId: crypto.randomUUID() }
+    sessionStorage.setItem('pendingDraftCreation', JSON.stringify(pending))
   }
-  clearTimeout(timeoutId)
-  if (!response.ok) throw new Error(`请求失败: ${response.status}`)
-
-  const reader = response.body?.getReader()
-  if (!reader) throw new Error('无法获取响应流')
-  const decoder = new TextDecoder()
-  let buffer = ''
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (trimmed.startsWith('data: ')) {
-          try {
-            const event = JSON.parse(trimmed.slice(6)) as DraftStreamEvent
-            onEvent(event)
-            if (event.type === 'complete' || event.type === 'error') return
-          } catch (e) {
-            console.warn('解析 SSE 事件失败:', trimmed, e)
-          }
-        }
-      }
-    }
-  } finally {
-    reader.cancel().catch(() => {})
-  }
+  return postSSE<DraftStreamEvent>(`${API_BASE_URL}/api/trip/draft/from-selections/stream`,
+    { ...payload, request_id: pending!.requestId }, event => {
+      onEvent(event)
+      if (event.type === 'complete') sessionStorage.removeItem('pendingDraftCreation')
+    }, options, 240000)
 }
 
 export async function getDraft(draftId: string) {
@@ -472,58 +218,9 @@ export async function rewriteNarrative(draftId: string, dayIndex: number) {
   return resp.data
 }
 
-export async function finalizeDraftStream(
-  draftId: string,
-  onEvent: (event: DraftStreamEvent) => void,
-  options?: StreamOptions,
-): Promise<void> {
-  const timeout = options?.timeout || 180000
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
-  const signal = options?.signal
-    ? AbortSignal.any([options.signal, controller.signal])
-    : controller.signal
-
-  let response: Response
-  try {
-    response = await fetch(`${API_BASE_URL}/api/trip/draft/${draftId}/finalize`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
-    })
-  } catch (error: any) {
-    clearTimeout(timeoutId)
-    if (error.name === 'AbortError') throw new Error('请求已取消或超时')
-    throw error
-  }
-  clearTimeout(timeoutId)
-  if (!response.ok) throw new Error(`请求失败: ${response.status}`)
-
-  const reader = response.body?.getReader()
-  if (!reader) throw new Error('无法获取响应流')
-  const decoder = new TextDecoder()
-  let buffer = ''
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (trimmed.startsWith('data: ')) {
-          try {
-            const event = JSON.parse(trimmed.slice(6)) as DraftStreamEvent
-            onEvent(event)
-            if (event.type === 'complete' || event.type === 'error') return
-          } catch {}
-        }
-      }
-    }
-  } finally {
-    reader.cancel().catch(() => {})
-  }
+export async function finalizeDraftStream(draftId: string, onEvent: (event: DraftStreamEvent) => void, options?: StreamOptions): Promise<void> {
+  return postSSE(`${API_BASE_URL}/api/trip/draft/${draftId}/finalize`, undefined, onEvent, options)
 }
-
 
 export async function previewDayAssignment(
   selectedAttractions: DiscoveredAttraction[],

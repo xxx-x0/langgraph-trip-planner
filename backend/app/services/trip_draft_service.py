@@ -1,21 +1,65 @@
 """草稿 CRUD 服务"""
 import json
 import uuid
+import asyncio
+from contextlib import asynccontextmanager
+from contextvars import ContextVar
+from weakref import WeakValueDictionary
 from datetime import datetime, timedelta
 from typing import List, Optional, Any
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import async_session
-from ..models.db_models import TripDraft
+from ..models.db_models import TripDraft, TripRecord
 from ..models.schemas import (
     TripRequest, MacroPlan, DayDetail, DiscoveredAttraction,
-    DiningPoolDay, WeatherInfo,
+    DiningPoolDay, WeatherInfo, TripPlan,
 )
 from ..logger import get_logger
 
 logger = get_logger(__name__)
+
+_UNSET = object()
+
+_creation = ContextVar('draft_creation', default=None)
+_creation_locks = WeakValueDictionary()
+
+
+@asynccontextmanager
+async def creation_request(user_id, request_id, fingerprint):
+    if not request_id:
+        yield
+        return
+    key = (user_id, request_id)
+    lock = _creation_locks.get(key)
+    if lock is None:
+        lock = asyncio.Lock()
+        _creation_locks[key] = lock
+    async with lock:
+        token = _creation.set((request_id, fingerprint))
+        try:
+            yield
+        finally:
+            _creation.reset(token)
+
+
+async def _find_creation(session, user_id, request_id, fingerprint):
+    result = await session.execute(select(TripDraft).where(
+        TripDraft.user_id == user_id,
+        func.json_extract(TripDraft.request_json, '$._creation_request_id') == request_id))
+    record = result.scalar_one_or_none()
+    if record and json.loads(record.request_json).get('_creation_fingerprint') != fingerprint:
+        raise ValueError('同一规划请求的输入已改变，请重新发起规划')
+    return record
+
+
+async def find_created_draft(user_id, request_id, fingerprint):
+    if not request_id:
+        return None
+    async with async_session() as session:
+        return await _find_creation(session, user_id, request_id, fingerprint)
 
 
 def _dump_pydantic_list(items: List[Any]) -> str:
@@ -46,11 +90,15 @@ async def create_draft(
     travel_days = request.travel_days
     days_detail_init = [None] * travel_days
 
+    request_data = request.model_dump(mode='json')
+    creation = _creation.get()
+    if creation:
+        request_data.update(_creation_request_id=creation[0], _creation_fingerprint=creation[1])
     record = TripDraft(
         id=draft_id,
         user_id=user_id,
         status="skeleton",
-        request_json=request.model_dump_json(),
+        request_json=json.dumps(request_data, ensure_ascii=False),
         selected_attractions_json=_dump_pydantic_list(selected_attractions),
         macro_plan_json=macro_plan.model_dump_json(),
         clusters_data_json=json.dumps(clusters_data, ensure_ascii=False, default=str),
@@ -60,6 +108,11 @@ async def create_draft(
         days_detail_json=json.dumps(days_detail_init),
     )
     async with async_session() as session:
+        if creation:
+            await session.execute(text('BEGIN IMMEDIATE'))
+            existing = await _find_creation(session, user_id, *creation)
+            if existing:
+                return existing.id
         session.add(record)
         await session.commit()
     logger.info(f"草稿已创建: id={draft_id}, user={user_id}, days={travel_days}")

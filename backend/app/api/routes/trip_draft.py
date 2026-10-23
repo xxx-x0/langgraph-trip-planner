@@ -1,6 +1,7 @@
 """草稿（骨架/详细分离）API 路由"""
 import asyncio
 import json
+import hashlib
 import re
 from typing import Optional
 
@@ -41,22 +42,28 @@ async def create_draft_from_selections(req: PlanFromSelectionsRequest):
     async def event_generator():
         agent = get_trip_planner_agent()
         try:
-            selected = [a.model_dump() for a in req.selected_attractions]
-            day_assign = None
-            if req.day_assignments:
-                day_assign = [[a.model_dump() for a in day] for day in req.day_assignments]
-            async for event in agent.plan_from_selections_stream(
-                request=req.request,
-                selected_attractions=selected,
-                day_assignments=day_assign,
-                weather_info=req.weather_info,
-                user_id=req.user_id,
-            ):
-                data = json.dumps(event, ensure_ascii=False, default=str)
-                yield f"data: {data}\n\n"
+            fingerprint = hashlib.sha256(json.dumps(req.model_dump(mode='json', exclude={'request_id'}),
+                                                   sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+            async with trip_draft_service.creation_request(req.user_id, req.request_id, fingerprint):
+                existing = await trip_draft_service.find_created_draft(req.user_id, req.request_id, fingerprint)
+                if existing:
+                    event = {'type':'complete', 'draft_id':existing.id, 'message':'已恢复保存的草稿', 'progress':100}
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+                    return
+                selected = [a.model_dump() for a in req.selected_attractions]
+                day_assign = None
+                if req.day_assignments:
+                    day_assign = [[a.model_dump() for a in day] for day in req.day_assignments]
+                async for event in agent.plan_from_selections_stream(
+                    request=req.request, selected_attractions=selected, day_assignments=day_assign,
+                    weather_info=req.weather_info, user_id=req.user_id,
+                ):
+                    data = json.dumps(event, ensure_ascii=False, default=str)
+                    yield f"data: {data}\n\n"
         except Exception as e:
             error = json.dumps(
-                {"type": "error", "message": f"骨架生成失败: {str(e)}", "progress": 0},
+                {"type": "error", "message": f"骨架生成失败: {str(e)}", "progress": 0,
+                 "step": getattr(e, 'operation', 'planning'), "retryable": getattr(e, 'retryable', False)},
                 ensure_ascii=False,
             )
             yield f"data: {error}\n\n"
@@ -64,9 +71,6 @@ async def create_draft_from_selections(req: PlanFromSelectionsRequest):
     async def heartbeat_wrapper():
         async for chunk in event_generator():
             yield chunk
-        while True:
-            await asyncio.sleep(15)
-            yield ": heartbeat\n\n"
 
     return StreamingResponse(
         heartbeat_wrapper(),

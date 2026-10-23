@@ -237,108 +237,47 @@ def _weather_from_mapping(data: dict[str, Any], date_key: str = "date") -> Optio
 
 
 def _parse_weather_payload(weather_data: Any, trip_start: str, trip_end: str) -> list[WeatherInfo]:
-    weather_list: list[WeatherInfo] = []
-    if not weather_data:
-        return weather_list
+    """Accept complete JSON, decoded data and legacy serialized MCP text blocks."""
+    import ast
+    matched: dict[str, WeatherInfo] = {}
 
-    print(f"🌤️ 开始解析天气数据，原始长度: {len(str(weather_data))}")
-    print(f"  行程日期范围: {trip_start} 至 {trip_end}")
-
-    try:
-        if isinstance(weather_data, str):
-            import ast
-            raw_chunks = [
-                chunk.strip()
-                for chunk in weather_data.split("\n")
-                if chunk.strip() and not chunk.startswith("[工具调用失败")
-            ]
-
-            for chunk in raw_chunks:
+    def visit(value, depth=0):
+        if depth > 16:
+            return
+        if isinstance(value, WeatherInfo):
+            if trip_start <= value.date <= trip_end:
+                matched[value.date] = value
+        elif isinstance(value, str):
+            if not value.strip() or value.startswith('[工具调用失败'):
+                return
+            for parse in (json.loads, ast.literal_eval):
                 try:
-                    parsed: Any = chunk
-                    for _ in range(2):
-                        try:
-                            parsed = json.loads(parsed)
-                            break
-                        except (json.JSONDecodeError, TypeError):
-                            try:
-                                parsed = ast.literal_eval(parsed)
-                                break
-                            except (ValueError, SyntaxError):
-                                pass
+                    parsed = parse(value)
+                except (ValueError, TypeError, SyntaxError):
+                    continue
+                visit(parsed, depth + 1)
+                return
+            # Older nodes join several independently serialized tool results.
+            lines = value.splitlines()
+            if len(lines) > 1:
+                for line in lines:
+                    visit(line, depth + 1)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item, depth + 1)
+        elif isinstance(value, dict):
+            if value.get('isError'):
+                return
+            if 'date' in value:
+                weather = _weather_from_mapping(value)
+                if weather and trip_start <= weather.date <= trip_end:
+                    matched[weather.date] = weather
+            for key in ('text', 'structuredContent', 'content', 'forecasts', 'casts', 'data'):
+                if key in value:
+                    visit(value[key], depth + 1)
 
-                    if isinstance(parsed, list) and parsed:
-                        first = parsed[0]
-                        if isinstance(first, dict) and "text" in first:
-                            inner = first["text"]
-                            if isinstance(inner, str):
-                                try:
-                                    parsed = json.loads(inner)
-                                except (json.JSONDecodeError, TypeError):
-                                    try:
-                                        parsed = ast.literal_eval(inner)
-                                    except (ValueError, SyntaxError):
-                                        pass
-
-                    forecasts: list[Any] = []
-                    if isinstance(parsed, dict):
-                        forecasts = parsed.get("forecasts", [])
-                        if not forecasts:
-                            for val in parsed.values():
-                                if isinstance(val, list) and val and isinstance(val[0], dict):
-                                    forecasts = val
-                                    break
-                    elif isinstance(parsed, list):
-                        if parsed and isinstance(parsed[0], dict) and "forecasts" in parsed[0]:
-                            forecasts = parsed[0]["forecasts"]
-                        else:
-                            forecasts = parsed
-
-                    for forecast in forecasts:
-                        if not isinstance(forecast, dict):
-                            continue
-                        casts = forecast.get("casts", [])
-                        if casts:
-                            for cast in casts:
-                                try:
-                                    weather = _weather_from_mapping(cast)
-                                    if weather and trip_start <= weather.date <= trip_end:
-                                        weather_list.append(weather)
-                                except Exception as ce:
-                                    print(f"  ⚠️ 天气cast解析失败: {str(ce)[:80]}")
-                        else:
-                            try:
-                                weather = _weather_from_mapping(forecast)
-                                if weather and trip_start <= weather.date <= trip_end:
-                                    weather_list.append(weather)
-                                elif weather:
-                                    print(f"  ℹ️ 天气forecast日期{weather.date}不在行程范围内，跳过")
-                            except Exception as fe:
-                                print(f"  ⚠️ 天气forecast解析失败: {str(fe)[:80]}")
-                except Exception as chunk_e:
-                    print(f"  ⚠️ 天气数据块解析失败: {str(chunk_e)[:80]}")
-
-        elif isinstance(weather_data, list):
-            for item in weather_data:
-                if isinstance(item, WeatherInfo):
-                    if item.date and trip_start <= item.date <= trip_end:
-                        weather_list.append(item)
-                elif isinstance(item, dict):
-                    try:
-                        weather = _weather_from_mapping(item)
-                        if weather and trip_start <= weather.date <= trip_end:
-                            weather_list.append(weather)
-                    except Exception:
-                        pass
-    except Exception as e:
-        print(f"⚠️ 天气数据解析失败: {str(e)[:100]}")
-
-    if weather_list:
-        print(f"🌤️ 从天气数据解析到 {len(weather_list)} 天匹配行程日期的天气: {[w.date for w in weather_list]}")
-    else:
-        print(f"⚠️ 天气数据解析后无匹配行程日期的天气，行程: {trip_start} 至 {trip_end}")
-        print(f"  原始数据前200字符: {str(weather_data)[:200]}")
-    return weather_list
+    visit(weather_data)
+    return [matched[date] for date in sorted(matched)]
 
 
 def _missing_date_ranges(dates: list[str]) -> list[tuple[str, str]]:

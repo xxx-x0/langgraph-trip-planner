@@ -1,100 +1,72 @@
-"""LangGraph State 数据模型
-
-用于 LangGraph 工作流中的状态传递，使用 TypedDict 实现轻量级数据结构。
-与 schemas.py 中的 Pydantic 模型不同，这些模型用于中间处理而非 API 序列化。
-
-重构说明:
-- 所有列表字段添加 operator.add Reducer，消除并发写入竞态
-- 新增 poi_details 字段，避免 fetch_poi_details 覆写整个列表
-- 新增 quality_report 字段，支持条件路由
-- 移除 6 个冗余字符串字段，统一使用结构化数据 + 序列化辅助函数
-"""
-
-from __future__ import annotations
-
-from typing import List, Optional, Dict, Any, Annotated
-from typing_extensions import TypedDict
-from langchain_core.messages import BaseMessage
+"""Canonical state schemas for the three running graphs and the daily subgraph."""
+from typing import TypedDict, Annotated, List, Optional, Any, Dict
 import operator
 
-from .schemas import Location, TripRequest, TripPlan
+from langchain_core.messages import BaseMessage
+
+from .schemas import TripRequest, TripPlan, MacroPlan
 
 
-def _merge_poi_details(left: Dict[str, Dict[str, Any]], right: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    merged = dict(left)
-    merged.update(right)
-    return merged
-
-
-class POIInfo(TypedDict):
-    id: str
-    name: str
-    address: str
-    location: Optional[Location]
-    typecode: Optional[str]
-    photo: Optional[str]
-
-
-class WeatherData(TypedDict):
-    date: str
-    day_weather: str
-    night_weather: str
-    day_temp: int
-    night_temp: int
-    wind_direction: str
-    wind_power: str
-
-
-class HotelData(TypedDict):
-    id: str
-    name: str
-    address: str
-    location: Optional[Location]
-    price_range: Optional[str]
-    rating: Optional[str]
-    type: Optional[str]
-    photos: List[str]
-
-
-class FoodData(TypedDict):
-    id: str
-    name: str
-    address: str
-    location: Optional[Location]
-    cuisine: Optional[str]
-    rating: Optional[float]
-    avg_cost: Optional[int]
-    photos: List[str]
-
-
-class ClusterGroup(TypedDict):
-    day_index: int
-    attractions: List[Dict[str, Any]]
-    center: Optional[Location]
-
-
-class RouteSegmentData(TypedDict):
-    from_name: str
-    to_name: str
-    mode: str
-    distance: str
-    duration: str
-    detail: str
+class DiscoveryState(TypedDict):
+    """景点发现阶段的状态"""
+    request: TripRequest
+    discovered_attractions: Annotated[List[dict], operator.add]
+    weather_info: str
+    errors: Annotated[List[str], operator.add]
+    messages: Annotated[List[BaseMessage], operator.add]
+    user_id: str
 
 
 class TripPlannerState(TypedDict):
+    """LangGraph 状态类：管理整个旅行规划流程中的数据流转"""
     request: TripRequest
-
-    attractions: Annotated[List[POIInfo], operator.add]
-    weather: Annotated[List[WeatherData], operator.add]
-    hotels: Annotated[List[HotelData], operator.add]
-    foods: Annotated[List[FoodData], operator.add]
-    clusters: Annotated[List[ClusterGroup], operator.add]
-    routes: Annotated[List[RouteSegmentData], operator.add]
-
-    poi_details: Annotated[Dict[str, Dict[str, Any]], _merge_poi_details]
-    quality_report: Dict[str, Any]
-
+    attractions_info: str
+    selected_pois: List[dict]
+    weather_info: str
+    hotels_info: str
+    aigohotel_raw_results: str
+    selected_hotels: List[dict]
+    food_info: str
+    cluster_info: str
+    route_info: str
     trip_plan: Optional[TripPlan]
     errors: Annotated[List[str], operator.add]
     messages: Annotated[List[BaseMessage], operator.add]
+    extracted_preferences: Optional[dict]
+    user_id: str
+    macro_plan: Optional[MacroPlan]
+    day_plans: Annotated[List[dict], operator.add]
+    global_narrative: Optional[str]
+    user_selected_attractions: List[dict]
+    user_day_assignments: Optional[List[List[dict]]]
+    clusters_data: List[List[dict]]
+    hotels_by_day: List[List[dict]]
+    dining_pool: List[Dict[str, Any]]   # 每日 DiningPoolDay-shape dict 列表（骨架阶段产物）
+    draft_id: Optional[str]              # save_draft_node 写入的草稿 ID
+
+
+class DayPlanLocalState(TypedDict):
+    day_index: int
+    date: str
+    attraction_names: List[str]
+    hotel_name: str
+    city: str
+    transportation: str
+    accommodation: str
+    attractions_info: str
+    hotels_info: str
+    food_info: str
+    route_info: str
+    weather_info: str
+    cluster_info: str
+    route_segments_data: List[dict]
+    day_plan: Optional[dict]
+    retry_count: int
+    max_retries: int
+    last_error: str
+    day_plans: List[dict]
+    day_food_info: str
+    food_preference: str
+    day_hotels_info: str
+    day_hotel_location: Optional[dict]
+    day_cluster: List[dict]

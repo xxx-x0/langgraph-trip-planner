@@ -24,15 +24,7 @@ from .schemas import (
     ErrorResponse,
 )
 
-from .state import (
-    POIInfo,
-    WeatherData,
-    HotelData,
-    FoodData,
-    ClusterGroup,
-    RouteSegmentData,
-    TripPlannerState,
-)
+from .state import TripPlannerState, DiscoveryState, DayPlanLocalState
 
 __all__ = [
     # Schemas - Pydantic models for API
@@ -57,12 +49,8 @@ __all__ = [
     "RouteResponse",
     "WeatherResponse",
     "ErrorResponse",
-    # State - TypedDict for LangGraph
-    "POIInfo",
-    "WeatherData",
-    "HotelData",
-    "FoodData",
-    "ClusterGroup",
-    "RouteSegmentData",
+    # Canonical graph states (API payloads remain Pydantic schemas).
     "TripPlannerState",
+    "DiscoveryState",
+    "DayPlanLocalState",
 ]

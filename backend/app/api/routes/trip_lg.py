@@ -2,12 +2,12 @@
 
 重构说明:
 - 使用 langgraph_agent (LangGraph工作流Agent)
-- LangGraph Agent通过并行节点搜索景点/天气/酒店，再规划路线，最后生成计划
+- 主图先并行查景点/天气，聚类后并行搜索酒店/餐饮；骨架图独立保存草稿
 - 所有服务调用均为异步
 - SSE 流式端点 /plan/stream，实时推送节点执行进度
 - 景点发现端点 /discover/stream，流式返回景点供用户选择
 - 基于选择的规划端点 /plan/from-selections/stream
-- 偏好管理端点 /preferences，支持跨会话偏好记忆
+- 偏好管理端点 /preferences 保留既有数据，不隐式参与规划
 
 韧性增强:
 - 结构化错误响应（区分 MCP/LLM/解析错误）
@@ -156,9 +156,6 @@ async def plan_trip_stream(request: TripRequest):
                 yield chunk
         async for chunk in inner():
             yield chunk
-        while True:
-            await asyncio.sleep(15)
-            yield ": heartbeat\n\n"
 
     return StreamingResponse(
         heartbeat_wrapper(),
@@ -194,9 +191,6 @@ async def discover_attractions_stream(request: TripRequest):
     async def heartbeat_wrapper():
         async for chunk in event_generator():
             yield chunk
-        while True:
-            await asyncio.sleep(15)
-            yield ": heartbeat\n\n"
 
     return StreamingResponse(
         heartbeat_wrapper(),
@@ -308,9 +302,6 @@ async def plan_from_selections_stream(req: PlanFromSelectionsRequest):
     async def heartbeat_wrapper():
         async for chunk in event_generator():
             yield chunk
-        while True:
-            await asyncio.sleep(15)
-            yield ": heartbeat\n\n"
 
     return StreamingResponse(
         heartbeat_wrapper(),
@@ -479,24 +470,22 @@ async def health_check():
             "agent_type": "LangGraphTripPlanner",
             "mcp_adapter": "langchain-mcp-adapters",
             "mcp_connected": mcp_healthy,
-            "graph_nodes": [
-                "search_attractions",
-                "search_weather",
-                "search_hotel",
-                "gather_search",
-                "cluster_attractions",
-                "search_food",
-                "plan_route",
-                "macro_planner",
-                "day_plan_subgraph",
-                "reduce_assemble",
-                "global_synthesizer",
-                "extract_preferences",
-                "save_preferences",
-            ],
+            "graph_nodes": [name for name in agent.app.get_graph().nodes
+                            if name not in {"__start__", "__end__"}],
+            "graphs": {
+                name: [node for node in graph.get_graph().nodes
+                       if node not in {"__start__", "__end__"}]
+                for name, graph in {
+                    "full_plan": agent.app,
+                    "discovery": agent.discovery_app,
+                    "draft_skeleton": agent.planning_app,
+                }.items()
+            },
             "features": {
                 "discovery_flow": True,
-                "preference_memory": True,
+                "preference_memory": False,
+                "preference_management": True,
+                "implicit_preference_loading": False,
             }
         }
     except Exception as e:

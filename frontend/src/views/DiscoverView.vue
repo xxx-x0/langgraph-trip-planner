@@ -92,8 +92,15 @@
 
         <!-- 加载进度 -->
         <div v-if="loading" class="loading-bar">
-          <div class="loading-text">{{ loadingMessage }}</div>
+          <div class="loading-text" role="status">正在查找 {{ formData?.city }} 的景点 <span>· 已等待 {{ elapsedSeconds }} 秒</span></div>
           <a-progress :percent="loadingProgress" :show-info="false" size="small" />
+          <p class="search-status">{{ loadingMessage }}</p>
+          <p v-if="elapsedSeconds >= 30" class="search-status">景点详情查询耗时较长。你可以先手动搜索并选择；停止搜索后，已有选择也会保留。</p>
+          <button class="search-recovery" @click="stopDiscovery">停止搜索，保留当前选择</button>
+        </div>
+        <div v-else-if="discoveryNotice" class="loading-bar search-notice" role="status">
+          <p>{{ discoveryNotice }}</p>
+          <button class="search-recovery" :disabled="selectionLocked" @click="startDiscovery">重新搜索景点</button>
         </div>
 
         <!-- 景点卡片网格 -->
@@ -141,7 +148,7 @@
             </div>
           </section>
           <div v-if="!loading && filteredAttractions.length === 0" class="empty-state">
-            <p>{{ attractions.length === 0 ? '正在搜索景点...' : '该分类下暂无景点' }}</p>
+            <p>{{ attractions.length === 0 ? '还没有景点，可以重新搜索或手动添加' : '该分类下暂无景点' }}</p>
           </div>
         </template>
         <template v-else>
@@ -156,13 +163,13 @@
               @toggle="toggleAttraction"
             />
             <div v-if="!loading && filteredAttractions.length === 0" class="empty-state">
-              <p>{{ attractions.length === 0 ? '正在搜索景点...' : '该分类下暂无景点' }}</p>
+              <p>{{ attractions.length === 0 ? '还没有景点，可以重新搜索或手动添加' : '该分类下暂无景点' }}</p>
             </div>
           </div>
         </template>
 
         <!-- 加载更多 -->
-        <div v-if="!loading" class="load-more-bar">
+        <div v-if="!loading && attractions.length > 0" class="load-more-bar">
           <a-button
             type="dashed"
             block
@@ -276,13 +283,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
 import SelectableAttractionCard from '@/components/SelectableAttractionCard.vue'
 import DiscoveryMap from '@/components/DiscoveryMap.vue'
 import { useTripLoader } from '@/composables/useTripLoader'
+import { useDiscoverySearch } from '@/composables/useDiscoverySearch'
 import { labelForNode, progressForNode } from '@/components/loader/constructionSteps'
 import { sortAttractionsByRating } from '@/utils/discoverySort'
 import { mergeDayAssignmentsWithSelected } from '@/utils/dayAssignmentMerge'
@@ -291,7 +299,7 @@ import {
   isCurrentAiSelectionRequest,
 } from '@/utils/aiSelectionState'
 import {
-  discoverAttractionsStream, searchAttractionManual,
+  searchAttractionManual,
   createDraftFromSelectionsStream, previewDayAssignment,
   loadMoreAttractions, aiSelectAttractions,
 } from '@/services/api'
@@ -305,9 +313,7 @@ const formData = ref<TripFormData | null>(null)
 const attractions = reactive<DiscoveredAttraction[]>([])
 const attractionPhotos = ref<Record<string, string>>({})
 const weatherInfo = ref('')
-const loading = ref(true)
-const loadingMessage = ref('正在搜索景点...')
-const loadingProgress = ref(0)
+const { loading, loadingMessage, loadingProgress, elapsedSeconds, discoveryNotice, search, stopDiscovery } = useDiscoverySearch(handleDiscoveryEvent)
 const searchKeyword = ref('')
 const searching = ref(false)
 const searchResults = ref<DiscoveredAttraction[]>([])
@@ -329,6 +335,15 @@ const loadMoreReachedLimit = ref(false)
 const aiSelectLoading = ref(false)
 const aiSelectRequestId = ref(0)
 const aiSelectSummary = ref('')
+
+watch([attractions, dayAssignments, dayDurations, weatherInfo, phase], () => {
+  if (!formData.value) return
+  try {
+    sessionStorage.setItem('discoveryRecovery', JSON.stringify({ form: formData.value,
+      attractions, assignments: dayAssignments.value, durations: dayDurations.value,
+      weather: weatherInfo.value, phase: phase.value === 'planning' ? 'assign' : phase.value }))
+  } catch { /* Existing in-memory choices remain usable if storage is full. */ }
+}, { deep: true })
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -759,44 +774,21 @@ async function confirmAndPlan() {
   }
 }
 
-async function startDiscovery() {
-  if (!formData.value) return
-
-  loading.value = true
-  loadingProgress.value = 5
-  loadingMessage.value = '正在搜索景点...'
-
-  try {
-    await discoverAttractionsStream(
-      formData.value,
-      (event: DiscoveryStreamEvent) => {
-        if (event.type === 'attraction' && event.data) {
-          event.data.selected = false
-          event.data.manuallyAdded = false
-          attractions.push(event.data)
-          if (!event.data.image_url) {
-            loadPhotoForAttraction(event.data.name)
-          }
-        } else if (event.type === 'weather' && event.data) {
-          weatherInfo.value = event.data
-        } else if (event.type === 'progress') {
-          loadingProgress.value = event.progress || 0
-          loadingMessage.value = event.message || ''
-        } else if (event.type === 'complete') {
-          loading.value = false
-          loadingProgress.value = 100
-          const total = attractions.length
-          message.success(`发现 ${total} 个景点，请选择您感兴趣的景点`)
-        } else if (event.type === 'error') {
-          loading.value = false
-          message.error(event.message || '景点发现失败')
-        }
-      }
-    )
-  } catch (e: any) {
-    loading.value = false
-    message.error('景点发现失败: ' + (e.message || '未知错误'))
+function handleDiscoveryEvent(event: DiscoveryStreamEvent) {
+  if (event.type === 'attraction' && event.data) {
+    // A retry may repeat already streamed POIs; preserve the user's selection.
+    const candidate = event.data
+    if (attractions.some(a => candidate.poi_id ? a.poi_id === candidate.poi_id : a.name === candidate.name && a.address === candidate.address)) return
+    attractions.push({ ...candidate, selected: false, manuallyAdded: false })
+    if (!candidate.image_url) loadPhotoForAttraction(candidate.name)
+  } else if (event.type === 'weather' && event.data) {
+    weatherInfo.value = event.data
+  } else if (event.type === 'complete') {
+    message.success(`发现 ${attractions.length} 个景点，请选择您感兴趣的景点`)
   }
+}
+async function startDiscovery() {
+  if (formData.value) await search(formData.value)
 }
 
 onMounted(() => {
@@ -804,6 +796,19 @@ onMounted(() => {
   if (stored) {
     try {
       formData.value = JSON.parse(stored)
+      try {
+        const recovered = JSON.parse(sessionStorage.getItem('discoveryRecovery') || 'null')
+        if (recovered && JSON.stringify(recovered.form) === JSON.stringify(formData.value)
+            && recovered.attractions?.length) {
+          attractions.push(...recovered.attractions)
+          dayAssignments.value = recovered.assignments || []
+          dayDurations.value = recovered.durations || []
+          weatherInfo.value = recovered.weather || ''
+          phase.value = recovered.phase === 'assign' ? 'assign' : 'discover'
+          loading.value = false
+          return
+        }
+      } catch { /* Fall back to a fresh discovery if the snapshot is invalid. */ }
       startDiscovery()
     } catch {
       message.error('表单数据解析失败')
@@ -817,6 +822,12 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.search-status { font-size: 13px; line-height: 1.7; margin: 8px 0; color: var(--text-secondary); }
+.loading-text span { font-weight: 400; font-size: 13px; }
+.search-recovery { padding: 8px 12px; border: 1px solid var(--border-color, #ddd); border-radius: 8px; background: var(--white, #fff); color: var(--text-primary); cursor: pointer; }
+.search-recovery:focus-visible { outline: 2px solid #377861; outline-offset: 3px; }
+.search-notice { line-height: 1.7; }
+
 .discover-page {
   min-height: 100vh;
   background: var(--white, #fff);

@@ -1,8 +1,9 @@
-"""用户偏好持久化服务"""
+"""Legacy preference storage and inactive trip observations; no implicit planning input."""
 
 import json
 from typing import Optional
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
 from ..database import async_session
@@ -77,9 +78,35 @@ async def delete_preferences(user_id: str) -> bool:
         return True
 
 
+async def apply_extracted_preferences(session: AsyncSession, user_id: str, extracted: dict | None, city: str) -> None:
+    """Participate in the caller's finalization transaction without committing."""
+    if not extracted:
+        return
+    result = await session.execute(select(UserPreferenceRecord).where(UserPreferenceRecord.user_id == user_id))
+    record = result.scalar_one_or_none()
+    # A generated itinerary is observation, never permission to change explicit choices.
+    if record and record.source == "explicit":
+        return
+    existing = UserPreference.model_validate_json(record.preference_data) if record else None
+    merged = merge_preferences(existing, extracted) if existing else UserPreference(user_id=user_id, **extracted)
+    merged.total_trips += 1
+    if city and city not in merged.cities_visited:
+        merged.cities_visited.append(city)
+    merged.last_updated = datetime.utcnow().isoformat()
+    payload = merged.model_dump_json()
+    if record:
+        record.preference_data = payload
+        record.source = "inferred"
+        record.confidence = 0.6
+        record.updated_at = datetime.utcnow()
+    else:
+        session.add(UserPreferenceRecord(user_id=user_id, preference_data=payload,
+                                         source="inferred", confidence=0.6))
+
+
 def merge_preferences(existing: UserPreference, extracted: dict) -> UserPreference:
     """合并偏好：新偏好与旧偏好加权融合"""
-    merged = existing.model_copy()
+    merged = existing.model_copy(deep=True)
 
     for key, new_values in extracted.items():
         if key.startswith("preferred_") and isinstance(new_values, list):
@@ -121,23 +148,3 @@ def merge_preferences(existing: UserPreference, extracted: dict) -> UserPreferen
             ]
 
     return merged
-
-
-def format_preference_hint(prefs: UserPreference) -> str:
-    """将偏好格式化为提示文本"""
-    hints = []
-    if prefs.preferred_hotel_types:
-        hints.append(f"用户历史偏好酒店类型: {', '.join(prefs.preferred_hotel_types)}")
-    if prefs.preferred_cuisines:
-        hints.append(f"用户历史偏好菜系: {', '.join(prefs.preferred_cuisines)}")
-    if prefs.preferred_attraction_categories:
-        hints.append(f"用户历史偏好景点类型: {', '.join(prefs.preferred_attraction_categories)}")
-    if prefs.budget_range and len(prefs.budget_range) == 2:
-        hints.append(f"用户历史预算范围: {prefs.budget_range[0]}-{prefs.budget_range[1]}元")
-    if prefs.cities_visited:
-        hints.append(f"用户曾去过: {', '.join(prefs.cities_visited[-5:])}")
-    if prefs.preferred_attractions_per_day:
-        hints.append(f"用户偏好每天游览{prefs.preferred_attractions_per_day}个景点")
-    if hints:
-        return "【用户历史偏好参考】\n" + "\n".join(hints)
-    return ""

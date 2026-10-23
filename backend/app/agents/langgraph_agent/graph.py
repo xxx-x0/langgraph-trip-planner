@@ -1,15 +1,12 @@
-import os
 from typing import Dict, Any, Optional, List
 
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import Send
 
-from .exceptions import RetryableError
 from .state import TripPlannerState, DiscoveryState
 from .nodes import (
     search_attractions_node,
     search_weather_node,
-    search_hotel_node,
     search_hotels_by_day_node,
     gather_search_node,
     search_food_node,
@@ -17,12 +14,10 @@ from .nodes import (
     cluster_attractions_node,
     cluster_from_selections_node,
     plan_route_node,
-    generate_plan_node,
     macro_planner_node,
     reduce_assemble_node,
     global_synthesizer_node,
     day_plan_subgraph_node,
-    load_user_preferences_node,
     extract_preferences_node,
     save_preferences_node,
     search_attractions_discovery_node,
@@ -32,6 +27,18 @@ from .nodes import (
 from .utils.parsing import _create_fallback_plan
 from ...services.llm_service import get_llm
 from ...services.langchain_amap_tools import get_mcp_tools
+
+
+# These fields use operator.add in the canonical state schemas. Other lists replace.
+_ACCUMULATED_FIELDS = frozenset({"errors", "messages", "day_plans", "discovered_attractions"})
+
+
+def _merge_stream_update(state: dict, update: dict) -> None:
+    for key, value in update.items():
+        if key in _ACCUMULATED_FIELDS:
+            state[key] = (state.get(key) or []) + value
+        else:
+            state[key] = value
 
 
 async def error_handler_node(state: TripPlannerState) -> Dict[str, Any]:
@@ -148,7 +155,6 @@ def create_trip_planner_graph():
 
     workflow = StateGraph(TripPlannerState)
 
-    workflow.add_node("load_user_preferences", load_user_preferences_node)
     workflow.add_node("search_attractions", search_attractions_node)
     workflow.add_node("search_weather", search_weather_node)
     workflow.add_node("gather_search", gather_search_node)
@@ -226,15 +232,13 @@ def create_planning_graph():
 
     workflow = StateGraph(TripPlannerState)
 
-    workflow.add_node("load_user_preferences", load_user_preferences_node)
     workflow.add_node("cluster_from_selections", cluster_from_selections_node)
     workflow.add_node("search_dining_pool", search_dining_pool_node)
     workflow.add_node("search_hotels_by_day", search_hotels_by_day_node)
     workflow.add_node("macro_planner", macro_planner_node)
     workflow.add_node("save_draft", save_draft_node)
 
-    workflow.add_edge(START, "load_user_preferences")
-    workflow.add_edge("load_user_preferences", "cluster_from_selections")
+    workflow.add_edge(START, "cluster_from_selections")
     workflow.add_edge("cluster_from_selections", "search_dining_pool")
     workflow.add_edge("cluster_from_selections", "search_hotels_by_day")
     workflow.add_edge(["search_dining_pool", "search_hotels_by_day"], "macro_planner")
@@ -277,7 +281,6 @@ class LangGraphTripPlanner:
             "trip_plan": None,
             "errors": [],
             "messages": [],
-            "user_preferences": None,
             "extracted_preferences": None,
             "user_id": user_id,
             "macro_plan": None,
@@ -335,15 +338,7 @@ class LangGraphTripPlanner:
             async for chunk in self.discovery_app.astream(initial_state, stream_mode="updates"):
                 for node_name, node_output in chunk.items():
                     if isinstance(node_output, dict):
-                        for key, value in node_output.items():
-                            if key in final_state:
-                                existing = final_state[key]
-                                if isinstance(existing, list) and isinstance(value, list):
-                                    existing.extend(value)
-                                else:
-                                    final_state[key] = value
-                            else:
-                                final_state[key] = value
+                        _merge_stream_update(final_state, node_output)
 
                         if "discovered_attractions" in node_output:
                             for attr in node_output["discovered_attractions"]:
@@ -399,16 +394,11 @@ class LangGraphTripPlanner:
         )
 
         PLANNING_NODE_INFO = {
-            "cluster_from_selections": {"message": "📊 正在聚类分析景点...", "progress": 15, "done_msg": "✅ 景点聚类完成"},
-            "search_food": {"message": "🍜 正在搜索美食...", "progress": 30, "done_msg": "✅ 美食搜索完成"},
-            "search_hotels_by_day": {"message": "🏨 正在搜索行程区域酒店...", "progress": 30, "done_msg": "✅ 酒店搜索完成"},
-            "plan_route": {"message": "🗺️ 正在规划路线...", "progress": 40, "done_msg": "✅ 路线规划完成"},
-            "macro_planner": {"message": "🏗️ 正在编排行程骨架...", "progress": 55, "done_msg": "✅ 行程骨架编排完成"},
-            "day_plan_subgraph": {"message": "📝 正在生成每日行程...", "progress": 70, "done_msg": "✅ 每日行程生成完成"},
-            "reduce_assemble": {"message": "🔧 正在合并行程数据...", "progress": 85, "done_msg": "✅ 行程合并完成"},
-            "global_synthesizer": {"message": "💡 正在生成全局建议...", "progress": 90, "done_msg": "✅ 全局建议生成完成"},
-            "extract_preferences": {"message": "📊 提取偏好...", "progress": 93, "done_msg": "✅ 偏好提取完成"},
-            "save_preferences": {"message": "💾 保存偏好...", "progress": 95, "done_msg": "✅ 偏好保存完成"},
+            "cluster_from_selections": {"done_msg": "✅ 景点聚类完成", "progress": 15},
+            "search_dining_pool": {"done_msg": "✅ 餐饮候选搜索完成", "progress": 30},
+            "search_hotels_by_day": {"done_msg": "✅ 酒店搜索完成", "progress": 30},
+            "macro_planner": {"done_msg": "✅ 行程骨架编排完成", "progress": 75},
+            "save_draft": {"done_msg": "✅ 行程草稿已保存", "progress": 95},
         }
 
         completed_nodes = set()
@@ -418,15 +408,7 @@ class LangGraphTripPlanner:
             async for chunk in self.planning_app.astream(initial_state, stream_mode="updates"):
                 for node_name, node_output in chunk.items():
                     if isinstance(node_output, dict):
-                        for key, value in node_output.items():
-                            if key in final_state:
-                                existing = final_state[key]
-                                if isinstance(existing, list) and isinstance(value, list):
-                                    existing.extend(value)
-                                else:
-                                    final_state[key] = value
-                            else:
-                                final_state[key] = value
+                        _merge_stream_update(final_state, node_output)
 
                     if node_name in PLANNING_NODE_INFO and node_name not in completed_nodes:
                         completed_nodes.add(node_name)
@@ -510,7 +492,6 @@ class LangGraphTripPlanner:
         initial_state = self._build_initial_state(request, user_id)
 
         NODE_INFO = {
-            "load_user_preferences": {"message": "📋 加载用户偏好...", "progress": 5, "done_msg": "✅ 用户偏好加载完成"},
             "search_attractions": {"message": "🔍 正在查询景点库...", "progress": 15, "done_msg": "✅ 景点查询完成"},
             "search_weather": {"message": "🌤️ 正在查询天气...", "progress": 10, "done_msg": "✅ 天气查询完成"},
             "gather_search": {"message": "🔗 汇总搜索结果...", "progress": 18, "done_msg": "✅ 搜索结果汇总完成"},
@@ -523,8 +504,8 @@ class LangGraphTripPlanner:
             "day_plan_subgraph": {"message": "📝 正在并行生成每日行程...", "progress": 75, "done_msg": "✅ 每日行程生成完成"},
             "reduce_assemble": {"message": "🔧 正在合并行程数据...", "progress": 85, "done_msg": "✅ 行程合并完成"},
             "global_synthesizer": {"message": "💡 正在生成全局建议...", "progress": 90, "done_msg": "✅ 全局建议生成完成"},
-            "extract_preferences": {"message": "📊 提取偏好...", "progress": 93, "done_msg": "✅ 偏好提取完成"},
-            "save_preferences": {"message": "💾 保存偏好...", "progress": 95, "done_msg": "✅ 偏好保存完成"},
+            "extract_preferences": {"message": "📊 提取行程观察...", "progress": 93, "done_msg": "✅ 行程观察提取完成"},
+            "save_preferences": {"message": "💾 保存行程观察...", "progress": 95, "done_msg": "✅ 行程观察处理完成"},
         }
 
         completed_nodes = set()
@@ -535,15 +516,7 @@ class LangGraphTripPlanner:
             async for chunk in self.app.astream(initial_state, stream_mode="updates"):
                 for node_name, node_output in chunk.items():
                     if isinstance(node_output, dict):
-                        for key, value in node_output.items():
-                            if key in final_state:
-                                existing = final_state[key]
-                                if isinstance(existing, list) and isinstance(value, list):
-                                    existing.extend(value)
-                                else:
-                                    final_state[key] = value
-                            else:
-                                final_state[key] = value
+                        _merge_stream_update(final_state, node_output)
 
                     if node_name in NODE_INFO and node_name not in completed_nodes and node_name not in executing_nodes:
                         executing_nodes.add(node_name)

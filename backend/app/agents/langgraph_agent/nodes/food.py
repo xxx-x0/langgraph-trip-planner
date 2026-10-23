@@ -9,7 +9,6 @@ from ..prompts import FOOD_AGENT_PROMPT
 from ..state import TripPlannerState, DayPlanLocalState
 from ....services.langchain_amap_tools import get_langchain_amap_service
 from ....services.llm_service import get_llm
-from ....services.preferences_service import format_preference_hint
 from ....models.schemas import DiningCategory
 
 # maps_search_detail节点内限速；缓存归公共边界，失败计数仅限当前批次。
@@ -74,11 +73,6 @@ async def search_food_node(state: TripPlannerState) -> Dict[str, Any]:
     food_keywords = _get_food_keywords(request.city, request.food_preference)
     city_info = CITY_FOOD_MAP.get(request.city, {"cuisine": "本地菜"})
 
-    preferences = state.get("user_preferences")
-    pref_hint = ""
-    if preferences:
-        pref_hint = "\n\n" + format_preference_hint(preferences)
-
     prompt = FOOD_AGENT_PROMPT + f"""
 请搜索城市: {request.city} 的餐厅信息。
 
@@ -92,7 +86,7 @@ async def search_food_node(state: TripPlannerState) -> Dict[str, Any]:
 请执行以下搜索:
 1. 使用 maps_around_search 搜索景点周边的餐厅（从景点信息中提取坐标）
 2. 使用 maps_text_search 搜索城市热门餐厅（关键词: {food_keywords[0]})
-""" + pref_hint
+"""
     response = await _invoke_llm_with_retry(llm_with_tools, [SystemMessage(content=FOOD_AGENT_PROMPT), HumanMessage(content=prompt)])
 
     food_results = []

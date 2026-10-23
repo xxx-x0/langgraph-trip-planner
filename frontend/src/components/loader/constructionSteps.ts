@@ -2,12 +2,7 @@
 //
 // ⚠️ 重要：这里的 key 必须与后端 create_planning_graph() 实际发出 node_complete
 // 的节点一致，而不是主行程图(create_trip_planner_graph)的节点。
-// 经核对 backend graph.py 的 plan_from_selections_stream / PLANNING_NODE_INFO，
-// draft 流程真正会触发 node_complete 的只有：
-//   cluster_from_selections / search_hotels_by_day / macro_planner
-// 其余 search_dining_pool / save_draft / load_user_preferences 在图中但不发事件。
-// 这里把用户可感知的步骤都列上，作为状态条标签来源；进度优先用后端事件自带的 progress，
-// progressForNode 仅作兜底。
+// 五个步骤对应骨架图实际完成事件；进度优先使用后端事件值。
 export interface ConstructionStep {
   key: string
   label: string
@@ -23,16 +18,10 @@ export const CONSTRUCTION_STEPS: ConstructionStep[] = [
 
 export const CONSTRUCTION_TOTAL = CONSTRUCTION_STEPS.length
 
-// 后端图中存在但不发 node_complete 的节点，仍给出标签以防偶发透传
-const EXTRA_LABELS: Record<string, string> = {
-  load_user_preferences: '加载偏好',
-}
-
 /** 给定当前节点 key，返回其中文标签；未知节点返回兜底文案。 */
 export function labelForNode(nodeKey: string): string {
   return (
     CONSTRUCTION_STEPS.find((s) => s.key === nodeKey)?.label ??
-    EXTRA_LABELS[nodeKey] ??
     '规划中'
   )
 }
