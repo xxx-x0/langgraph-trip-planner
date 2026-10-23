@@ -204,3 +204,35 @@ describe('saved draft edit protection', () => {
     wrapper.unmount()
   })
 })
+
+
+describe('meal intent recovery',()=>{
+  it('shows an AI omission recovery while keeping the saved dinner visible',async()=>{
+    const data=draft()
+    Object.assign(data.days_detail[0],{meals:[{name:'Dinner',type:'dinner',category:'main'}],meal_adjustments:[]})
+    vi.mocked(getDraft).mockResolvedValue(data)
+    const wrapper=await openDraft()
+    const updated={...data.days_detail[0],meal_adjustments:['AI未完整安排晚餐，已保留Dinner。'],description_source:'itinerary_facts_v1',description:'17:30–18:30 晚餐：Dinner'}
+    vi.mocked(aiRearrangeDay).mockResolvedValue({day_detail:updated} as any)
+    wrapper.getComponent({name:'DayCard'}).vm.$emit('ai-rearrange','优化路线')
+    await flushPromises()
+    expect(wrapper.findAll('.meal-row .name').map(e=>e.text())).toEqual(['Dinner'])
+    expect(wrapper.get('[role="status"]').text()).toContain('已保留Dinner')
+    expect(wrapper.get('.narrative').text()).toContain('晚餐：Dinner')
+    wrapper.unmount()
+  })
+  it('shows a deletion adjustment and removes it after the user explicitly deletes the meal',async()=>{
+    const data=draft()
+    Object.assign(data.days_detail[0],{meals:[{name:'Lunch',type:'lunch',category:'main'}],meal_adjustments:['原景点已删除，Lunch保留在首个景点之前。'],description_source:'itinerary_facts_v1',description:'11:30–12:30 午餐：Lunch'})
+    vi.mocked(getDraft).mockResolvedValue(data)
+    const wrapper=await openDraft()
+    expect(wrapper.get('[role="status"]').text()).toContain('首个景点之前')
+    const updated={...data.days_detail[0],meals:[],meal_adjustments:[],description:'当前未安排午餐'}
+    vi.mocked(recomputeDay).mockResolvedValue({day_detail:updated} as any)
+    await wrapper.get('.meal-row button').trigger('click');await flushPromises()
+    expect(vi.mocked(recomputeDay).mock.calls[0][2].meals).toEqual([])
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
+    expect(wrapper.get('.narrative').text()).not.toContain('11:30–12:30')
+    wrapper.unmount()
+  })
+})

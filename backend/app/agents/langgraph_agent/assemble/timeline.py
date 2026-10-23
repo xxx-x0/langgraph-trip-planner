@@ -6,6 +6,7 @@
 - timeline_order：[{kind, ref_name}]，hotel 在头尾，meal 按 insert_after 嵌入
 """
 from typing import Dict, Any, List, Optional
+from .schedule import estimated_lunch_anchor
 
 from ....models.schemas import (
     Attraction, Meal, Location, DayDetail, DraftDayContext,
@@ -36,7 +37,7 @@ def _candidate_to_meal(c: DiningCandidate) -> Meal:
         tel=c.tel,
         poi_id=c.poi_id,
         source=c.source,
-        estimated_cost=c.avg_cost or _default_cost(c.category),
+        estimated_cost=c.avg_cost if c.avg_cost is not None else _default_cost(c.category),
     )
 
 
@@ -80,6 +81,8 @@ def _meal_from_override_dict(d: Dict[str, Any]) -> tuple[Meal, str]:
         distance=d.get("distance"),
         open_hours=d.get("open_hours"),
         tel=d.get("tel"),
+        schedule_mode=d.get("schedule_mode") or "manual",
+        preferred_slot=d.get("preferred_slot"),
         poi_id=d.get("poi_id"),
         source=d.get("source", "user_custom"),
         estimated_cost=(avg_cost if avg_cost is not None else d.get("estimated_cost", _default_cost(category))),
@@ -112,6 +115,8 @@ def _default_main_meal(ctx: DraftDayContext, attractions: List[Attraction]) -> t
         return None, ""
     top1 = ctx.dining_pool.main[0]
     meal = _candidate_to_meal(top1)
+    meal.schedule_mode = "auto"
+    meal.preferred_slot = "lunch"
     mid_idx = max(len(attractions) // 2 - 1, 0)
     return meal, attractions[mid_idx].name
 
@@ -175,6 +180,14 @@ def rule_assemble_day_timeline(
         meals_with_insert = [
             _meal_from_override_dict(d) for d in (overrides["meals"] or [])
         ]
+        start = overrides.get("day_start_time") or ctx.day_start_time
+        meals_with_insert = [
+            (meal, ("hotel_start" if (meal.preferred_slot or meal.type) == "breakfast" else
+              estimated_lunch_anchor(attractions, start) if (meal.preferred_slot or meal.type) == "lunch"
+              else attractions[-1].name if attractions else "hotel_start")
+             if meal.schedule_mode == "auto" else anchor)
+            for meal, anchor in meals_with_insert
+        ]
         meals = [m for m, _ in meals_with_insert]
     else:
         default_meal, default_after = _default_main_meal(ctx, attractions)
@@ -198,6 +211,7 @@ def rule_assemble_day_timeline(
         locked_attraction_names=locked_attraction_names,
         removed_attraction_names=removed_attraction_names,
         is_assembled=True,
+        meal_adjustments=overrides.get("meal_adjustments") or [],
     )
 
 

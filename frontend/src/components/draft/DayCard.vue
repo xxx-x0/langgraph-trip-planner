@@ -14,7 +14,7 @@
              cancel-text="取消" @ok="confirmAIRearrange">
       <a-textarea v-model:value="aiHint" aria-label="AI 重排提示（可选）"
                   placeholder="可选，比如：我想吃辣的" :rows="3" />
-      <p>锁定景点保留当前位置，已删除景点不会重新加入。</p>
+      <p>锁定景点保留当前位置，已删除景点不会重新加入。AI会保留已安排的正餐；需要减少餐次时，请先在草稿中手动删除。</p>
     </a-modal>
     <template #extra>
       <a-button v-if="!isExpanded" type="link" @click="onExpand"
@@ -134,6 +134,8 @@
             </div>
           </div>
           <a-empty v-else class="meal-empty" description="还没有用餐安排" />
+          <p v-for="note in detail?.meal_adjustments || []" :key="note" role="status">ℹ️ {{ note }}</p>
+          <p v-for="warning in detail?.meal_warnings || []" :key="warning" role="alert">⚠️ {{ warning }}</p>
         </section>
       </div>
       <div class="route-info" v-if="detail.route_segments?.length">

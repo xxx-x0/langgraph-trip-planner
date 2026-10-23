@@ -30,7 +30,7 @@ def _sample_macro():
     )
 
 
-async def _seed_draft(user_id="u1") -> str:
+async def _seed_draft(user_id="u1", dining_pool=None) -> str:
     return await trip_draft_service.create_draft(
         user_id=user_id, request=_sample_request(),
         selected_attractions=[], macro_plan=_sample_macro(),
@@ -39,7 +39,7 @@ async def _seed_draft(user_id="u1") -> str:
             [{"name": "B", "longitude": 116.5, "latitude": 39.95}],
         ],
         hotels_by_day=[[], []],
-        dining_pool=[DiningPoolDay().model_dump(mode="json")] * 2,
+        dining_pool=dining_pool or [DiningPoolDay().model_dump(mode="json")] * 2,
         weather_info=[],
     )
 
@@ -326,7 +326,8 @@ async def test_ai_rearrange_replaces_day_detail(client):
         )
     assert resp.status_code == 200
     body = resp.json()
-    assert "AI 推荐" in [m["name"] for m in body["day_detail"]["meals"]]
+    assert "AI 推荐" not in [m["name"] for m in body["day_detail"]["meals"]]
+    assert any("不在当前可用列表" in x for x in body["day_detail"]["meal_adjustments"])
 
 
 @pytest.mark.asyncio
@@ -410,3 +411,31 @@ def test_preserve_locked_positions_for_ai_rearrange():
     )
 
     assert order == ["A", "C", "B"]
+
+
+@pytest.mark.asyncio
+async def test_ai_rearrange_keeps_selected_restaurant_service_data(client):
+    pool = DiningPoolDay(main=[{
+        "name": "真实餐厅", "category": "main", "source": "nearby",
+        "location": {"longitude": 116.41, "latitude": 39.91},
+        "avg_cost": 68, "open_hours": "11:00-23:00", "poi_id": "poi-1",
+    }]).model_dump(mode="json")
+    draft_id = await _seed_draft(dining_pool=[pool, pool])
+    response = type("R", (), {"content": json.dumps({
+        "attractions_order": ["A"],
+        "meals": [{"name": "真实餐厅", "category": "main", "insert_after": "A",
+                   "location": {"longitude": 1, "latitude": 1}, "estimated_cost": 999}],
+    })})
+    with patch("app.api.routes.trip_draft._invoke_llm_with_retry", new=AsyncMock(return_value=response)), \
+         patch("app.api.routes.trip_draft.get_llm", return_value=object()), \
+         patch("app.api.routes.trip_draft.compute_day_route", new=AsyncMock(return_value=[])) as route:
+        result = await client.post(f"/api/trip/draft/{draft_id}/day/0/ai-rearrange", json={})
+    assert result.status_code == 200
+    detail = result.json()["day_detail"]
+    meal = detail["meals"][0]
+    assert meal["location"] == pool["main"][0]["location"]
+    assert meal["estimated_cost"] == 68
+    assert meal["open_hours"] == "11:00-23:00"
+    assert meal["source"] == "nearby"
+    assert route.call_args.args[0].meals[0].location.longitude == 116.41
+    assert detail["timeline_order"][1]["ref_name"] == "真实餐厅"

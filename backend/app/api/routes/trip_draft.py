@@ -15,12 +15,13 @@ from ...agents.langgraph_agent.graph import get_trip_planner_agent
 from ...agents.langgraph_agent.assemble.timeline import rule_assemble_day_timeline
 from ...agents.langgraph_agent.assemble.route import compute_day_route
 from ...agents.langgraph_agent.assemble.budget import compute_day_budget
+from ...agents.langgraph_agent.assemble.schedule import schedule_day
 from ...agents.langgraph_agent.assemble.narrative import write_day_narrative_llm
 from ...agents.langgraph_agent.exceptions import _invoke_llm_with_retry
 from ...agents.langgraph_agent.finalize.pipeline import finalize_draft
 from ...services import trip_draft_service
-from ...agents.langgraph_agent.assemble.meals import saved_meals as _saved_meals, repair_deleted_anchors
-from ...services.external_calls import ExternalServiceError
+from ...agents.langgraph_agent.assemble.meals import saved_meals as _saved_meals, repair_deleted_anchors, normalize_ai_meals, meal_plan_violations
+from ...services.external_calls import ExternalServiceError, FailureKind, operation_deadline
 from ...services.llm_service import get_llm
 from ...models.schemas import PlanFromSelectionsRequest
 
@@ -304,13 +305,21 @@ def _merge_day_edit(
         raise HTTPException(409, detail="移动锁定景点前请先解锁")
 
     meals = edit.meals if edit.meals is not None else _saved_meals(current) if current else None
+    adjustments = []
     if meals is not None:
-        meals, _ = repair_deleted_anchors(meals, current, proposed)
+        # Browser may choose identity/position, but provider facts come from saved candidates.
+        sources = {c.name:c.model_dump(mode='json') for cat in type(ctx.dining_pool).model_fields for c in getattr(ctx.dining_pool,cat)}
+        sources.update({m.name:m.model_dump(mode='json') for m in current.meals} if current else {})
+        meals = [{**sources[m['name']], **{k:v for k,v in m.items() if k in {'insert_after','schedule_mode','preferred_slot','type'}}}
+                 if m.get('name') in sources else m for m in meals]
+    if meals is not None:
+        meals, adjustments = repair_deleted_anchors(meals, current, proposed)
     overrides = _build_edit_overrides(
         order=proposed, meals=meals,
         day_start_time=edit.day_start_time or (current.day_start_time if current else None) or ctx.day_start_time,
         locked_names=locked, removed_names=removed,
     )
+    overrides['meal_adjustments'] = adjustments
     return overrides
 
 
@@ -337,6 +346,7 @@ async def assemble_day(
     detail.route_segments = await compute_day_route(
         detail, request.city, request.transportation
     )
+    schedule_day(detail)
     detail.day_budget = compute_day_budget(detail)
     detail.description = await write_day_narrative_llm(
         detail, weather=ctx.weather,
@@ -366,6 +376,18 @@ async def recompute_day(draft_id: str, day_index: int, edit: DayEditRequest):
     detail.route_segments = await compute_day_route(
         detail, request.city, request.transportation
     )
+    schedule_day(detail)
+    if edit.meals is not None:
+        from ...agents.langgraph_agent.assemble.schedule import opening_windows
+        existing_names = {m.name for m in current.meals} if current else set()
+        for meal in detail.meals:
+            if meal.name in existing_names: continue
+            if any(w in (meal.name+' '+(meal.open_hours or '')) for w in ('暂停营业','永久关闭','已歇业')):
+                raise HTTPException(409, detail=f'{meal.name}已被来源标为停止营业，本次修改未保存')
+            entry = next((x for x in detail.timeline_schedule if x.get('kind') == 'meal' and x.get('ref_name') == meal.name), None)
+            windows = opening_windows(meal.open_hours)
+            if entry and windows and not any(a <= entry['start_minutes'] and entry['end_minutes'] <= b for a,b in windows):
+                raise HTTPException(409, detail=f'{meal.name}不适合当前用餐时间，请换一家或调整时间；本次修改未保存')
     detail.day_budget = compute_day_budget(detail)
     # 保留当前 description（recompute 不写 LLM）
     detail.description = current.description if current else ""
@@ -397,21 +419,31 @@ _AI_REARRANGE_SYSTEM = """你是单日行程优化专家。请从给定的餐饮
 
 严格约束：
 1. 只能从候选池中挑餐厅，禁止编造名字
-2. 输出 JSON，含 attractions_order (景点名顺序) 和 meals (含 category, name, insert_after, estimated_cost)
+2. 输出 JSON，含 attractions_order (景点名顺序) 和 meals (含 category, name, insert_after, preferred_slot)；正餐preferred_slot为breakfast/lunch/dinner
 3. category 必须是 main/snack/dessert/cafe/late_night 之一
 4. insert_after 必须是 attractions_order 里的景点名（或 hotel_start / hotel_end）
-5. 锁定景点必须保留当前位置；已删除景点禁止加入
-6. 不要输出其他字段、不要 markdown、纯 JSON"""
+5. 锁定景点必须保留，且不要改变它们在当前顺序里的位置
+6. 已删除景点禁止出现在 attractions_order 或 insert_after 中
+7. 保留当前已安排正餐的数量与餐次；不能把咖啡/小吃当作午餐或晚餐，不能默默删除已有正餐。不要额外补当前未安排的早餐等餐次
+8. 只选择餐厅和位置，不编造价格、坐标、营业时间
+9. 不要输出其他字段、不要 markdown、纯 JSON"""
 
 
 @router.post("/{draft_id}/day/{day_index}/ai-rearrange", response_model=DayDetailResponse,
              summary="AI 重新安排某天")
 async def ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeRequest):
+    try:
+        async with operation_deadline(110):
+            return await _ai_rearrange_day(draft_id, day_index, req)
+    except TimeoutError:
+        raise ExternalServiceError('llm', 'AI重排与用餐核对', FailureKind.TIMEOUT) from None
+
+
+async def _ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeRequest):
     record = await trip_draft_service.get_draft(draft_id)
     _ensure_editable(record)
     ctx = _get_day_context_from_record(record, day_index)
     request = TripRequest.model_validate_json(record.request_json)
-
     existing_days = json.loads(record.days_detail_json)
     current = (DayDetail.model_validate(existing_days[day_index])
                if existing_days[day_index] else None)
@@ -422,13 +454,9 @@ async def ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReques
     ]
     base_order = [a.name for a in base_attractions]
 
-    pool_summary = []
-    for cat, items in ctx.dining_pool.model_dump().items():
-        if items:
-            names = "、".join(it["name"] for it in items[:5])
-            pool_summary.append(f"  {cat}: {names}")
-    pool_text = "\n".join(pool_summary) or "（候选池为空）"
-
+    base_detail = current or rule_assemble_day_timeline(ctx)
+    pool_text = json.dumps(ctx.dining_pool.model_dump(mode='json'), ensure_ascii=False)
+    meal_intent = json.dumps(_saved_meals(base_detail), ensure_ascii=False)
     attr_names = "、".join(base_order) or "（无）"
     locked_text = "、".join(locked_names) or "无"
     removed_text = "、".join(removed_names) or "无"
@@ -439,7 +467,10 @@ async def ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReques
 景点（可重排）: {attr_names}
 锁定景点（必须保留当前位置）: {locked_text}
 已删除景点（禁止加入）: {removed_text}
-餐饮候选池:
+开始时间: {base_detail.day_start_time}
+当前已安排用餐（保留正餐餐次与数量，不能漏掉）:
+{meal_intent}
+餐饮候选池（价格/坐标/营业时间沿用此事实）:
 {pool_text}
 
 用户提示: {hint or '无'}
@@ -466,22 +497,42 @@ async def ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReques
         proposed_order=parsed.attractions_order or base_order,
         locked_names=locked_names,
     )
+    try:
+        meals, adjustments = normalize_ai_meals(parsed.meals, base_detail, ctx, attractions_order)
+    except ValueError as error:
+        raise HTTPException(422, detail=str(error)) from error
+
     overrides = {
         "attractions_order": attractions_order,
-        "meals": parsed.meals or [],
+        "meals": meals,
+        "meal_adjustments": adjustments,
         "locked_attraction_names": locked_names,
         "removed_attraction_names": removed_names,
-        "day_start_time": current.day_start_time if current and current.day_start_time else ctx.day_start_time,
+        "day_start_time": (
+            current.day_start_time if current and current.day_start_time
+            else ctx.day_start_time
+        ),
     }
     detail = rule_assemble_day_timeline(ctx, overrides=overrides)
     detail.route_segments = await compute_day_route(
         detail, request.city, request.transportation
     )
+    schedule_day(detail)
+    problems = meal_plan_violations(detail, base_detail)
+    if problems:
+        # Reject a regression after actual route timing. Reuse the last saved itinerary,
+        # checking its factual times; no second model request or unbounded optimization loop.
+        detail = base_detail.model_copy(deep=True)
+        detail.meal_adjustments = ['AI建议与已有用餐时段不兼容，已保留原景点顺序和餐厅。']
+        if not detail.route_segments:
+            detail.route_segments = await compute_day_route(detail, request.city, request.transportation)
+        schedule_day(detail)
+        if any(r.is_estimated for r in detail.route_segments):
+            raise ExternalServiceError('amap', '路线计算', FailureKind.UNAVAILABLE)
+        if meal_plan_violations(detail, base_detail):
+            raise HTTPException(422, detail='无法保留已有正餐时段，本次重排未保存；请先核对开始时间、景点时长和用餐安排')
     detail.day_budget = compute_day_budget(detail)
-    # description 保留当前（用户可手动 narrative 刷新）
-    existing_days = json.loads(record.days_detail_json)
-    if existing_days[day_index]:
-        detail.description = existing_days[day_index].get("description", "")
+    detail.description = current.description if current else ""
     await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
 

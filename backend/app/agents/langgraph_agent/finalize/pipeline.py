@@ -13,6 +13,7 @@ from ....services import trip_draft_service
 from ..assemble.timeline import rule_assemble_day_timeline
 from ..assemble.route import compute_day_route
 from ..assemble.budget import compute_day_budget
+from ..assemble.schedule import schedule_day
 
 
 _finalize_locks = WeakValueDictionary()
@@ -82,6 +83,9 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         timeline_order=detail.timeline_order,
         locked_attraction_names=detail.locked_attraction_names,
         day_start_time=detail.day_start_time,
+        timeline_schedule=detail.timeline_schedule,
+        meal_warnings=detail.meal_warnings,
+        meal_adjustments=detail.meal_adjustments,
     )
 
 
@@ -183,6 +187,7 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
             )
             detail.day_budget = compute_day_budget(detail)
 
+        schedule_day(detail)
         day_plans.append(_day_detail_to_day_plan(
             detail, request.transportation, request.accommodation
         ))

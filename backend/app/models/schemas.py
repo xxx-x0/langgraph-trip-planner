@@ -1,7 +1,7 @@
 """数据模型定义"""
 
 from enum import Enum
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Union, Any, Literal
 from pydantic import BaseModel, Field, field_validator
 from datetime import date
 
@@ -170,6 +170,8 @@ class Meal(BaseModel):
     estimated_cost: int = Field(default=0, description="预估费用(元)")
     open_hours: Optional[str] = Field(default=None, description="营业时间")
     tel: Optional[str] = Field(default=None, description="联系电话")
+    schedule_mode: Literal["auto", "manual"] = Field(default="manual", description="默认推荐可随景点排序调整，明确选择保留插入位置")
+    preferred_slot: Optional[Literal["breakfast", "lunch", "dinner"]] = Field(default=None)
 
 
 class Hotel(BaseModel):
@@ -227,6 +229,9 @@ class DayPlan(BaseModel):
         description="单日行程开始时间 HH:mm",
     )
     locked_attraction_names: List[str] = Field(default_factory=list)
+    timeline_schedule: List[Dict[str, Any]] = Field(default_factory=list, description="按路线计算的活动开始/结束时间")
+    meal_warnings: List[str] = Field(default_factory=list, description="缺餐或用餐时段需要确认")
+    meal_adjustments: List[str] = Field(default_factory=list, description="本次编辑的用餐保留与调整说明")
 
 
 class WeatherInfo(BaseModel):
@@ -453,6 +458,9 @@ class DayDetail(BaseModel):
         default_factory=list,
         description="用户从当天删除的景点名；后续重算和 AI 重排需排除",
     )
+    timeline_schedule: List[Dict[str, Any]] = Field(default_factory=list)
+    meal_warnings: List[str] = Field(default_factory=list)
+    meal_adjustments: List[str] = Field(default_factory=list, description="本次编辑的用餐保留与调整说明")
 
 
 class TripDraftPayload(BaseModel):
