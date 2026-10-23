@@ -31,24 +31,25 @@
 
       <!-- 价格区域 -->
       <div class="hotel-price-section">
-        <div v-if="hotel.price" class="price-main">
-          <span class="price-currency">{{ hotel.currency || 'CNY' }}</span>
-          <span class="price-value">¥{{ Math.round(hotel.price) }}</span>
-          <span class="price-unit">/晚</span>
-          <span v-if="hotel.original_price && hotel.original_price > hotel.price" class="price-original">
-            ¥{{ Math.round(hotel.original_price) }}
-          </span>
-          <span v-if="hotel.original_price && hotel.original_price > hotel.price" class="price-save">
-            省¥{{ Math.round(hotel.original_price - hotel.price) }}
-          </span>
-        </div>
-        <div v-else-if="hotel.price_range" class="price-main">
-          <span class="info-text price">{{ hotel.price_range }}</span>
-        </div>
-        <div v-else-if="hotel.estimated_cost" class="price-estimated">
-          约¥{{ hotel.estimated_cost }}/晚
-        </div>
-        <div v-else class="price-pending">价格待确认</div>
+        <template v-if="hotel.quote">
+          <div class="price-main" v-if="hotel.quote.amount != null">
+            <span>{{ costKind }}</span>
+            <span class="price-value">{{ hotel.quote.currency || '币种待确认' }} {{ hotel.quote.amount.toFixed(2) }}</span>
+            <span class="price-unit">{{ priceUnit }}</span>
+          </div>
+          <div v-else class="price-pending">房型价格待确认</div>
+          <p>{{ hotel.quote.check_in }} 入住 → {{ hotel.quote.check_out }} 退房 · {{ hotel.quote.nights }} 晚</p>
+          <p>{{ hotel.quote.occupancy.room_count }} 间房，每间 {{ hotel.quote.occupancy.adults_per_room }} 位成人<span v-if="hotel.quote.occupancy.children_ages.length">，儿童 {{ hotel.quote.occupancy.children_ages.join('、') }} 岁</span></p>
+          <p v-if="hotel.quote.room_name">{{ hotel.quote.room_name }} · {{ hotel.quote.bed_type || '床型待确认' }}</p>
+          <p>{{ hotel.quote.meal_plan || '早餐条件待确认' }} · {{ hotel.quote.taxes_included === true ? '含税费' : hotel.quote.taxes_included === false ? '不含税费' : '税费待确认' }}</p>
+          <p>{{ hotel.quote.cancellation_policy || '退改条件待确认' }}</p>
+          <p>{{ availability }}，提交预订前需重新核价。</p>
+          <ul v-if="hotel.quote.unsupported_conditions.length" role="alert">
+            <li v-for="item in hotel.quote.unsupported_conditions" :key="item">{{ item }}</li>
+          </ul>
+          <small>来源：AIGoHotel · 查询时间 {{ queryTime }}</small>
+        </template>
+        <div v-else class="price-pending">历史住宿价格未核对入住条件，当前房型价格待确认</div>
       </div>
 
       <!-- 距离 -->
@@ -125,6 +126,11 @@ import { cleanHotelName } from '@/utils/hotelFormat'
 const props = defineProps<{
   hotel: Hotel
 }>()
+
+const costKind = computed(() => props.hotel.quote?.unsupported_conditions.length ? '条件未匹配的参考价（未计入预算）' : ({ query_quote: '查询参考报价', user_estimate: '用户估算', system_estimate: '系统估算', paid: '已付金额', unknown: '价格待确认' }[props.hotel.quote?.cost_kind || 'unknown']))
+const priceUnit = computed(() => ({ average_per_room_night: '/间/晚（整段均价）', total_stay: '/整段住宿', unknown: '（计价单位待确认）' }[props.hotel.quote?.unit || 'unknown']))
+const availability = computed(() => ({ returned: '本次查询返回房型，尚未预订', on_request: '房型需供应方确认', unavailable: '未返回可售房型', unknown: '可售状态待确认' }[props.hotel.quote?.availability || 'unknown']))
+const queryTime = computed(() => props.hotel.quote?.queried_at ? new Date(props.hotel.quote.queried_at).toLocaleString('zh-CN', { hour12: false }) : '未记录')
 
 const isDescExpanded = ref(false)
 

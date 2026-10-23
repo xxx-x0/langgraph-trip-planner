@@ -14,7 +14,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from ...agents.langgraph_agent.graph import get_trip_planner_agent
 from ...agents.langgraph_agent.assemble.timeline import rule_assemble_day_timeline
 from ...agents.langgraph_agent.assemble.route import compute_day_route
-from ...agents.langgraph_agent.assemble.budget import compute_day_budget
+from ...agents.langgraph_agent.assemble.budget import compute_day_budget, parse_ticket_price as _parse_ticket_price
 from ...agents.langgraph_agent.assemble.schedule import schedule_day
 from ...agents.langgraph_agent.assemble.narrative import write_day_narrative_llm, refresh_day_description
 from ...agents.langgraph_agent.exceptions import _invoke_llm_with_retry
@@ -27,14 +27,6 @@ from ...models.schemas import PlanFromSelectionsRequest
 
 router = APIRouter(prefix="/trip/draft", tags=["trip_draft"])
 
-
-def _parse_ticket_price(value) -> int:
-    if value is None:
-        return 0
-    if isinstance(value, (int, float)):
-        return int(value)
-    match = re.search(r"\d+", str(value))
-    return int(match.group()) if match else 0
 
 
 async def _save_day_detail(draft_id, day_index, detail, *, expected_day, expected_request, weather=None):
@@ -152,14 +144,24 @@ def _load_payload(record) -> TripDraftPayload:
             attractions=attractions, hotel=hotel,
             dining_pool=pool, weather=weather_obj,
             day_start_time=request.default_day_start_time,
+            overnight_stay=idx < request.travel_days - 1,
+            companion_count=request.companions.count if request.companions else 1,
         ))
 
     days_detail = []
-    for d in days_detail_raw:
+    for idx, d in enumerate(days_detail_raw):
         if d is None:
             days_detail.append(None)
         else:
             detail = DayDetail.model_validate(d)
+            detail.overnight_stay = idx < request.travel_days - 1
+            detail.companion_count = request.companions.count if request.companions else 1
+            detail.day_budget = compute_day_budget(detail)
+            from ...services.hotel_quotes import hotel_cost_for_date
+            for entry in detail.timeline_schedule:
+                if entry.get("kind") == "hotel":
+                    amount, missing = hotel_cost_for_date(detail.hotel, detail.date) if detail.hotel and detail.overnight_stay else (0, [])
+                    entry["cost"] = (amount if amount or not missing else None) if detail.overnight_stay else None
             refresh_day_description(detail, next((ctx.weather for ctx in days if ctx.date == detail.date), None))
             days_detail.append(detail)
 

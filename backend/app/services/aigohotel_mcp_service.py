@@ -213,18 +213,22 @@ class AIGoHotelService:
         check_in: Optional[str] = None,
         stay_nights: Optional[int] = None,
         adult_count: Optional[int] = None,
+        room_count: int = 1,
+        children_ages: Optional[List[int]] = None,
     ) -> Any:
         """获取酒店详情"""
         arguments: Dict[str, Any] = {"hotelId": hotel_id}
         date_param: Dict[str, Any] = {}
         if check_in:
             date_param["checkInDate"] = check_in
-        if stay_nights is not None:
-            date_param["stayNights"] = stay_nights
+        if check_in and stay_nights is not None:
+            date_param["checkOutDate"] = (date.fromisoformat(check_in) + timedelta(days=stay_nights)).isoformat()
         if date_param:
             arguments["dateParam"] = date_param
         if adult_count is not None:
-            arguments["occupancyParam"] = {"adultCount": adult_count}
+            ages = children_ages or []
+            arguments["occupancyParam"] = {"adultCount": adult_count, "roomCount": room_count,
+                                          "childCount": len(ages), "childAgeDetails": ages}
 
         result = await self._call_tool("GetHotelDetail", arguments, timeout=30.0)
         return _parse_result(result)

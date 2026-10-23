@@ -128,7 +128,10 @@ def schedule_day(detail: DayDetail) -> None:
             append(kind, name, 60 if is_main else 30, cost=meal.estimated_cost,
                    detail=slot_label(meal.type))
         elif kind == 'hotel' and detail.hotel:
-            append(kind, name, 30, cost=detail.hotel.estimated_cost, detail=detail.hotel.address)
+            from ....services.hotel_quotes import hotel_cost_for_date
+            amount, missing = hotel_cost_for_date(detail.hotel, detail.date)
+            append(kind, name, 30, cost=(amount if amount > 0 or not missing else None) if detail.overnight_stay else None,
+                   detail=detail.hotel.address if detail.overnight_stay else '离开日；此处为酒店位置参考，不计新增住宿')
         previous = name
 
     if detail.attractions or detail.meals:

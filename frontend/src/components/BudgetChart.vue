@@ -21,7 +21,7 @@ const initChart = () => {
 
   if (barChartRef.value) {
     barChart = echarts.init(barChartRef.value)
-    barChart.setOption(getBarOption())
+    barChart.setOption(getBarOption(), true)
   }
 }
 
@@ -31,11 +31,10 @@ const getBarOption = () => {
   const values = [b.total_attractions, b.total_hotels, b.total_meals, b.total_transportation]
   const colors = ['#5470c6', '#91cc75', '#fac858', '#ee6666']
 
-  const budgetLimit = b.budget_limit
 
   return {
     title: {
-      text: budgetLimit ? '费用 vs 预算' : '费用明细',
+      text: '已知费用预估构成',
       left: 'center',
       top: 10,
       textStyle: { fontSize: 14, color: '#333', fontWeight: 600 }
@@ -67,7 +66,7 @@ const getBarOption = () => {
     },
     series: [
       {
-        name: '实际费用',
+        name: '已知费用预估',
         type: 'bar',
         data: values.map((v, i) => ({
           value: v,
@@ -88,25 +87,6 @@ const getBarOption = () => {
           color: '#666'
         }
       },
-      ...(budgetLimit ? [{
-        name: '预算参考',
-        type: 'line',
-        data: categories.map((_, i) => {
-          const ratios = [0.15, 0.45, 0.30, 0.10]
-          return Math.round(budgetLimit * ratios[i])
-        }),
-        lineStyle: { color: '#ff4d4f', type: 'dashed', width: 2 },
-        itemStyle: { color: '#ff4d4d' },
-        symbol: 'diamond',
-        symbolSize: 8,
-        label: {
-          show: true,
-          position: 'top',
-          formatter: '¥{c}',
-          fontSize: 10,
-          color: '#ff4d4f'
-        }
-      }] : [])
     ]
   }
 }
@@ -126,7 +106,7 @@ onUnmounted(() => {
 })
 
 watch(() => props.budget, () => {
-  if (barChart) barChart.setOption(getBarOption())
+  if (barChart) barChart.setOption(getBarOption(), true)
 }, { deep: true })
 </script>
 

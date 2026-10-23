@@ -14,7 +14,7 @@ export interface Attraction {
   category?: string
   rating?: number
   image_url?: string
-  ticket_price?: number
+  ticket_price?: number | null
   open_hours?: string
   tel?: string
 }
@@ -36,6 +36,7 @@ export interface Meal {
 }
 
 export interface Hotel {
+  quote?: HotelQuote | null
   name: string
   address: string
   location?: Location
@@ -64,13 +65,15 @@ export interface CompanionInfo {
 }
 
 export interface Budget {
+  is_complete?: boolean
+  unknown_cost_items?: string[]
   total_attractions: number
   total_hotels: number
   total_meals: number
   total_transportation: number
   total: number
   budget_limit?: number
-  is_within_budget?: boolean
+  is_within_budget?: boolean | null
 }
 
 export interface RouteSegment {
@@ -83,6 +86,7 @@ export interface RouteSegment {
 }
 
 export interface DayPlan {
+  overnight_stay?: boolean
   description_source?: string | null
   pending_confirmations?: string[]
   timeline_schedule?: Array<{ kind: "attraction" | "meal" | "hotel" | "travel" | "wait" | "free_time"; ref_name: string; start_time: string; end_time: string; start_minutes: number; end_minutes: number; duration: number; cost?: number | null; detail?: string; mode?: string; distance?: string }>
@@ -135,6 +139,7 @@ export interface TripPlan {
 }
 
 export interface TripFormData {
+  hotel_occupancy?: HotelOccupancy
   city: string
   start_date: string
   end_date: string
@@ -244,4 +249,34 @@ export interface DayDurationInfo {
 export interface PreviewDayAssignmentResponse {
   day_assignments: DiscoveredAttraction[][]
   day_durations: DayDurationInfo[]
+}
+
+
+export interface HotelOccupancy {
+  room_count: number
+  adults_per_room: number
+  children_ages: number[]
+}
+
+
+export interface HotelQuote {
+  source: string
+  cost_kind: 'query_quote' | 'user_estimate' | 'system_estimate' | 'paid' | 'unknown'
+  status: string
+  amount?: number | null
+  currency?: string | null
+  unit: 'average_per_room_night' | 'total_stay' | 'unknown'
+  check_in: string
+  check_out: string
+  nights: number
+  occupancy: HotelOccupancy
+  occupancy_confirmed: boolean
+  queried_at: string
+  unsupported_conditions: string[]
+  room_name?: string | null
+  bed_type?: string | null
+  meal_plan?: string | null
+  cancellation_policy?: string | null
+  taxes_included?: boolean | null
+  availability: string
 }

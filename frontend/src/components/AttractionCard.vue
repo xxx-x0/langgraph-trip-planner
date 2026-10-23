@@ -10,8 +10,8 @@
       <div class="attraction-badge">
         <span class="badge-number">{{ globalIndex }}</span>
       </div>
-      <div v-if="attraction.ticket_price" class="price-tag">
-        ¥{{ attraction.ticket_price }}
+      <div class="price-tag">
+        {{ attraction.ticket_price == null ? '票价待确认' : attraction.ticket_price === 0 ? '免费' : '¥' + attraction.ticket_price }}
       </div>
       <div v-if="attraction.category" class="category-tag">
         {{ attraction.category }}

@@ -32,6 +32,7 @@ def test_attractions_meals_hotel_summed():
     b = compute_day_budget(detail)
     assert b.total_attractions == 100
     assert b.total_meals == 100
-    assert b.total_hotels == 300
+    assert b.total_hotels == 0  # 旧估价没有入住条件，不能充当报价
+    assert not b.is_complete
     assert b.total_transportation == 50  # 默认 50
-    assert b.total == 550
+    assert b.total == 250

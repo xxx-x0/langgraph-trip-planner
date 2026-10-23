@@ -56,7 +56,7 @@
       <div class="stat-divider"></div>
       <div class="stat-item">
         <div class="stat-value">¥{{ tripPlan.budget?.total || 0 }}</div>
-        <div class="stat-label">预算</div>
+        <div class="stat-label">{{ tripPlan.budget?.is_complete === true ? "预估费用" : "已知费用预估小计" }}</div>
       </div>
       <div class="stat-divider"></div>
       <div class="stat-item">

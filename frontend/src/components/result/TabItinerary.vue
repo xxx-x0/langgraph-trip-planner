@@ -79,7 +79,7 @@
             </div>
 
             <!-- 住宿推荐 -->
-            <div v-if="day.hotel" class="section-block section-block-yellow">
+            <div v-if="day.hotel && day.overnight_stay !== false" class="section-block section-block-yellow">
               <div class="section-block-title">🏨 住宿推荐</div>
               <div class="section-block-content">
                 <HotelCard :hotel="day.hotel" />

@@ -234,7 +234,7 @@
                   <span class="form-label">出行人数</span>
                 </template>
                 <a-input-number
-                  v-model:value="formData.companions!.count"
+                  v-model:value="formData.companions!.count" aria-label="出行人数"
                   :min="1"
                   :max="20"
                   style="width: 100%"
@@ -260,7 +260,27 @@
               </a-form-item>
             </a-col>
           </a-row>
+          <div v-if="formData.travel_days > 1" class="stay-with-party">
+            <div class="stay-heading"><h4>这几晚，怎么住</h4><span>{{ formData.travel_days - 1 }} 晚 · {{ formData.companions.count }} 人</span></div>
+            <p v-if="formData.companions.count === 1" class="setup-hint">独自出行，按 1 间房、1 位成人查询住宿。</p>
+            <template v-else>
+              <p class="setup-hint">一起出发，也把房间分配好。各间房按相同人数查询。</p>
+              <div v-if="formData.companions.count === 2 && !hotelChildren.trim()" class="room-presets" aria-label="双人分房方式">
+                <button type="button" :aria-pressed="hotelRoomCount === 1 && hotelAdults === 2" @click="setTwinStay(1)">同住一间 <span>1 间 × 2 位成人</span></button>
+                <button type="button" :aria-pressed="hotelRoomCount === 2 && hotelAdults === 1" @click="setTwinStay(2)">各住一间 <span>2 间 × 1 位成人</span></button>
+              </div>
+              <a-row :gutter="16">
+                <a-col :xs="12" :md="6"><a-form-item label="房间数"><a-input-number v-model:value="hotelRoomCount" :min="1" :max="10" aria-label="房间数" /></a-form-item></a-col>
+                <a-col :xs="12" :md="6"><a-form-item label="每间房成人数"><a-input-number v-model:value="hotelAdults" :min="1" :max="20" aria-label="每间房成人数" /></a-form-item></a-col>
+                <a-col :xs="24" :md="12"><a-form-item label="每间房儿童年龄（没有可留空）"><a-input v-model:value="hotelChildren" placeholder="例如：3,8" aria-label="每间房儿童年龄" /></a-form-item></a-col>
+              </a-row>
+              <p v-if="occupancyIssue" class="setup-error" role="alert">{{ occupancyIssue }}</p>
+              <p v-else class="setup-hint">{{ hotelRoomCount }} 间房，共 {{ formData.companions.count }} 人。儿童与多房报价需再向酒店确认。</p>
+            </template>
+          </div>
         </div>
+
+
 
         <!-- 卡片 4: 额外要求 - 白色背景 -->
         <div class="form-card">
@@ -292,7 +312,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { reactive, watch, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { TripFormData } from '@/types'
@@ -340,6 +360,27 @@ const formData = reactive<{
   companions: { count: 1, type: 'solo' }
 })
 
+const hotelRoomCount = ref(1)
+const hotelAdults = ref(1)
+const hotelChildren = ref('')
+function setTwinStay(rooms:1|2){hotelRoomCount.value=rooms;hotelAdults.value=2/rooms}
+
+const occupancy = computed(() => {
+  if (formData.travel_days <= 1) return undefined
+  if (formData.companions.count === 1) return { room_count: 1, adults_per_room: 1, children_ages: [] }
+  const ages = hotelChildren.value.trim() ? hotelChildren.value.split(/[,，]/).map(v => v.trim() ? Number(v.trim()) : NaN) : []
+  return { room_count: hotelRoomCount.value, adults_per_room: hotelAdults.value, children_ages: ages }
+})
+const occupancyIssue = computed(() => {
+  const o = occupancy.value
+  if (!o) return ''
+  if (!Number.isInteger(o.room_count) || o.room_count < 1 || o.room_count > 10 || !Number.isInteger(o.adults_per_room) || o.adults_per_room < 1 || o.adults_per_room > 20 || o.children_ages.some(age => !Number.isInteger(age) || age < 0 || age > 17)) return '请填写有效的房间数、成人数和 0～17 岁的儿童年龄。'
+  return o.room_count * (o.adults_per_room + o.children_ages.length) === formData.companions.count ? '' : '房间内的总人数与出行人数不一致，请调整房间或每间房人数。'
+})
+watch(() => formData.companions.count, (count, oldCount) => {
+  if (hotelRoomCount.value === 1 && !hotelChildren.value.trim() && hotelAdults.value === oldCount) hotelAdults.value = count
+})
+
 const selectCity = (city: string) => {
   formData.city = city
 }
@@ -365,7 +406,10 @@ const handleSubmit = () => {
     return
   }
 
+  if (occupancyIssue.value) { message.error(occupancyIssue.value); return }
+
   const requestData: TripFormData = {
+    hotel_occupancy: occupancy.value,
     city: formData.city,
     start_date: formData.start_date.format('YYYY-MM-DD'),
     end_date: formData.end_date.format('YYYY-MM-DD'),

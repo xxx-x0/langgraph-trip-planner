@@ -1036,7 +1036,7 @@ async def day_plan_generator_node(state: DayPlanLocalState) -> Dict[str, Any]:
                 if isinstance(attr, dict):
                     attr.setdefault("visit_duration", 120)
                     attr.setdefault("category", "景点")
-                    attr.setdefault("ticket_price", 0)
+                    attr.setdefault("ticket_price", None)
 
         day_plan = DayPlan(**data)
         day_plan = _validate_plan_coordinates_single_day(day_plan)
@@ -1296,7 +1296,7 @@ def day_plan_fallback_node(state: DayPlanLocalState) -> Dict[str, Any]:
             visit_duration=120,
             description="推荐景点（数据来源受限，建议自行确认详情）",
             category="景点",
-            ticket_price=0,
+            ticket_price=None,
         ))
     if not attractions:
         attractions = [Attraction(
@@ -1306,7 +1306,7 @@ def day_plan_fallback_node(state: DayPlanLocalState) -> Dict[str, Any]:
             visit_duration=120,
             description="请自行查询景点详情",
             category="景点",
-            ticket_price=0,
+            ticket_price=None,
         )]
 
     hotel = None
@@ -1403,25 +1403,21 @@ async def reduce_assemble_node(state: TripPlannerState) -> Dict[str, Any]:
                 meal.description = "品尝当地特色美食"
             seen_meal_names.add(meal.name.strip())
 
-    total_attractions = sum(
-        a.ticket_price for d in day_plans for a in d.attractions
-    )
-    total_meals = sum(
-        m.estimated_cost for d in day_plans for m in d.meals
-    )
-    total_hotels = sum(
-        d.hotel.estimated_cost for d in day_plans if d.hotel and d.hotel.estimated_cost
-    )
-    total_transportation = max(len(day_plans) * 50, 0)
-    total = total_attractions + total_meals + total_hotels + total_transportation
-
-    budget = Budget(
-        total_attractions=total_attractions,
-        total_hotels=total_hotels,
-        total_meals=total_meals,
-        total_transportation=total_transportation,
-        total=total,
-    )
+    from ..assemble.budget import compute_day_budget, combine_budgets
+    from ....models.schemas import DayDetail
+    budgets = []
+    for index, day in enumerate(day_plans):
+        day.overnight_stay = index < len(day_plans) - 1
+        # A model-generated quote is never evidence. Copy only an actual candidate.
+        candidates = (state.get("hotels_by_day") or [])
+        trusted = candidates[index] if index < len(candidates) else []
+        match = next((h for h in trusted if day.hotel and h.get("hotel_id") == day.hotel.hotel_id and h.get("name") == day.hotel.name), None)
+        if day.hotel:
+            day.hotel.quote = Hotel(**match).quote if match else None
+        detail = DayDetail.model_validate(day.model_dump())
+        detail.companion_count = request.companions.count if request.companions else 1
+        budgets.append(compute_day_budget(detail))
+    budget = combine_budgets(budgets, request.budget)
 
     weather_list = await _build_weather_list(request, state.get("weather_info", ""))
 
@@ -1433,11 +1429,11 @@ async def reduce_assemble_node(state: TripPlannerState) -> Dict[str, Any]:
         weather_info=weather_list,
         overall_suggestions="",
         budget=budget,
+        companions=request.companions,
     )
 
-    print(f"✅ 归约合并完成: {len(day_plans)}天, 预算{total}元")
+    print(f"✅ 归约合并完成: {len(day_plans)}天, 已知费用预估{budget.total}元")
     return {"trip_plan": trip_plan}
-
 
 async def global_synthesizer_node(state: TripPlannerState) -> Dict[str, Any]:
     plan = state.get("trip_plan")

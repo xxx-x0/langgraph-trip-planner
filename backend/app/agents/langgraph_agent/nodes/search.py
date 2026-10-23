@@ -681,21 +681,12 @@ def _parse_aigohotel_hotels(raw: Any) -> List[Dict[str, Any]]:
         if hotel_type:
             item["type"] = str(hotel_type)
 
-        if "price" in item and item.get("price"):
-            try:
-                item["estimated_cost"] = int(float(item["price"]))
-            except (TypeError, ValueError):
-                pass
-        if "estimated_cost" not in item:
-            star = item.get("star_rating")
-            if star and star > 0:
-                item["estimated_cost"] = int(star * 200)
-            else:
-                item["estimated_cost"] = 500
+        # Search display price has no selected room/occupancy contract. Never
+        # turn it (or star level) into a known per-night budget amount.
+        item["estimated_cost"] = 0
 
         parsed.append(item)
     return parsed
-
 
 def _cluster_centroid(cluster: List[Dict[str, Any]]) -> tuple[float, float] | None:
     """计算聚类质心 (lon, lat)，无坐标返回 None。"""
@@ -809,23 +800,23 @@ async def _aigohotel_search_for_day(
     radius_km: float,
     star_ratings: List[int],
     check_in: str | None,
+    stay_nights: int = 1,
+    adult_count: int = 1,
 ) -> List[Dict[str, Any]]:
     """对单日聚类调一次 AIGoHotel SearchHotels（景点级），返回已解析+距离增强的酒店列表。"""
     distance_m = int(max(radius_km + 2.0, 2.0) * 1000)
     distance_m = min(distance_m, 20000)
     args: Dict[str, Any] = {
-        "place": rep_name,
+        "place": f"{rep_name} {city}",
         "placeType": "景点",
         "originQuery": f"搜索{city}{rep_name}附近的{accommodation or ''}酒店".strip(),
         "size": 8,
-        "withHotelAmenities": True,
-        "withRoomAmenities": True,
         "filterOptions": {"distanceInMeter": distance_m},
     }
     if star_ratings:
         args["filterOptions"]["starRatings"] = star_ratings
     if check_in:
-        args["checkInParam"] = {"checkInDate": check_in, "stayNights": 1}
+        args["checkInParam"] = {"checkInDate": check_in, "stayNights": stay_nights, "adultCount": adult_count}
 
     try:
         raw = await _invoke_tool_with_retry(search_tool, args, max_retries=1, per_attempt_timeout=30.0)
@@ -837,7 +828,6 @@ async def _aigohotel_search_for_day(
     _enrich_hotels_with_distance(hotels, centroid)
     return hotels
 
-
 async def _aigohotel_city_fallback(
     search_tool: Any,
     city: str,
@@ -845,20 +835,19 @@ async def _aigohotel_city_fallback(
     star_ratings: List[int],
     check_in: str | None,
     stay_nights: int,
+    adult_count: int = 1,
 ) -> List[Dict[str, Any]]:
     """城市级兜底搜索，用于当日聚类无坐标或景点搜索失败时。"""
     args: Dict[str, Any] = {
-        "place": city,
+        "place": f"{city} 中国",
         "placeType": "城市",
         "originQuery": f"搜索{city}{accommodation or ''}酒店".strip(),
         "size": 8,
-        "withHotelAmenities": True,
-        "withRoomAmenities": True,
     }
     if star_ratings:
         args["filterOptions"] = {"starRatings": star_ratings}
     if check_in:
-        args["checkInParam"] = {"checkInDate": check_in, "stayNights": stay_nights}
+        args["checkInParam"] = {"checkInDate": check_in, "stayNights": stay_nights, "adultCount": adult_count}
 
     try:
         raw = await _invoke_tool_with_retry(search_tool, args, max_retries=2, per_attempt_timeout=30.0)
@@ -866,7 +855,6 @@ async def _aigohotel_city_fallback(
         print(f"  ⚠️ AIGoHotel 城市级兜底失败 [{city}]: {str(e)[:120]}")
         return []
     return _parse_aigohotel_hotels(raw)
-
 
 
 async def search_hotels_by_day_node(state: TripPlannerState) -> Dict[str, Any]:
@@ -882,6 +870,15 @@ async def search_hotels_by_day_node(state: TripPlannerState) -> Dict[str, Any]:
     request = state["request"]
     clusters: List[List[Dict[str, Any]]] = state.get("clusters_data") or []
     travel_days = request.travel_days
+
+    from ....services.hotel_quotes import occupancy_for, quote_context, enrich_selected_hotel
+    context = quote_context(request)
+    if context.nights <= 0:
+        return {"hotels_info": "当日往返，无住宿晚数", "hotels_by_day": [[] for _ in range(travel_days)]}
+    if context.nights > 28:
+        return {"hotels_info": "酒店接口最多查询28晚，住宿需另行确认", "hotels_by_day": [[] for _ in range(travel_days)],
+                "errors": ["酒店接口不支持超过28晚的整段报价"]}
+    occupancy, _ = occupancy_for(request)
 
     from ....services.aigohotel_mcp_service import get_aigohotel_service
     aigohotel_service = get_aigohotel_service()
@@ -941,7 +938,8 @@ async def search_hotels_by_day_node(state: TripPlannerState) -> Dict[str, Any]:
         hotels = await _aigohotel_search_for_day(
             search_tool, rep_name, request.city, accommodation,
             trip_centroid, max_radius_km, star_ratings,
-            request.start_date,
+            context.check_in,
+            context.nights, occupancy.adults_per_room,
         )
         if hotels:
             _enrich_hotels_with_distance(hotels, trip_centroid)
@@ -952,13 +950,24 @@ async def search_hotels_by_day_node(state: TripPlannerState) -> Dict[str, Any]:
         print(" ⚠️ 景点级搜索无结果，使用城市级兜底")
         city_hotels = await _aigohotel_city_fallback(
             search_tool, request.city, accommodation, star_ratings,
-            request.start_date, max(travel_days, 1),
+            context.check_in, context.nights, occupancy.adults_per_room,
         )
         if city_hotels and trip_centroid:
             _enrich_hotels_with_distance(city_hotels, trip_centroid)
         ranked = _rank_day_hotels(city_hotels, top_n=5) if city_hotels else []
 
-    # 同一份候选分发给所有天
+    # Search is just initial screening. The current editor uses the first
+    # candidate; fetch that hotel's room quote for the entire stay once.
+    for candidate in ranked:
+        candidate['quote'] = context.model_copy(deep=True).model_dump()
+        candidate['quote']['unsupported_conditions'].append('搜索参考价未核对具体房型及入住条件')
+    if ranked:
+        try:
+            detail_tool = await aigohotel_service.get_tool('GetHotelDetail')
+        except Exception:
+            detail_tool = None
+        ranked[0] = await enrich_selected_hotel(ranked[0], request, aigohotel_service, detail_tool)
+    # Shared stay quote; budgets allocate its total, not independent nightly prices.
     hotels_by_day = [ranked for _ in range(travel_days)]
     hotels_info = _format_hotels_by_day_text(hotels_by_day)
     print(f"✅ 行程级酒店搜索完成: {len(ranked)} 家候选, 分配给 {travel_days} 天")

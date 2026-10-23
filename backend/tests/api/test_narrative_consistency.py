@@ -83,7 +83,10 @@ async def test_every_successful_edit_and_finalize_use_current_facts(case):
     plan=event['trip_plan']
     assert plan['days'][0]['description']==saved['description']
     assert plan['narrative_source']=='itinerary_facts_v1'
-    assert '费用口径和缺项尚未核对' in plan['overall_suggestions']
+    assert '需要1晚住宿' in plan['overall_suggestions']
+    assert plan['budget']['total_hotels'] == 0
+    assert '旧记录住宿报价条件未核对' in plan['overall_suggestions']
+    assert '未知价格不代表免费' in plan['overall_suggestions']
     history=(await client.get(f"/api/trips/{event['trip_id']}")).json()['data']['plan']
     assert history==plan
     again=await client.post(f'/api/trip/draft/{draft}/finalize')

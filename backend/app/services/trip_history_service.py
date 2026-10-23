@@ -177,7 +177,10 @@ def project_saved_narratives(raw: dict) -> dict:
         return raw
     for original, day in zip(raw.get("days", []), plan.days):
         original.update(description=day.description, description_source=day.description_source,
-                        pending_confirmations=day.pending_confirmations)
+                        pending_confirmations=day.pending_confirmations, overnight_stay=day.overnight_stay,
+                        timeline_schedule=day.timeline_schedule)
+    if plan.budget:
+        raw["budget"] = {**(raw.get("budget") or {}), **plan.budget.model_dump(mode="json")}
     raw.update(trip_tagline=plan.trip_tagline, overall_suggestions=plan.overall_suggestions,
                weather_summary=plan.weather_summary, narrative_source=plan.narrative_source)
     return raw

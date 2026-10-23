@@ -37,12 +37,18 @@ def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherI
     if gaps:
         lines.append(f"{gaps[0]['start_time']}至{gaps[0]['end_time']}尚未安排，可以留在附近自由活动。如想去别处，先核对后续路程。")
     pending = []
+    if not day.hotel and day.overnight_stay:
+        pending.append("今晚住宿尚未确定，请先确认住宿再核对晚间回程。")
     unknown = [a.name for a in day.attractions if a.ticket_price is None]
     if unknown: pending.append('票价待确认：'+'、'.join(unknown)+'；未知不代表免费。')
     if names: pending.append('请核对景点开放日期和预约要求。')
     if weather and weather.date == day.date and _weather_fact(weather):
         pending.append('本次天气预报：'+_weather_fact(weather)+'；出发前再看一次最新预报。')
     else: pending.append('当日天气尚未获取，出发前请查看预报。')
+    if day.hotel and day.overnight_stay:
+        from ....services.hotel_quotes import hotel_cost_for_date
+        _, missing = hotel_cost_for_date(day.hotel, day.date)
+        pending.extend(missing)
     pending.extend(day.meal_adjustments)
     pending.extend(day.meal_warnings)
     day.pending_confirmations = list(dict.fromkeys(pending))
@@ -71,15 +77,28 @@ def _weather_fact(weather: Optional[WeatherInfo]) -> str:
 
 
 def _confirmed_overall_suggestions(plan) -> str:
-    lines = [f"这次在{plan.city}安排了{len(plan.days)}天；请按每日保存的安排核对开放日期和预约要求。"]
-    if plan.budget:
-        lines.append(f"当前保存的费用预估为{plan.budget.total:g}元；费用口径和缺项尚未核对，不能据此判断最终花费或是否在预算上限内。")
-    notes = list(dict.fromkeys(note for day in plan.days for note in day.meal_adjustments + day.meal_warnings))
-    if notes: lines.append('用餐待确认：'+'；'.join(notes)+'。')
+    """Keep cost, nights, meal coverage and weather tied to saved facts."""
+    nights = sum(bool(day.overnight_stay) for day in plan.days)
+    lines = [f"这次在{plan.city}安排了{len(plan.days)}天，需要{nights}晚住宿。先确认最想去的景点能否预约，再把住宿和往返交通定下来；每天的取舍建议在‘每日行程’里。"]
+    budget = plan.budget
+    if budget:
+        lines.append(f"目前已知费用预估小计{budget.total:g}元，其中已核对的住宿参考报价为{budget.total_hotels:g}元。餐饮按候选人均价估算，市内交通暂按每人每天50元计；往返大交通尚未纳入，这还不是整趟旅行的最终花费。")
+        if not budget.is_complete:
+            lines.append('仍需核对：'+'；'.join(budget.unknown_cost_items)+'。未知价格不代表免费。')
+        if '旧记录费用完整性未核对' in budget.unknown_cost_items:
+            lines.append('这是一份旧记录，旧记录费用口径待核对。')
+        if budget.budget_limit is not None:
+            status = ('已知费用已超出上限，建议先调整大项开销' if budget.is_within_budget is False else
+                      '按当前预估在上限内，预订前还要再核价' if budget.is_within_budget is True else
+                      '费用有缺项，暂不能判断是否在上限内')
+            lines.append(f'你设定的预算上限为{budget.budget_limit}元；{status}。')
+    meal_notes = list(dict.fromkeys(note for day in plan.days for note in day.meal_adjustments+day.meal_warnings))
+    if meal_notes:
+        lines.append('用餐方面，'+'；'.join(meal_notes)+'。')
     forecasts = [f'{w.date}：{_weather_fact(w)}' for w in plan.weather_info if _weather_fact(w)]
-    lines.append('本次查询的天气预报：'+'；'.join(forecasts)+'。出发前再看一次最新预报。' if forecasts else '天气数据未获取，请在出发前查询预报。')
+    lines.append('本次查询的天气预报：'+'；'.join(forecasts)+'。出发前再看一次最新预报。' if forecasts else
+                 '天气数据未获取，请在出发前查询，再决定衣物和雨具。')
     return '\n\n'.join(lines)
-
 def _generate_weather_summary_fallback(trip_plan) -> str:
     from collections import Counter
     if not trip_plan.weather_info:
@@ -98,8 +117,36 @@ def _generate_weather_summary_fallback(trip_plan) -> str:
 
 def refresh_trip_descriptions(plan: TripPlan) -> TripPlan:
     weather_by_date = {w.date: w for w in plan.weather_info}
-    for day in plan.days:
+    for index, day in enumerate(plan.days):
+        if "overnight_stay" not in day.model_fields_set:
+            day.overnight_stay = index < len(plan.days) - 1
         refresh_day_description(day, weather_by_date.get(day.date))
+    # Legacy monetary completeness was not recorded; it cannot become confirmed by parsing defaults.
+    if plan.budget and not {"is_complete", "unknown_cost_items"} <= plan.budget.model_fields_set:
+        plan.budget.is_complete = False
+        plan.budget.is_within_budget = None
+        if "旧记录费用完整性未核对" not in plan.budget.unknown_cost_items:
+            plan.budget.unknown_cost_items.append("旧记录费用完整性未核对")
+    if plan.budget:
+        from .budget import compute_day_budget, combine_budgets
+        old_unknown = [item for item in plan.budget.unknown_cost_items if "分钟未安排" not in item]
+        day_budgets = []
+        for day in plan.days:
+            detail = DayDetail.model_validate(day.model_dump())
+            detail.companion_count = plan.companions.count if plan.companions else 1
+            day_budgets.append(compute_day_budget(detail))
+            # Read projection only: avoid displaying a stale hotel charge in old schedules.
+            for entry in day.timeline_schedule:
+                if entry.get('kind') == 'hotel':
+                    from ....services.hotel_quotes import hotel_cost_for_date
+                    amount, missing = hotel_cost_for_date(day.hotel, day.date) if day.hotel and day.overnight_stay else (0, [])
+                    entry['cost'] = (amount if amount or not missing else None) if day.overnight_stay else None
+        plan.budget = combine_budgets(day_budgets, plan.budget.budget_limit)
+        plan.budget.unknown_cost_items = list(dict.fromkeys(plan.budget.unknown_cost_items + old_unknown))
+        if plan.budget.unknown_cost_items:
+            plan.budget.is_complete = False
+            if plan.budget.is_within_budget is True:
+                plan.budget.is_within_budget = None
     plan.trip_tagline = f"{plan.city} · {len(plan.days)}日行程"
     plan.overall_suggestions = _confirmed_overall_suggestions(plan)
     plan.weather_summary = _generate_weather_summary_fallback(plan)

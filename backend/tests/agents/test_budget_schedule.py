@@ -1,0 +1,81 @@
+import pytest
+from app.models.schemas import Attraction, Hotel, DayDetail, DiningPoolDay, DraftDayContext
+from app.agents.langgraph_agent.assemble.budget import compute_day_budget, combine_budgets, parse_ticket_price
+from app.agents.langgraph_agent.assemble.timeline import rule_assemble_day_timeline
+from app.agents.langgraph_agent.assemble.schedule import schedule_day, route_minutes
+
+def attraction(name, minutes=90, price=None):
+    return Attraction(name=name, address='', description='', visit_duration=minutes, ticket_price=price)
+
+
+
+@pytest.mark.parametrize('raw,expected', [(None, None), ('未知', None), ('免费', 0), (0, 0), ('60元', 60), ('-20', None)])
+def test_unknown_is_distinct_from_free(raw, expected):
+    assert parse_ticket_price(raw) == expected
+
+
+
+@pytest.mark.parametrize('days,nights', [(1, 0), (2, 1), (3, 2)])
+def test_stays_charge_only_travel_nights(days, nights):
+    from app.models.schemas import HotelQuote, HotelOccupancy
+    quote = HotelQuote(queried_at='2026-10-15T00:00:00Z', status='detail_returned', cost_kind='query_quote', amount=310, currency='CNY', unit='average_per_room_night', check_in='2026-10-14', check_out=f'2026-10-{14+nights}', nights=nights, occupancy=HotelOccupancy(), occupancy_confirmed=True, taxes_included=True, meal_plan='不含早', cancellation_policy='不可退', availability='returned')
+    budgets = [compute_day_budget(DayDetail(day_index=i, date=f'2026-10-{14+i}',
+                hotel=Hotel(name='H', quote=quote), overnight_stay=i < days-1)) for i in range(days)]
+    assert combine_budgets(budgets).total_hotels == nights * 310
+
+
+
+def test_missing_cost_cannot_claim_within_limit_but_known_excess_is_reported():
+    budget = compute_day_budget(DayDetail(day_index=0, date='2026-10-14', overnight_stay=False,
+                  attractions=[attraction('免费', price=0), attraction('未知'), attraction('收费', price=60)]))
+    assert budget.total_attractions == 60
+    assert '2026-10-14 未知门票' in budget.unknown_cost_items
+    assert any('往返大交通未纳入' in item for item in budget.unknown_cost_items)
+    assert combine_budgets([budget], 1000).is_within_budget is None
+    assert combine_budgets([budget], 10).is_within_budget is False
+    known = compute_day_budget(DayDetail(day_index=0, date='2026-10-14', overnight_stay=False, attractions=[attraction('免费', price=0)]))
+    assert combine_budgets([known], 1000).is_within_budget is None
+
+
+
+def test_explicit_empty_meals_do_not_restore_defaults():
+    pool = DiningPoolDay(main=[dict(name='M', category='main')])
+    ctx = DraftDayContext(day_index=0, date='2026-10-14', attractions=[attraction('A')], dining_pool=pool)
+    detail = rule_assemble_day_timeline(ctx, {'meals':[]})
+    schedule_day(detail)
+    assert detail.meals==[]
+    assert any('午餐未安排' in w for w in detail.meal_warnings)
+    assert not compute_day_budget(detail).is_complete
+
+
+@pytest.mark.parametrize('raw', [float('nan'),float('inf'),float('-inf'),True,False])
+def test_invalid_numeric_ticket_prices_remain_unknown(raw):
+    assert parse_ticket_price(raw) is None
+
+
+def test_empty_overnight_day_still_reports_missing_lodging():
+    day=DayDetail(day_index=0,date='2026-10-19',overnight_stay=True)
+    budget=compute_day_budget(day)
+    assert budget.total_hotels==0 and not budget.is_complete
+    assert '2026-10-19 住宿未安排' in budget.unknown_cost_items
+    assert combine_budgets([budget],1000).is_within_budget is None
+
+
+def test_party_scaling_keeps_room_quote_separate_from_per_person_costs():
+    from app.models.schemas import Meal
+    from tests.services.test_hotel_quotes import parsed
+    detail=DayDetail(day_index=0,date='2026-10-19',companion_count=2,hotel=parsed(),
+        attractions=[attraction('A',price=20)],meals=[Meal(name='M',type='lunch',estimated_cost=30)])
+    budget=compute_day_budget(detail)
+    assert budget.total_hotels==123.45
+    assert budget.total_attractions==40 and budget.total_meals==60
+    assert budget.total_transportation==100 and budget.total==323.45
+
+
+def test_departure_day_retains_hotel_position_without_new_night_charge():
+    from tests.services.test_hotel_quotes import parsed
+    ctx=DraftDayContext(day_index=2,date='2026-10-21',overnight_stay=False,hotel=parsed(),attractions=[attraction('A',price=0)])
+    detail=rule_assemble_day_timeline(ctx,{'meals':[]});schedule_day(detail)
+    assert detail.hotel is not None and detail.overnight_stay is False
+    assert compute_day_budget(detail).total_hotels==0
+    assert all(x['cost'] is None for x in detail.timeline_schedule if x['kind']=='hotel')

@@ -60,7 +60,7 @@ def test_unknown_hours_are_visible_and_not_treated_as_known_closed(hours):
     assert meal_plan_violations(detail, before) == []
 
 
-def test_default_candidate_zero_price_and_legacy_hotel_do_not_require_quote_modules():
+def test_default_candidate_zero_price_and_unverified_hotel_are_preserved():
     ctx = DraftDayContext(day_index=0,date='2026-10-15',day_start_time='10:00',attractions=[attraction('A',60)],
         hotel=Hotel(name='H',estimated_cost=123), dining_pool=DiningPoolDay(main=[{'name':'M','category':'main','avg_cost':0,'open_hours':'11:00-23:00'}]))
     detail = rule_assemble_day_timeline(ctx)
@@ -68,4 +68,4 @@ def test_default_candidate_zero_price_and_legacy_hotel_do_not_require_quote_modu
     assert detail.meals[0].schedule_mode == 'auto' and detail.meals[0].preferred_slot == 'lunch'
     schedule_day(detail)
     hotel = next(x for x in detail.timeline_schedule if x['kind']=='hotel')
-    assert hotel['duration'] == 30 and hotel['cost'] == 123
+    assert hotel['duration'] == 30 and hotel['cost'] is None

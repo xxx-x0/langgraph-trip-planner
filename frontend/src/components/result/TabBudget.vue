@@ -6,26 +6,8 @@
         <span class="card-title">预算明细</span>
       </div>
       <div class="budget-body">
-        <div class="budget-grid">
-          <div class="budget-item">
-            <div class="budget-label">景点门票</div>
-            <div class="budget-value">¥{{ budget.total_attractions }}</div>
-          </div>
-          <div class="budget-item">
-            <div class="budget-label">酒店住宿</div>
-            <div class="budget-value">¥{{ budget.total_hotels }}</div>
-          </div>
-          <div class="budget-item">
-            <div class="budget-label">餐饮费用</div>
-            <div class="budget-value">¥{{ budget.total_meals }}</div>
-          </div>
-          <div class="budget-item">
-            <div class="budget-label">交通费用</div>
-            <div class="budget-value">¥{{ budget.total_transportation }}</div>
-          </div>
-        </div>
-        <div class="budget-total" :class="{ 'over-budget': budget.budget_limit && !budget.is_within_budget }">
-          <span class="total-label">预估总费用</span>
+        <div class="budget-total" :class="{ 'over-budget': budget.is_within_budget === false }">
+          <span class="total-label">{{ budget.is_complete === true ? '预估总费用' : '已知费用预估小计' }}</span>
           <span class="total-value">¥{{ budget.total }}</span>
         </div>
         <div v-if="budget.budget_limit" class="budget-limit-info">
@@ -38,9 +20,36 @@
           </div>
           <div class="budget-limit-text">
             <span>预算上限: ¥{{ budget.budget_limit }}</span>
-            <span :class="budget.is_within_budget ? 'within-budget' : 'over-budget-text'">
-              {{ budget.is_within_budget ? '✅ 在预算范围内' : '⚠️ 超出预算 ¥' + (budget.total - budget.budget_limit) }}
+            <span :class="budget.is_within_budget === true ? 'within-budget' : 'over-budget-text'">
+              {{ budget.is_within_budget === true ? '✅ 在预算范围内' : budget.is_within_budget === false ? '⚠️ 已知费用超出预算 ¥' + (budget.total - budget.budget_limit) : '费用有缺项，暂不能判断是否在预算内' }}
             </span>
+          </div>
+        </div>
+
+        <div v-if="budget.is_complete !== true" role="alert" class="budget-limit-info">
+          费用尚不完整，所示金额仅为已知费用的预估小计。
+          <ul v-if="budget.unknown_cost_items?.length">
+            <li v-for="item in budget.unknown_cost_items" :key="item">{{ item }}：待确认</li>
+          </ul>
+          <span v-else>历史预算未记录缺项状态，请重新核对费用。</span>
+        </div>
+        <p>往返大交通尚未纳入；市内交通按每人每天50元估算。酒店未核对的报价不计入小计，未知不代表免费。</p>
+        <div class="budget-grid">
+          <div class="budget-item">
+            <div class="budget-label">已知景点门票</div>
+            <div class="budget-value">¥{{ budget.total_attractions }}</div>
+          </div>
+          <div class="budget-item">
+            <div class="budget-label">已核对住宿参考价</div>
+            <div class="budget-value">¥{{ budget.total_hotels }}</div>
+          </div>
+          <div class="budget-item">
+            <div class="budget-label">餐饮费用</div>
+            <div class="budget-value">¥{{ budget.total_meals }}</div>
+          </div>
+          <div class="budget-item">
+            <div class="budget-label">交通费用合计</div>
+            <div class="budget-value">¥{{ budget.total_transportation }}</div>
           </div>
         </div>
         <BudgetChart v-if="budget.total > 0" :budget="budget" class="budget-chart-section" />

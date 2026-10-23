@@ -54,7 +54,7 @@ async def test_get_hotel_detail_accepts_dates_and_occupancy():
         "hotelId": 572174,
         "dateParam": {
             "checkInDate": "2026-06-01",
-            "stayNights": 2,
+            "checkOutDate": "2026-06-03",
         },
-        "occupancyParam": {"adultCount": 2},
+        "occupancyParam": {"adultCount": 2, "roomCount": 1, "childCount": 0, "childAgeDetails": []},
     }

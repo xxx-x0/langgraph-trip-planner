@@ -211,6 +211,8 @@ def rule_assemble_day_timeline(
         locked_attraction_names=locked_attraction_names,
         removed_attraction_names=removed_attraction_names,
         is_assembled=True,
+        overnight_stay=ctx.overnight_stay,
+        companion_count=ctx.companion_count,
         meal_adjustments=overrides.get("meal_adjustments") or [],
     )
 

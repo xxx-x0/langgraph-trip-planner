@@ -150,7 +150,7 @@ const rawTimelineItems = computed<TimelineItem[]>(() => {
     }
 
     const visitDur = attr.visit_duration || 120
-    items.push(makeItem('attraction', attr.name, currentMinutes, visitDur, attr.ticket_price, attr.description?.slice(0, 60)))
+    items.push(makeItem('attraction', attr.name, currentMinutes, visitDur, attr.ticket_price ?? undefined, attr.description?.slice(0, 60)))
     currentMinutes += visitDur
 
     if (i === Math.floor(attractions.length / 2) - 1 || (attractions.length === 1 && i === 0)) {
@@ -192,7 +192,7 @@ const rawTimelineItems = computed<TimelineItem[]>(() => {
   currentMinutes += travelBack
 
   if (day.hotel) {
-    items.push(makeItem('hotel', cleanHotelName(day.hotel.name), currentMinutes, 30, day.hotel.estimated_cost, day.hotel.address))
+    items.push(makeItem('hotel', cleanHotelName(day.hotel.name), currentMinutes, 30, undefined, day.hotel.address))
   }
 
   return items
@@ -318,7 +318,7 @@ function buildSavedTimeline(day: DayPlan, startMinutes: number): TimelineItem[] 
         attraction.name,
         currentMinutes,
         duration,
-        attraction.ticket_price,
+        attraction.ticket_price ?? undefined,
         attraction.description?.slice(0, 60),
       ))
       currentMinutes += duration
@@ -339,7 +339,7 @@ function buildSavedTimeline(day: DayPlan, startMinutes: number): TimelineItem[] 
         cleanHotelName(node.hotel.name),
         currentMinutes,
         30,
-        node.hotel.estimated_cost,
+        undefined,
         node.hotel.address,
       ))
       currentMinutes += 30

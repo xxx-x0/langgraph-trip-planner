@@ -213,7 +213,7 @@ def _parse_response(response_text: str, request: TripRequest) -> TripPlan:
                                     if isinstance(attr, dict):
                                         attr.setdefault("visit_duration", 120)
                                         attr.setdefault("category", "景点")
-                                        attr.setdefault("ticket_price", 0)
+                                        attr.setdefault("ticket_price", None)
                 trip_plan = TripPlan(**data)
                 print("⚠️ JSON缺少部分字段，已自动补全")
                 return _validate_plan_coordinates(trip_plan)

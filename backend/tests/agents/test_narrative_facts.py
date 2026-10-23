@@ -7,7 +7,7 @@ from app.agents.langgraph_agent.assemble.schedule import schedule_day
 
 def day():
     return DayDetail(day_index=0,date='2026-10-15',day_start_time='09:30',
-        attractions=[Attraction(name=n,address='',description='',ticket_price=p,visit_duration=60) for n,p in [('甲园',10),('免费公园',0)]],
+        attractions=[Attraction(name=n,address='',description='',ticket_price=p,visit_duration=60) for n,p in [('甲园',None),('免费公园',0)]],
         meals=[Meal(type='lunch',name='饭馆',category='main',estimated_cost=40,open_hours='10:00-22:00')],
         timeline_order=[{'kind':'attraction','ref_name':'甲园'},{'kind':'meal','ref_name':'饭馆'},{'kind':'attraction','ref_name':'免费公园'}])
 
@@ -20,7 +20,7 @@ def test_description_uses_only_matching_weather_current_times_and_unknown_prices
     assert '09:30–10:30' not in text  # Detailed times live in the timeline, not duplicated prose.
     assert '饭馆' not in text  # Restaurant details belong in the meal card unless food is the trip focus.
     text = '\n'.join(d.pending_confirmations)
-    assert '请核对景点开放日期和预约要求' in text
+    assert '票价待确认：甲园；未知不代表免费' in text
     assert '票价待确认：免费公园' not in text
     assert '白天阴 24°C' in text
     refresh_day_description(d,weather.model_copy(update={'date':'2026-10-16'}))
@@ -49,6 +49,20 @@ async def test_copy_refresh_ignores_unverified_free_text_and_never_uses_llm():
     assert '门票全部免费' not in text and '已预约成功' not in text and '必定晴天' not in text
 
 
+def test_legacy_budget_defaults_do_not_become_complete_confirmation():
+    plan=TripPlan.model_validate({'city':'苏州','start_date':'2026-10-15','end_date':'2026-10-16','overall_suggestions':'旧文',
+        'days':[{'date':d,'day_index':i,'description':'旧文','transportation':'步行','accommodation':'民宿','hotel':{'name':'住处','estimated_cost':200}} for i,d in enumerate(['2026-10-15','2026-10-16'])],
+        'budget':{'total_hotels':400,'total':400,'budget_limit':500,'is_within_budget':True}})
+    refresh_trip_descriptions(plan)
+    assert plan.days[-1].overnight_stay is False
+    assert plan.budget.is_complete is False and plan.budget.is_within_budget is None
+    assert '旧记录费用完整性未核对' in plan.overall_suggestions
+    assert '旧记录费用口径待核对' in plan.overall_suggestions
+    assert '按当前预估在上限内' not in plan.overall_suggestions
+    once=plan.model_dump();refresh_trip_descriptions(plan)
+    assert plan.model_dump()==once
+
+
 def test_empty_weather_does_not_turn_default_temperature_into_forecast():
     d=day();schedule_day(d)
     refresh_day_description(d,WeatherInfo(date=d.date))
@@ -64,10 +78,10 @@ def test_trip_projection_keeps_budget_and_arrangement_idempotently():
     plan=TripPlan(city='苏州', start_date=d.date, end_date=d.date,
         overall_suggestions='全免费，已预约', budget=Budget(total=200, total_hotels=100, is_within_budget=True),
         days=[DayPlan(**d.model_dump(exclude={'description'}),description='旧文',transportation='步行',accommodation='民宿')])
-    before=plan.budget.model_dump()
     refresh_trip_descriptions(plan)
-    assert plan.budget.model_dump()==before
-    assert '不能据此判断' in plan.overall_suggestions
+    assert plan.budget.is_complete is False
+    assert plan.budget.is_within_budget is None
+    assert '旧记录费用口径待核对' in plan.overall_suggestions
     assert '全免费' not in plan.overall_suggestions
     once=plan.model_dump();refresh_trip_descriptions(plan)
     assert plan.model_dump()==once

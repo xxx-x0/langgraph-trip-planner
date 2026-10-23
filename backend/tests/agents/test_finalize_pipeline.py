@@ -76,6 +76,8 @@ async def test_finalize_assembles_missing_days_and_writes_trip_history():
     assert trip_plan.trip_tagline == "北京 · 2日行程"
     assert trip_plan.narrative_source == "itinerary_facts_v1"
     assert trip_plan.weather_summary == ""
+    assert "总建议" not in trip_plan.overall_suggestions
+    assert "天气数据未获取" in trip_plan.overall_suggestions
     # draft 已标记 finalized
     record = await trip_draft_service.get_draft(draft_id)
     assert record.status == "finalized"
@@ -159,10 +161,10 @@ from app.agents.langgraph_agent.finalize.pipeline import _parse_ticket_price
 @pytest.mark.parametrize("raw,expected", [
     ("60", 60),
     ("免费", 0),
-    (None, 0),
+    (None, None),
     ("￥80起", 80),
     (120, 120),
-    ("", 0),
+    ("", None),
 ])
 def test_parse_ticket_price(raw, expected):
     assert _parse_ticket_price(raw) == expected
@@ -213,5 +215,5 @@ def test_build_day_context_defaults_when_fields_missing():
     assert a.address == ""
     assert a.description == ""
     assert a.visit_duration == 120       # 默认
-    assert a.ticket_price == 0
+    assert a.ticket_price is None
     assert a.category == "景点"

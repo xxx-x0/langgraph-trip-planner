@@ -12,7 +12,7 @@ from ....models.schemas import (
 from ....services import trip_draft_service
 from ..assemble.timeline import rule_assemble_day_timeline
 from ..assemble.route import compute_day_route
-from ..assemble.budget import compute_day_budget
+from ..assemble.budget import compute_day_budget, combine_budgets, parse_ticket_price as _parse_ticket_price
 from ..assemble.schedule import schedule_day
 from ..assemble.narrative import refresh_day_description, refresh_trip_descriptions
 
@@ -23,19 +23,6 @@ _finalize_locks = WeakValueDictionary()
 async def _run_global_synthesizer(trip_plan: TripPlan, free_text: str) -> Tuple[str, str, str]:
     refresh_trip_descriptions(trip_plan)
     return trip_plan.trip_tagline, trip_plan.overall_suggestions, trip_plan.weather_summary
-
-def _parse_ticket_price(val) -> int:
-    """把发现页门票字段转成 int 元。
-
-    "60"->60, "免费"->0, "￥80起"->80, None/""/无数字 ->0, 数字原样取整。
-    """
-    if val is None:
-        return 0
-    if isinstance(val, (int, float)):
-        return int(val)
-    m = re.search(r"\d+", str(val))
-    return int(m.group()) if m else 0
-
 
 def _make_pseudo_request(plan: TripPlan, free_text: str):
     return TripRequest(
@@ -76,6 +63,7 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         timeline_schedule=detail.timeline_schedule,
         meal_warnings=detail.meal_warnings,
         meal_adjustments=detail.meal_adjustments,
+        overnight_stay=detail.overnight_stay,
     )
 
 
@@ -136,6 +124,7 @@ def _build_day_context(
         dining_pool=pool,
         weather=weather_obj,
         day_start_time=default_day_start_time,
+        overnight_stay=day_idx < macro_plan.total_days - 1,
     )
 
 
@@ -155,7 +144,7 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
     days_detail_raw = json.loads(record.days_detail_json)
 
     day_plans = []
-    total_budget = Budget()
+    budgets = []
     for idx in range(request.travel_days):
         existing = days_detail_raw[idx] if idx < len(days_detail_raw) else None
         if existing is not None:
@@ -177,20 +166,20 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
             )
             detail.day_budget = compute_day_budget(detail)
 
+        detail.overnight_stay = idx < request.travel_days - 1
+        detail.companion_count = request.companions.count if request.companions else 1
+        raw_by_name = {c['name']: c for c in (clusters_data[idx] if idx < len(clusters_data) else [])}
+        for attraction in detail.attractions:
+            raw = raw_by_name.get(attraction.name)
+            if attraction.ticket_price == 0 and raw and _parse_ticket_price(raw.get('ticket_price')) is None:
+                attraction.ticket_price = None
         schedule_day(detail)
+        detail.day_budget = compute_day_budget(detail)
         refresh_day_description(detail, next((WeatherInfo.model_validate(w) for w in weather_info if isinstance(w, dict) and w.get("date") == detail.date), None))
         day_plans.append(_day_detail_to_day_plan(
             detail, request.transportation, request.accommodation
         ))
-        b = detail.day_budget
-        total_budget = Budget(
-            total_attractions=total_budget.total_attractions + b.total_attractions,
-            total_hotels=total_budget.total_hotels + b.total_hotels,
-            total_meals=total_budget.total_meals + b.total_meals,
-            total_transportation=total_budget.total_transportation + b.total_transportation,
-            total=total_budget.total + b.total,
-            budget_limit=request.budget,
-        )
+        budgets.append(detail.day_budget)
 
     weather_list = [WeatherInfo.model_validate(w) for w in weather_info if isinstance(w, dict)]
 
@@ -201,7 +190,7 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
         days=day_plans,
         weather_info=weather_list,
         overall_suggestions="",
-        budget=total_budget,
+        budget=combine_budgets(budgets, request.budget),
         companions=request.companions,
     )
 

@@ -158,6 +158,8 @@
         </ul>
       </div>
 
+      <HotelCard v-if="detail.hotel && detail.overnight_stay" :hotel="detail.hotel" />
+
       <!-- 非首次装配的遮罩 -->
       <div v-if="busy && busy !== '装配中'" class="day-overlay">
         <a-spin size="large" />
@@ -172,6 +174,7 @@ import { ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { DeleteOutlined, LockOutlined, UndoOutlined, UnlockOutlined } from '@ant-design/icons-vue'
 import DayTimeline from '../DayTimeline.vue'
+import HotelCard from '../HotelCard.vue'
 import AddDiningPopover from './AddDiningPopover.vue'
 
 interface Props {

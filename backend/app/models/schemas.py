@@ -2,7 +2,7 @@
 
 from enum import Enum
 from typing import Dict, List, Optional, Union, Any, Literal
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import date
 
 
@@ -12,6 +12,21 @@ class CompanionInfo(BaseModel):
     """出行同伴信息"""
     count: int = Field(default=1, description="出行人数", ge=1, le=20, example=2)
     type: str = Field(default="solo", description="同伴类型: solo/couple/family/friends/elderly/group", example="couple")
+
+
+class HotelOccupancy(BaseModel):
+    """同一批房间具有相同入住配置；不同配置须分别查询。"""
+    room_count: int = Field(default=1, ge=1, le=10)
+    adults_per_room: int = Field(default=1, ge=1, le=20)
+    children_ages: List[int] = Field(default_factory=list, max_length=10)
+
+    @field_validator('children_ages')
+    @classmethod
+    def valid_ages(cls, ages):
+        if any(age < 0 or age > 17 for age in ages):
+            raise ValueError('儿童年龄须为0～17岁')
+        return ages
+
 
 
 class TripRequest(BaseModel):
@@ -27,10 +42,22 @@ class TripRequest(BaseModel):
     free_text_input: Optional[str] = Field(default="", description="额外要求", example="希望多安排一些博物馆")
     budget: Optional[int] = Field(default=None, description="总预算上限(元)，为空表示不限预算", example=5000)
     companions: Optional[CompanionInfo] = Field(default=None, description="出行同伴信息")
+    hotel_occupancy: Optional[HotelOccupancy] = None
     default_day_start_time: str = Field(
         default="08:00",
         description="每日行程默认开始时间 HH:mm，草稿中的单日设置可覆盖",
     )
+
+    @model_validator(mode='after')
+    def validate_hotel_occupancy(self):
+        start, end = date.fromisoformat(self.start_date), date.fromisoformat(self.end_date)
+        if end < start or (end-start).days >= 30:
+            raise ValueError('行程日期须正序且不超过30天')
+        if self.hotel_occupancy and self.companions:
+            o = self.hotel_occupancy
+            if o.room_count * (o.adults_per_room + len(o.children_ages)) != self.companions.count:
+                raise ValueError('房间入住总人数须与出行人数一致；各间房按相同入住配置查询')
+        return self
 
     @field_validator("travel_days", mode="before")
     @classmethod
@@ -111,7 +138,7 @@ class Attraction(BaseModel):
     photos: Optional[List[str]] = Field(default_factory=list, description="景点图片URL列表")
     poi_id: Optional[str] = Field(default="", description="POI ID")
     image_url: Optional[str] = Field(default=None, description="图片URL")
-    ticket_price: int = Field(default=0, description="门票价格(元)")
+    ticket_price: Optional[int] = Field(default=None, ge=0, description="门票价格(元)，未知为null，明确免费为0")
     open_hours: Optional[str] = Field(default=None, description="开放时间")
     tel: Optional[str] = Field(default=None, description="联系电话")
 
@@ -174,6 +201,32 @@ class Meal(BaseModel):
     preferred_slot: Optional[Literal["breakfast", "lunch", "dinner"]] = Field(default=None)
 
 
+class HotelQuote(BaseModel):
+    source: str = 'aigohotel'
+    cost_kind: Literal['query_quote', 'user_estimate', 'system_estimate', 'paid', 'unknown'] = 'unknown'
+    status: Literal['search_only', 'detail_returned', 'unavailable', 'failed', 'legacy_unverified'] = 'search_only'
+    amount: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
+    currency: Optional[str] = None
+    unit: Literal['average_per_room_night', 'total_stay', 'unknown'] = 'unknown'
+    check_in: str
+    check_out: str
+    nights: int = Field(ge=0)
+    occupancy: HotelOccupancy
+    occupancy_confirmed: bool = False
+    queried_at: str
+    unsupported_conditions: List[str] = Field(default_factory=list)
+    room_name: Optional[str] = None
+    rate_plan_id: Optional[str] = None
+    bed_type: Optional[str] = None
+    meal_plan: Optional[str] = None
+    cancellation_policy: Optional[str] = None
+    taxes_included: Optional[bool] = None
+    availability: Literal['returned', 'on_request', 'unavailable', 'unknown'] = 'unknown'
+    # Raw provider facts selected for audit; never let the LLM fill quote fields.
+    provider_price_field: Optional[str] = None
+
+
+
 class Hotel(BaseModel):
     """酒店信息"""
     name: str = Field(..., description="酒店名称")
@@ -183,7 +236,8 @@ class Hotel(BaseModel):
     rating: str = Field(default="", description="评分")
     distance: str = Field(default="", description="距离景点距离")
     type: str = Field(default="", description="酒店类型")
-    estimated_cost: int = Field(default=0, description="预估费用(元/晚)")
+    estimated_cost: float = Field(default=0, description="兼容旧记录的估算；新报价以quote为准")
+    quote: Optional[HotelQuote] = None
     # === AIGoHotel 新增字段 ===
     star_rating: Optional[float] = Field(default=None, description="星级(0-5)")
     price: Optional[float] = Field(default=None, description="实际价格")
@@ -234,6 +288,8 @@ class DayPlan(BaseModel):
     timeline_schedule: List[Dict[str, Any]] = Field(default_factory=list, description="按路线计算的活动开始/结束时间")
     meal_warnings: List[str] = Field(default_factory=list, description="缺餐或用餐时段需要确认")
     meal_adjustments: List[str] = Field(default_factory=list, description="本次编辑的用餐保留与调整说明")
+    overnight_stay: bool = Field(default=True)
+
 
 
 class WeatherInfo(BaseModel):
@@ -263,12 +319,14 @@ class WeatherInfo(BaseModel):
 class Budget(BaseModel):
     """预算信息"""
     total_attractions: int = Field(default=0, description="景点门票总费用")
-    total_hotels: int = Field(default=0, description="酒店总费用")
+    total_hotels: float = Field(default=0, description="酒店已知费用小计")
     total_meals: int = Field(default=0, description="餐饮总费用")
     total_transportation: int = Field(default=0, description="交通总费用")
-    total: int = Field(default=0, description="总费用")
+    total: float = Field(default=0, description="总费用")
     budget_limit: Optional[int] = Field(default=None, description="用户预算上限(元)")
     is_within_budget: Optional[bool] = Field(default=None, description="是否在预算范围内")
+    unknown_cost_items: List[str] = Field(default_factory=list, description="尚未计入总额的未知费用")
+    is_complete: bool = Field(default=True, description="费用项是否齐全；缺项时总额仅为已知预估小计")
 
 
 class DaySkeleton(BaseModel):
@@ -435,6 +493,9 @@ class DraftDayContext(BaseModel):
     dining_pool: DiningPoolDay = Field(default_factory=DiningPoolDay)
     weather: Optional[WeatherInfo] = Field(default=None)
     day_start_time: Optional[str] = Field(default=None)
+    overnight_stay: bool = Field(default=True)
+    companion_count: int = Field(default=1, ge=1)
+
 
 
 class DayDetail(BaseModel):
@@ -466,6 +527,9 @@ class DayDetail(BaseModel):
     timeline_schedule: List[Dict[str, Any]] = Field(default_factory=list)
     meal_warnings: List[str] = Field(default_factory=list)
     meal_adjustments: List[str] = Field(default_factory=list, description="本次编辑的用餐保留与调整说明")
+    overnight_stay: bool = Field(default=True)
+    companion_count: int = Field(default=1, ge=1)
+
 
 
 class TripDraftPayload(BaseModel):
