@@ -125,15 +125,22 @@ async def get_draft(draft_id: str) -> Optional[TripDraft]:
 
 
 async def patch_day_detail(
-    draft_id: str, day_index: int, day_detail: DayDetail
+    draft_id: str, day_index: int, day_detail: DayDetail, *, expected_day: Any = _UNSET, expected_request: Any = _UNSET
 ) -> None:
     async with async_session() as session:
+        await session.execute(text("BEGIN IMMEDIATE"))
         record = await session.get(TripDraft, draft_id)
         if record is None:
             raise ValueError(f"draft {draft_id} not found")
+        if record.status == "finalized":
+            raise DraftChangedDuringFinalize("草稿已定稿，本次修改未保存，请查看已保存行程")
+        if expected_request is not _UNSET and record.request_json != expected_request:
+            raise DraftChangedDuringFinalize("抵离交通已更新，本次结果未保存，请加载最新草稿")
         days = json.loads(record.days_detail_json)
         if day_index < 0 or day_index >= len(days):
             raise IndexError(f"day_index {day_index} out of range (len={len(days)})")
+        if expected_day is not _UNSET and days[day_index] != expected_day:
+            raise DraftChangedDuringFinalize("该天安排已被更新，本次结果未保存；请加载最新草稿后重试")
         days[day_index] = day_detail.model_dump(mode="json")
         record.days_detail_json = json.dumps(days, ensure_ascii=False, default=str)
         await session.commit()
@@ -187,3 +194,47 @@ async def delete_expired(*, days: int = 30) -> int:
         if deleted > 0:
             logger.info(f"TTL 清理: 删除了 {deleted} 个过期草稿")
         return deleted
+
+
+class DraftChangedDuringFinalize(ValueError):
+    pass
+
+
+async def read_finalized_trip(record: TripDraft) -> tuple[TripPlan, int]:
+    async with async_session() as session:
+        trip = await session.get(TripRecord, record.finalized_trip_id)
+        if trip is None:
+            raise ValueError("已定稿草稿的历史记录不存在，请检查或恢复历史记录")
+        return TripPlan.model_validate_json(trip.plan_data), trip.id
+
+
+async def persist_finalized_trip(draft_id: str, plan: TripPlan, request: TripRequest,
+                                 expected_days_detail: str, extracted: dict | None, *, expected_request: str | None = None) -> tuple[TripPlan, int]:
+    """One durable commit for history, draft and preferences, using existing tables."""
+    from .trip_history_service import build_trip_record
+    from .preferences_service import apply_extracted_preferences
+    async with async_session() as session:
+        # SQLite's write reservation serializes the check and insert across workers.
+        await session.execute(text("BEGIN IMMEDIATE"))
+        record = await session.get(TripDraft, draft_id)
+        if record is None:
+            raise ValueError("草稿不存在")
+        if record.status == "finalized":
+            trip = await session.get(TripRecord, record.finalized_trip_id)
+            if trip is None:
+                raise ValueError("已定稿草稿的历史记录不存在")
+            return TripPlan.model_validate_json(trip.plan_data), trip.id
+        if (expected_request is not None and record.request_json != expected_request) or record.days_detail_json != expected_days_detail:
+            raise DraftChangedDuringFinalize("定稿期间草稿已更新，本次未保存；请核对最新草稿后重试")
+        trip = build_trip_record(plan, request)
+        session.add(trip)
+        await session.flush()
+        record.status = "finalized"
+        record.finalized_trip_id = trip.id
+        record.finalized_at = datetime.utcnow()
+        record.trip_tagline = plan.trip_tagline
+        record.overall_suggestions = plan.overall_suggestions
+        record.weather_summary = plan.weather_summary
+        await apply_extracted_preferences(session, record.user_id, extracted, request.city)
+        await session.commit()
+        return plan, trip.id

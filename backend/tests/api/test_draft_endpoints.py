@@ -363,9 +363,9 @@ async def test_finalize_sse_returns_trip_id(client):
 
 
 @pytest.mark.asyncio
-async def test_finalize_already_finalized_returns_409(client):
+async def test_finalize_missing_history_reports_recoverable_error(client):
     draft_id = await _seed_draft()
-    await trip_draft_service.mark_finalized(draft_id, trip_id=1)
+    await trip_draft_service.mark_finalized(draft_id, trip_id=999999)
     async with client.stream(
         "POST", f"/api/trip/draft/{draft_id}/finalize"
     ) as resp:

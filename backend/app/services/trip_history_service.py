@@ -13,47 +13,51 @@ from ..logger import get_logger
 logger = get_logger(__name__)
 
 
+def build_trip_record(plan: TripPlan, request: Optional[TripRequest] = None) -> TripRecord:
+    plan_dict = plan.model_dump()
+    request_dict = None
+    if request:
+        request_dict = request.model_dump() if hasattr(request, 'model_dump') else request.dict()
+
+    total_cost = plan.budget.total if plan.budget else 0
+    budget_limit = plan.budget.budget_limit if plan.budget else None
+    companion_type = plan.companions.type if plan.companions else None
+    companion_count = plan.companions.count if plan.companions else 1
+    tags = ",".join(request.preferences) if request and request.preferences else None
+
+    cover_image = None
+    for day in plan.days:
+        for attr in day.attractions:
+            if attr.image_url:
+                cover_image = attr.image_url
+                break
+        if cover_image:
+            break
+
+    title = f"{plan.city}{plan.days.__len__()}日游"
+
+    record = TripRecord(
+        title=title,
+        city=plan.city,
+        start_date=plan.start_date,
+        end_date=plan.end_date,
+        travel_days=len(plan.days),
+        plan_data=json.dumps(plan_dict, ensure_ascii=False),
+        request_data=json.dumps(request_dict, ensure_ascii=False) if request_dict else None,
+        status="completed",
+        budget_limit=budget_limit,
+        total_cost=total_cost,
+        companion_type=companion_type,
+        companion_count=companion_count,
+        tags=tags,
+        cover_image=cover_image,
+    )
+    return record
+
+
 async def save_trip(plan: TripPlan, request: Optional[TripRequest] = None) -> TripRecord:
     async with async_session() as session:
-        plan_dict = plan.model_dump() if hasattr(plan, 'model_dump') else plan.dict()
-        request_dict = None
-        if request:
-            request_dict = request.model_dump() if hasattr(request, 'model_dump') else request.dict()
-
-        total_cost = plan.budget.total if plan.budget else 0
-        budget_limit = plan.budget.budget_limit if plan.budget else None
-        companion_type = plan.companions.type if plan.companions else None
-        companion_count = plan.companions.count if plan.companions else 1
-        tags = ",".join(request.preferences) if request and request.preferences else None
-
-        cover_image = None
-        for day in plan.days:
-            for attr in day.attractions:
-                if attr.image_url:
-                    cover_image = attr.image_url
-                    break
-            if cover_image:
-                break
-
-        title = f"{plan.city}{plan.days.__len__()}日游"
-
-        record = TripRecord(
-            title=title,
-            city=plan.city,
-            start_date=plan.start_date,
-            end_date=plan.end_date,
-            travel_days=len(plan.days),
-            plan_data=json.dumps(plan_dict, ensure_ascii=False),
-            request_data=json.dumps(request_dict, ensure_ascii=False) if request_dict else None,
-            status="completed",
-            budget_limit=budget_limit,
-            total_cost=total_cost,
-            companion_type=companion_type,
-            companion_count=companion_count,
-            tags=tags,
-            cover_image=cover_image,
-        )
-
+        record = build_trip_record(plan, request)
         session.add(record)
         await session.commit()
         await session.refresh(record)

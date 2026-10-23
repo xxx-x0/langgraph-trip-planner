@@ -1,5 +1,7 @@
 """定稿流水线：草稿 → TripPlan → 全局综合 + 偏好提取 → trip_history"""
+import asyncio
 import json
+from weakref import WeakValueDictionary
 import re
 from typing import Tuple, Optional
 
@@ -8,10 +10,12 @@ from ....models.schemas import (
     DiningPoolDay, Attraction, Hotel, Budget, WeatherInfo, Location,
 )
 from ....services import trip_draft_service
-from ....services.trip_history_service import save_trip
 from ..assemble.timeline import rule_assemble_day_timeline
 from ..assemble.route import compute_day_route
 from ..assemble.budget import compute_day_budget
+
+
+_finalize_locks = WeakValueDictionary()
 
 
 async def _run_global_synthesizer(trip_plan: TripPlan, free_text: str) -> Tuple[str, str, str]:
@@ -56,12 +60,12 @@ def _make_pseudo_request(plan: TripPlan, free_text: str):
     )
 
 
-async def _run_extract_and_save_preferences(trip_plan: TripPlan, user_id: str) -> None:
-    """复用旧 extract_preferences_node + save_preferences_node"""
-    from ..nodes.preferences import extract_preferences_node, save_preferences_node
+async def _run_extract_preferences(trip_plan: TripPlan, user_id: str) -> dict | None:
+    """Extract only; persistence participates in the finalization transaction."""
+    from ..nodes.preferences import extract_preferences_node
     state = {"trip_plan": trip_plan, "user_id": user_id, "extracted_preferences": None}
     state.update(await extract_preferences_node(state))
-    await save_preferences_node(state)
+    return state.get("extracted_preferences")
 
 
 def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodation: str) -> DayPlan:
@@ -140,12 +144,12 @@ def _build_day_context(
     )
 
 
-async def finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int]:
+async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int]:
     record = await trip_draft_service.get_draft(draft_id)
     if record is None:
         raise ValueError(f"draft {draft_id} 不存在")
     if record.status == "finalized":
-        raise ValueError(f"draft {draft_id} 已 finalized")
+        return await trip_draft_service.read_finalized_trip(record)
 
     request = TripRequest.model_validate_json(record.request_json)
     macro_plan = MacroPlan.model_validate_json(record.macro_plan_json)
@@ -211,15 +215,17 @@ async def finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int]
     trip_plan.overall_suggestions = suggestions
     trip_plan.weather_summary = summary
 
-    await _run_extract_and_save_preferences(trip_plan, user_id)
-
-    trip_record = await save_trip(trip_plan, request=request)
-    await trip_draft_service.mark_finalized(draft_id, trip_id=trip_record.id)
-    await trip_draft_service.update_synthesizer_fields(
-        draft_id,
-        trip_tagline=tagline,
-        overall_suggestions=suggestions,
-        weather_summary=summary,
+    extracted = await _run_extract_preferences(trip_plan, user_id)
+    return await trip_draft_service.persist_finalized_trip(
+        draft_id, trip_plan, request, record.days_detail_json, extracted,
+        expected_request=record.request_json,
     )
 
-    return trip_plan, trip_record.id
+
+async def finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int]:
+    lock = _finalize_locks.get(draft_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _finalize_locks[draft_id] = lock
+    async with lock:
+        return await _finalize_draft(draft_id, user_id=user_id)

@@ -57,24 +57,20 @@ async def test_finalize_assembles_missing_days_and_writes_trip_history():
         ),
     )
 
-    fake_trip_record = type("Rec", (), {"id": 777})()
 
     with patch(
         "app.agents.langgraph_agent.finalize.pipeline._run_global_synthesizer",
         new=AsyncMock(return_value=("行程标语", "总建议", "晴间多云")),
     ), patch(
-        "app.agents.langgraph_agent.finalize.pipeline._run_extract_and_save_preferences",
+        "app.agents.langgraph_agent.finalize.pipeline._run_extract_preferences",
         new=AsyncMock(return_value=None),
-    ), patch(
-        "app.agents.langgraph_agent.finalize.pipeline.save_trip",
-        new=AsyncMock(return_value=fake_trip_record),
     ), patch(
         "app.agents.langgraph_agent.finalize.pipeline.compute_day_route",
         new=AsyncMock(return_value=[]),
     ):
         trip_plan, trip_id = await finalize_draft(draft_id, user_id="u1")
 
-    assert trip_id == 777
+    assert trip_id > 0
     assert trip_plan.city == "北京"
     assert len(trip_plan.days) == 2
     assert trip_plan.trip_tagline == "行程标语"
@@ -82,7 +78,7 @@ async def test_finalize_assembles_missing_days_and_writes_trip_history():
     # draft 已标记 finalized
     record = await trip_draft_service.get_draft(draft_id)
     assert record.status == "finalized"
-    assert record.finalized_trip_id == 777
+    assert record.finalized_trip_id == trip_id
 
 
 @pytest.mark.asyncio
@@ -95,9 +91,9 @@ async def test_finalize_rejects_already_finalized():
         dining_pool=[DiningPoolDay().model_dump(mode="json")] * 2,
         weather_info=[],
     )
-    await trip_draft_service.mark_finalized(draft_id, trip_id=1)
+    await trip_draft_service.mark_finalized(draft_id, trip_id=999999)
 
-    with pytest.raises(ValueError, match="已 finalized"):
+    with pytest.raises(ValueError, match="历史记录不存在"):
         await finalize_draft(draft_id, user_id="u1")
 
 
@@ -136,17 +132,13 @@ async def test_finalize_preserves_timeline_order_and_day_start_time():
             is_assembled=True,
         ),
     )
-    fake_trip_record = type("Rec", (), {"id": 778})()
 
     with patch(
         "app.agents.langgraph_agent.finalize.pipeline._run_global_synthesizer",
         new=AsyncMock(return_value=("", "", "")),
     ), patch(
-        "app.agents.langgraph_agent.finalize.pipeline._run_extract_and_save_preferences",
+        "app.agents.langgraph_agent.finalize.pipeline._run_extract_preferences",
         new=AsyncMock(return_value=None),
-    ), patch(
-        "app.agents.langgraph_agent.finalize.pipeline.save_trip",
-        new=AsyncMock(return_value=fake_trip_record),
     ), patch(
         "app.agents.langgraph_agent.finalize.pipeline.compute_day_route",
         new=AsyncMock(return_value=[]),

@@ -34,6 +34,13 @@ def _parse_ticket_price(value) -> int:
     return int(match.group()) if match else 0
 
 
+async def _save_day_detail(draft_id, day_index, detail, *, expected_day, expected_request):
+    try:
+        await trip_draft_service.patch_day_detail(draft_id, day_index, detail, expected_day=expected_day, expected_request=expected_request)
+    except trip_draft_service.DraftChangedDuringFinalize as error:
+        raise HTTPException(409, detail=str(error)) from error
+
+
 @router.post(
     "/from-selections/stream",
     summary="从 Discover 勾选结果生成草稿骨架（SSE）",
@@ -227,7 +234,7 @@ async def assemble_day(
         free_text_input=request.free_text_input or "",
         city=request.city,
     )
-    await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
 
 
@@ -278,7 +285,7 @@ async def recompute_day(draft_id: str, day_index: int, edit: DayEditRequest):
     detail.day_budget = compute_day_budget(detail)
     # 保留当前 description（recompute 不写 LLM）
     detail.description = current.description if current else ""
-    await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
 
 
@@ -298,7 +305,7 @@ async def rewrite_narrative(draft_id: str, day_index: int):
         free_text_input=request.free_text_input or "",
         city=request.city,
     )
-    await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
 
 
@@ -366,7 +373,7 @@ async def ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReques
     existing_days = json.loads(record.days_detail_json)
     if existing_days[day_index]:
         detail.description = existing_days[day_index].get("description", "")
-    await trip_draft_service.patch_day_detail(draft_id, day_index, detail)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
 
 
@@ -379,10 +386,6 @@ async def finalize_draft_endpoint(draft_id: str):
             if record is None:
                 yield f"data: {json.dumps({'type':'error','message':'draft 不存在'}, ensure_ascii=False)}\n\n"
                 return
-            if record.status == "finalized":
-                yield f"data: {json.dumps({'type':'error','message':'draft 已 finalized'}, ensure_ascii=False)}\n\n"
-                return
-
             yield f"data: {json.dumps({'type':'progress','step':'synthesizer','message':'生成总体建议...'}, ensure_ascii=False)}\n\n"
             trip_plan, trip_id = await finalize_draft(draft_id, user_id=record.user_id)
             yield f"data: {json.dumps({'type':'progress','step':'saving','message':'写入历史...'}, ensure_ascii=False)}\n\n"
@@ -394,7 +397,8 @@ async def finalize_draft_endpoint(draft_id: str):
             }
             yield f"data: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
         except Exception as e:
-            err = {"type": "error", "message": f"finalize 失败: {str(e)}"}
+            err = {"type": "error", "message": f"定稿失败: {str(e)}",
+                   "step": getattr(e, 'operation', 'finalize'), "retryable": getattr(e, 'retryable', False)}
             yield f"data: {json.dumps(err, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(
