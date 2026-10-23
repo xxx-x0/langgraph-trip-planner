@@ -52,7 +52,7 @@ def estimated_lunch_anchor(attractions, start: str | None) -> str:
     return min(choices)[1]
 
 
-def schedule_day(detail: DayDetail) -> None:
+def schedule_day(detail: DayDetail, *, suggest=True) -> None:
     detail.route_segments = [RouteSegment.model_validate(r) for r in detail.route_segments]
     routes = {(r.from_name, r.to_name): r for r in detail.route_segments}
     attractions = {a.name: a for a in detail.attractions}
@@ -130,18 +130,47 @@ def schedule_day(detail: DayDetail) -> None:
         elif kind == 'hotel' and detail.hotel:
             from ....services.hotel_quotes import hotel_cost_for_date
             amount, missing = hotel_cost_for_date(detail.hotel, detail.date)
-            append(kind, name, 30, cost=(amount if amount > 0 or not missing else None) if detail.overnight_stay else None,
+            # With intercity buffers, check-in/out is already reserved at the trip boundary.
+            append(kind, name, 0 if 'intercity_cost' in detail.travel_window else 30, cost=(amount if amount > 0 or not missing else None) if detail.overnight_stay else None,
                    detail=detail.hotel.address if detail.overnight_stay else '离开日；此处为酒店位置参考，不计新增住宿')
         previous = name
 
-    if detail.attractions or detail.meals:
+    if detail.attractions or detail.meals or detail.rest_periods:
         for slot in ['lunch', 'dinner']:
             if slot not in actual_slots:
                 warnings.append(f'{slot_label(slot)}未安排，请自行安排或补充餐厅')
         if clock_minutes(detail.day_start_time) < 600 and 'breakfast' not in actual_slots:
             warnings.append('早餐未安排，请出发前自行安排')
     detail.timeline_schedule = schedule
+    if detail.rest_periods:
+        from ....services.rest_schedule import reserve_rest
+        reserve_rest(detail)
+        warnings=[w for w in warnings if "分钟未安排" not in w]
+        warnings.extend(f"{x['start_time']}起有{x['duration']}分钟未安排，请核对当地休息与用餐" for x in detail.timeline_schedule if x['kind']=='free_time' and x['duration']>60)
     detail.meal_warnings = list(dict.fromkeys(warnings))
+    detail.schedule_suggestion = {}
+    if suggest and not detail.rest_periods and any(x['kind'] == 'free_time' for x in schedule):
+        # Explicit opt-in only. Keep chosen restaurants, attractions, order and durations.
+        original_gap = sum(x['duration'] for x in schedule if x['kind'] == 'free_time')
+        best = None
+        for delta in range(30, 241, 30):
+            trial = detail.model_copy(deep=True)
+            trial.day_start_time = clock(clock_minutes(detail.day_start_time) + delta)
+            schedule_day(trial, suggest=False)
+            from .meals import meal_plan_violations
+            from ....services.journey_service import conflicts
+            if conflicts(trial) or meal_plan_violations(trial, detail):
+                continue
+            if any(x['end_minutes'] > 1440 for x in trial.timeline_schedule):
+                continue
+            if any(opening_windows(a.open_hours) and not any(lo <= x['start_minutes'] and x['end_minutes'] <= hi for lo,hi in opening_windows(a.open_hours))
+                   for a in trial.attractions for x in trial.timeline_schedule if x['kind']=='attraction' and x['ref_name']==a.name):
+                continue
+            gap = sum(x['duration'] for x in trial.timeline_schedule if x['kind'] in {'free_time','wait'})
+            if gap < original_gap and (best is None or gap < best[0]): best = (gap, trial.day_start_time)
+        if best:
+            detail.schedule_suggestion = {'day_start_time':best[1], 'saved_minutes': original_gap-best[0],
+                'message':f'改为{best[1]}出发，预计可减少{original_gap-best[0]}分钟空档。景点开放和预约仍需核对。'}
 
 
 def slot_label(value: str) -> str:

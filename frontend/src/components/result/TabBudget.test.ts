@@ -21,6 +21,12 @@ describe('budget completeness',()=>{
     const wrapper=open(base)
     expect(wrapper.get('[role="alert"]').text()).toContain('历史预算')
   })
+  it('keeps intercity inclusion and the combined transport label consistent',()=>{
+    const wrapper=open({...base,total_intercity:341,total_transportation:441,total:842,is_complete:false})
+    expect(wrapper.text()).not.toContain('往返大交通尚未纳入')
+    expect(wrapper.text()).toContain('往返大交通 341 元，市内交通估算 100 元')
+    expect(wrapper.findAll('.budget-item').at(-1)!.text()).toContain('交通费用合计¥441')
+  })
   it('reports complete estimate within its limit',()=>{
     const wrapper=open({...base,is_complete:true,is_within_budget:true})
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)

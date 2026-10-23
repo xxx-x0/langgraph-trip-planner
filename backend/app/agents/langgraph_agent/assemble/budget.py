@@ -36,11 +36,13 @@ def compute_day_budget(day_detail: DayDetail) -> Budget:
     has_content = bool(day_detail.attractions or day_detail.meals or day_detail.hotel)
     transport = _DAILY_TRANSPORT_DEFAULT * count if has_content else 0
     if has_content:
-        unknown.append('往返大交通未纳入；市内交通仅按每人每天50元估算')
+        unknown.append('市内交通仅按每人每天50元估算' if 'intercity_cost' in day_detail.travel_window else '往返大交通未纳入；市内交通仅按每人每天50元估算')
+    intercity = day_detail.travel_window.get('intercity_cost',0)
+    unknown.extend(day_detail.travel_window.get('unknown_cost_items',[]))
     return Budget(
         total_attractions=total_attractions, total_hotels=total_hotels,
-        total_meals=total_meals, total_transportation=transport,
-        total=round(total_attractions + total_hotels + total_meals + transport, 2),
+        total_meals=total_meals, total_transportation=transport+intercity, total_intercity=intercity,
+        total=round(total_attractions + total_hotels + total_meals + transport + intercity, 2),
         unknown_cost_items=unknown, is_complete=not unknown,
     )
 
@@ -51,7 +53,7 @@ def combine_budgets(budgets: list[Budget], limit: int | None = None) -> Budget:
     complete = all(b.is_complete for b in budgets)
     return Budget(
         **{field: round(sum(getattr(b, field) for b in budgets), 2) for field in
-           ["total_attractions", "total_hotels", "total_meals", "total_transportation"]},
+           ["total_attractions", "total_hotels", "total_meals", "total_transportation", "total_intercity"]},
         total=total, budget_limit=limit, unknown_cost_items=unknown, is_complete=complete,
         is_within_budget=(False if limit is not None and total > limit else
                           total <= limit if complete and limit is not None else None),

@@ -33,7 +33,8 @@
           </ul>
           <span v-else>历史预算未记录缺项状态，请重新核对费用。</span>
         </div>
-        <p>往返大交通尚未纳入；市内交通按每人每天50元估算。酒店未核对的报价不计入小计，未知不代表免费。</p>
+        <p>大交通仅计入已填写的已知费用；市内交通按每人每天50元估算。酒店未核对的报价不计入小计，未知不代表免费。</p>
+        <p v-if="budget.total_intercity">交通合计中，往返大交通 {{ budget.total_intercity }} 元，市内交通估算 {{ Math.round((budget.total_transportation-budget.total_intercity)*100)/100 }} 元，均按全体同行人合计。</p>
         <div class="budget-grid">
           <div class="budget-item">
             <div class="budget-label">已知景点门票</div>

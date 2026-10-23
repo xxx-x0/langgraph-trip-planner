@@ -6,7 +6,7 @@
 - timeline_order：[{kind, ref_name}]，hotel 在头尾，meal 按 insert_after 嵌入
 """
 from typing import Dict, Any, List, Optional
-from .schedule import estimated_lunch_anchor, opening_windows
+from .schedule import estimated_lunch_anchor, opening_windows, clock, clock_minutes
 
 from ....models.schemas import (
     Attraction, Meal, Location, DayDetail, DraftDayContext,
@@ -120,6 +120,8 @@ def _default_meals(ctx: DraftDayContext, attractions: List[Attraction]):
     result = []
     used = set()
     for slot, start, end in [("lunch", 690, 870), ("dinner", 1050, 1230)]:
+        if ctx.travel_window.get('unavailable') or max(start,ctx.travel_window.get('start_minutes',0)) + 60 > min(end+60,ctx.travel_window.get('end_minutes',1440)):
+            continue
         candidates = [c for c in ctx.dining_pool.main if c.name not in used and not any(w in (c.name+' '+(c.open_hours or '')) for w in ('暂停营业','永久关闭','已歇业')) and
                       (not opening_windows(c.open_hours) or any(
                           max(a, start) + 60 <= min(b, end + 60)
@@ -181,14 +183,17 @@ def rule_assemble_day_timeline(
     overrides = overrides or {}
     removed_attraction_names = _unique_names(overrides.get("removed_attraction_names"))
     locked_attraction_names = _unique_names(overrides.get("locked_attraction_names"))
-    available_attractions = _apply_removed_attractions(ctx.attractions, removed_attraction_names)
 
+    available_attractions = _apply_removed_attractions(
+        ctx.attractions, removed_attraction_names
+    )
     attractions = _apply_attraction_order(
         available_attractions, overrides.get("attractions_order")
     )
-
     present_names = {a.name for a in attractions}
-    locked_attraction_names = [name for name in locked_attraction_names if name in present_names]
+    locked_attraction_names = [
+        name for name in locked_attraction_names if name in present_names
+    ]
 
     if "meals" in overrides:
         meals_with_insert = [
@@ -207,16 +212,18 @@ def rule_assemble_day_timeline(
         meals_with_insert = _default_meals(ctx, attractions)
         meals = [m for m, _ in meals_with_insert]
 
-    timeline = _build_timeline_order(attractions, meals_with_insert, ctx.hotel)
+    hotel = None if ctx.travel_window.get("unavailable") else ctx.hotel
+    timeline = _build_timeline_order(attractions, meals_with_insert, hotel)
 
     return DayDetail(
-        day_index=ctx.day_index,
         trip_intent=ctx.trip_intent,
+        travel_window=ctx.travel_window, rest_periods=ctx.rest_periods,
+        day_index=ctx.day_index,
         date=ctx.date,
         attractions=attractions,
         meals=meals,
-        hotel=ctx.hotel,
-        day_start_time=overrides.get("day_start_time") or ctx.day_start_time,
+        hotel=hotel,
+        day_start_time=overrides.get("day_start_time") or clock(max(clock_minutes(ctx.day_start_time),ctx.travel_window.get("start_minutes",0))),
         timeline_order=timeline,
         locked_attraction_names=locked_attraction_names,
         removed_attraction_names=removed_attraction_names,

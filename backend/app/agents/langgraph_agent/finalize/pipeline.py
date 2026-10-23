@@ -10,6 +10,7 @@ from ....models.schemas import (
     DiningPoolDay, Attraction, Hotel, Budget, WeatherInfo, Location,
 )
 from ....services import trip_draft_service
+from ....services.journey_service import apply_context, conflicts
 from ..assemble.timeline import rule_assemble_day_timeline
 from ..assemble.route import compute_day_route
 from ..assemble.budget import compute_day_budget, combine_budgets, parse_ticket_price as _parse_ticket_price
@@ -52,6 +53,8 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         trip_intent=detail.trip_intent,
         description_source=detail.description_source,
         pending_confirmations=detail.pending_confirmations,
+        schedule_suggestion=detail.schedule_suggestion,
+        travel_window=detail.travel_window, rest_periods=detail.rest_periods,
         transportation=transportation,
         accommodation=accommodation,
         hotel=detail.hotel,
@@ -163,6 +166,7 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
             )
             from ....services.recommendations import intent_for
             ctx.trip_intent = intent_for(request)
+            apply_context(ctx, request)
             detail = rule_assemble_day_timeline(ctx, overrides=None)
             detail.route_segments = await compute_day_route(
                 detail, request.city, request.transportation
@@ -172,6 +176,7 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
         from ....services.recommendations import intent_for
         detail.trip_intent = intent_for(request)
         detail.overnight_stay = idx < request.travel_days - 1
+        apply_context(detail, request)
         detail.companion_count = request.companions.count if request.companions else 1
         raw_by_name = {c['name']: c for c in (clusters_data[idx] if idx < len(clusters_data) else [])}
         for attraction in detail.attractions:
@@ -179,6 +184,8 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
             if attraction.ticket_price == 0 and raw and _parse_ticket_price(raw.get('ticket_price')) is None:
                 attraction.ticket_price = None
         schedule_day(detail)
+        problems = conflicts(detail)
+        if problems: raise ValueError("与交通或休息安排冲突，请先调整第"+str(idx+1)+"天："+"；".join(problems))
         detail.day_budget = compute_day_budget(detail)
         refresh_day_description(detail, next((WeatherInfo.model_validate(w) for w in weather_info if isinstance(w, dict) and w.get("date") == detail.date), None))
         day_plans.append(_day_detail_to_day_plan(
@@ -197,6 +204,7 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
         overall_suggestions="",
         budget=combine_budgets(budgets, request.budget),
         companions=request.companions,
+        journey=request.journey,
     )
 
     tagline, suggestions, summary = await _run_global_synthesizer(

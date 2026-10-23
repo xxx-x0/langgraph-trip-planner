@@ -46,7 +46,7 @@ import type { Attraction, DayPlan, Hotel, Meal } from '@/types'
 import { cleanHotelName } from '@/utils/hotelFormat'
 
 interface TimelineItem {
-  type: 'attraction' | 'meal' | 'hotel' | 'travel' | 'wait' | 'free_time'
+  type: 'attraction' | 'meal' | 'hotel' | 'travel' | 'wait' | 'free_time' | 'rest'
   name: string
   startTime: string
   endTime: string
@@ -428,6 +428,7 @@ function getIcon(type: string): string {
     travel: '🚗',
     wait: '⏳',
     free_time: '☕',
+    rest: '🌿',
   }
   return map[type] || '📍'
 }

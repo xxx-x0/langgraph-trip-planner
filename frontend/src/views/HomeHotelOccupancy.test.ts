@@ -5,6 +5,7 @@ import dayjs from 'dayjs'
 import Home from './Home.vue'
 const navigation=vi.hoisted(()=>({push:vi.fn()}))
 vi.mock('vue-router',()=>({useRouter:()=>navigation}))
+vi.mock('@/services/api',()=>({previewJourney:vi.fn(async()=>({days:[]}))}))
 function setup(){return mount(Home,{global:{plugins:[Antd]}})}
 async function dates(w:any,start='2026-10-30',end='2026-11-01'){
  const pickers=w.findAllComponents(DatePicker)

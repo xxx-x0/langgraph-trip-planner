@@ -17,3 +17,8 @@ describe('persisted service schedule',()=>{
     expect(wrapper.text()).toContain('等待用餐时段')
   })
 })
+
+it('renders reserved rest with its saved times and explanation',()=>{
+  const wrapper=mount(DayTimeline,{props:{day:{date:'2026-10-28',day_index:2,description:'',transportation:'公共交通',accommodation:'',attractions:[],meals:[],route_segments:[],timeline_schedule:[{kind:'rest',ref_name:'下午歇一歇',start_time:'14:00',end_time:'17:00',start_minutes:840,end_minutes:1020,duration:180,detail:'在当前区域自行休息'}]}}})
+  expect(wrapper.text()).toContain('14:00 - 17:00');expect(wrapper.text()).toContain('下午歇一歇');expect(wrapper.text()).toContain('在当前区域自行休息')
+})

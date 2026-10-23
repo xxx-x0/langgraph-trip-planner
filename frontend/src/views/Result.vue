@@ -42,6 +42,8 @@
       </div>
     </div>
 
+    <JourneySummary v-if="tripPlan?.journey" :journey="tripPlan.journey" :city="tripPlan.city" :days="tripPlan.days" />
+
     <!-- 统计数据区 - 黄色背景 -->
     <div v-if="tripPlan" class="stats-section">
       <div class="stat-item">
@@ -131,6 +133,7 @@
 </template>
 
 <script setup lang="ts">
+import JourneySummary from '@/components/JourneySummary.vue'
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'

@@ -49,6 +49,10 @@
         <summary>查看时间安排和路上用时</summary>
         <DayTimeline :day="detail" />
       </details>
+      <div v-if="detail.schedule_suggestion?.day_start_time" class="pending-confirmations">
+        <p>{{ detail.schedule_suggestion.message }}</p>
+        <a-button :disabled="!!busy" @click="emit('recompute', buildEditBody({day_start_time: detail.schedule_suggestion.day_start_time}))">采用较晚出发时间</a-button>
+      </div>
       <div class="timeline-editor">
         <section class="editor-section">
           <div class="section-header">

@@ -25,6 +25,7 @@ from ...services.external_calls import ExternalServiceError, FailureKind, operat
 from ...services.llm_service import get_llm
 from ...models.schemas import PlanFromSelectionsRequest
 
+from ...services.journey_service import apply_context, travel_window, conflicts
 from ...services.recommendations import intent_for, explain_dining
 
 router = APIRouter(prefix="/trip/draft", tags=["trip_draft"])
@@ -33,6 +34,10 @@ router = APIRouter(prefix="/trip/draft", tags=["trip_draft"])
 
 async def _save_day_detail(draft_id, day_index, detail, *, expected_day, expected_request, weather=None):
     detail.trip_intent = intent_for(TripRequest.model_validate_json(expected_request))
+    apply_context(detail, TripRequest.model_validate_json(expected_request))
+    problems = conflicts(detail)
+    if problems:
+        raise HTTPException(409, detail="与交通或休息安排冲突，本次修改未保存：" + "；".join(problems))
     refresh_day_description(detail, weather)
     try:
         await trip_draft_service.patch_day_detail(draft_id, day_index, detail, expected_day=expected_day, expected_request=expected_request)
@@ -152,6 +157,11 @@ def _load_payload(record) -> TripDraftPayload:
             companion_count=request.companions.count if request.companions else 1,
         ))
 
+    for ctx in days:
+        apply_context(ctx, request)
+        from ...agents.langgraph_agent.assemble.schedule import clock, clock_minutes
+        ctx.day_start_time = clock(max(clock_minutes(ctx.day_start_time), ctx.travel_window.get("start_minutes", 0)))
+
     days_detail = []
     for idx, d in enumerate(days_detail_raw):
         if d is None:
@@ -161,6 +171,10 @@ def _load_payload(record) -> TripDraftPayload:
             detail.trip_intent = intent_for(request)
             detail.overnight_stay = idx < request.travel_days - 1
             detail.companion_count = request.companions.count if request.companions else 1
+            apply_context(detail, request)
+            suggestion = detail.model_copy(deep=True)
+            schedule_day(suggestion)
+            detail.schedule_suggestion = suggestion.schedule_suggestion
             detail.day_budget = compute_day_budget(detail)
             from ...services.hotel_quotes import hotel_cost_for_date
             for entry in detail.timeline_schedule:
@@ -397,6 +411,22 @@ async def recompute_day(draft_id: str, day_index: int, edit: DayEditRequest):
         detail, request.city, request.transportation
     )
     schedule_day(detail)
+    if current and edit.day_start_time:
+        # GET can project a suggestion for legacy JSON without persisting it.
+        saved_schedule = current.model_copy(deep=True)
+        schedule_day(saved_schedule)
+        offered_start = current.schedule_suggestion.get('day_start_time') or saved_schedule.schedule_suggestion.get('day_start_time')
+        if offered_start and edit.day_start_time == offered_start:
+            from ...agents.langgraph_agent.assemble.schedule import opening_windows
+            problems = meal_plan_violations(detail, current)
+            for activity in [*detail.attractions, *detail.meals]:
+                kind = 'attraction' if activity in detail.attractions else 'meal'
+                entry = next((x for x in detail.timeline_schedule if x['kind'] == kind and x['ref_name'] == activity.name), None)
+                windows = opening_windows(activity.open_hours)
+                if entry and windows and not any(lo <= entry['start_minutes'] and entry['end_minutes'] <= hi for lo, hi in windows):
+                    problems.append(activity.name + '不在已知开放时间内')
+            if problems:
+                raise HTTPException(409, detail='较晚出发建议按本次路线复核失败，本次修改未保存：'+'；'.join(problems))
     if edit.meals is not None:
         from ...agents.langgraph_agent.assemble.schedule import opening_windows
         existing_names = {m.name for m in current.meals} if current else set()
@@ -627,3 +657,46 @@ async def refresh_dining_options(draft_id: str, day_index: int):
         raise HTTPException(409, detail=str(error)) from error
     return {'dining_pool':pool, 'retained_categories':retained,
             'message':'备选已更新；原用餐安排保留。'+('部分分类未取得新结果，保留旧备选及其查询时间。' if retained else '')}
+
+
+from ...models.journey import Journey
+from pydantic import ValidationError
+
+class JourneyChange(BaseModel):
+    journey: Journey | None = None
+    preview_token: str | None = None
+
+@router.post('/{draft_id}/journey', summary='预览并确认抵离交通变更')
+async def change_journey(draft_id: str, change: JourneyChange):
+    record=await trip_draft_service.get_draft(draft_id)
+    _ensure_editable(record)
+    raw=json.loads(record.request_json)
+    raw['journey']=change.journey.model_dump(mode='json') if change.journey else None
+    try: request=TripRequest.model_validate(raw)
+    except ValidationError as error: raise HTTPException(422,detail=str(error)) from error
+    token=hashlib.sha256((record.request_json+record.days_detail_json+json.dumps(raw,sort_keys=True)).encode()).hexdigest()
+    payload=_load_payload(record)
+    impacts=[]
+    for ctx,detail in zip(payload.days,payload.days_detail):
+        window=travel_window(request,ctx.date)
+        problems=[]
+        if detail:
+            apply_context(detail,request)
+            problems=conflicts(detail)
+        impacts.append({'date':ctx.date,'window':window,'conflicts':problems,
+                        'activities':[a.name for a in (detail.attractions if detail else ctx.attractions)]})
+    if change.preview_token:
+        if change.preview_token!=token: raise HTTPException(409,detail='预览后输入或草稿发生变化，请重新预览')
+        try: await trip_draft_service.replace_journey(draft_id,request,record.request_json,record.days_detail_json)
+        except trip_draft_service.DraftChangedDuringFinalize as error: raise HTTPException(409,detail=str(error)) from error
+    return {'saved':bool(change.preview_token),'preview_token':token,'impacts':impacts,
+            'intercity_total':round(sum(x['window'].get('intercity_cost',0) for x in impacts),2),
+            'notice':'修改已订班次只更新本地计划，不会改签。景点和餐厅保持原安排；冲突须调整后才能定稿。住宿日期改变时旧报价作废，需重新查询或创建新规划。'}
+
+
+@router.post('/journey-preview', summary='核对交通输入与目的地可用时间')
+async def preview_journey(request: TripRequest):
+    from datetime import date,timedelta
+    return {'days':[{'date':(date.fromisoformat(request.start_date)+timedelta(days=i)).isoformat(),
+                     'window':travel_window(request,(date.fromisoformat(request.start_date)+timedelta(days=i)).isoformat())}
+                    for i in range(request.travel_days)]}

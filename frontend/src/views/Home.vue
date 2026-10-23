@@ -300,6 +300,8 @@
 
 
 
+        <JourneyEditor ref="journeyEditor" v-model="journey" class="form-card" :destination-city="formData.city" :start-date="formData.start_date?.format('YYYY-MM-DD')" :end-date="formData.end_date?.format('YYYY-MM-DD')" :passengers="formData.companions.count" />
+
         <!-- 卡片 4: 额外要求 - 白色背景 -->
         <div class="form-card">
           <div class="card-decoration decoration-square decoration-red"></div>
@@ -319,6 +321,7 @@
         <div class="submit-section">
           <button
             type="submit"
+            :disabled="submitting"
             class="bauhaus-btn bauhaus-btn-yellow bauhaus-btn-square submit-btn"
           >
             🚀 开始探索景点
@@ -330,6 +333,9 @@
 </template>
 
 <script setup lang="ts">
+import JourneyEditor from '@/components/JourneyEditor.vue'
+import type {Journey} from '@/types'
+import {previewJourney} from '@/services/api'
 import { reactive, watch, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
@@ -338,6 +344,9 @@ import type { Dayjs } from 'dayjs'
 import GeometricDecoration from '@/components/bauhaus/GeometricDecoration.vue'
 
 const router = useRouter()
+const journey=ref<Journey|null>(null)
+const journeyEditor=ref<InstanceType<typeof JourneyEditor>>()
+const submitting=ref(false)
 
 const hotCities = [
   { name: '北京', emoji: '🏯' },
@@ -402,6 +411,14 @@ const occupancyIssue = computed(() => {
   return o.room_count * (o.adults_per_room + o.children_ages.length) === formData.companions.count ? '' : '房间内的总人数与出行人数不一致，请调整房间或每间房人数。'
 })
 watch(() => formData.companions.count, (count, oldCount) => {
+  if (Number.isInteger(count) && count > 0 && journey.value) {
+    const updated: Journey = JSON.parse(JSON.stringify(journey.value))
+    for (const key of ['outbound', 'inbound'] as const) {
+      const leg = updated[key]
+      if (leg && leg.booking_status === 'planned' && leg.price_source === 'unknown' && leg.ticket_total == null && leg.extras_total == null && !leg.extra_costs) leg.passengers = count
+    }
+    journey.value = updated
+  }
   if (hotelRoomCount.value === 1 && !hotelChildren.value.trim() && hotelAdults.value === oldCount) hotelAdults.value = count
 })
 
@@ -424,7 +441,8 @@ watch([() => formData.start_date, () => formData.end_date], ([start, end]) => {
   }
 })
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
+  if(submitting.value)return
   if (!formData.start_date || !formData.end_date) {
     message.error('请选择日期')
     return
@@ -432,7 +450,10 @@ const handleSubmit = () => {
 
   if (occupancyIssue.value) { message.error(occupancyIssue.value); return }
 
+  if (journeyEditor.value && !await journeyEditor.value.validate()) return
+  if(submitting.value)return
   const requestData: TripFormData = {
+    journey: journey.value,
     hotel_occupancy: occupancy.value,
     city: formData.city,
     start_date: formData.start_date.format('YYYY-MM-DD'),
@@ -451,8 +472,17 @@ const handleSubmit = () => {
     companions: formData.companions,
   }
 
-  sessionStorage.setItem('tripFormData', JSON.stringify(requestData))
-  router.push('/discover')
+  submitting.value=true
+  try {
+    const preview=await previewJourney(requestData)
+    sessionStorage.setItem('journeyPreview',JSON.stringify({request:requestData,days:preview.days}))
+    sessionStorage.setItem('tripFormData',JSON.stringify(requestData))
+    await router.push('/discover')
+  } catch(e:any) {
+    const detail=e?.response?.data?.detail
+    const explanation=Array.isArray(detail) ? detail.map((item:any)=>String(item.msg||'').replace(/^Value error, /,'')).filter(Boolean).join('；') : typeof detail==='string'?detail:''
+    message.error(explanation || '交通输入核对失败，请检查日期、人数和价格来源后重试')
+  } finally {submitting.value=false}
 }
 </script>
 

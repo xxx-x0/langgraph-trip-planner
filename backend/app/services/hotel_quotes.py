@@ -16,7 +16,8 @@ def occupancy_for(request: TripRequest) -> tuple[HotelOccupancy, bool]:
 
 def quote_context(request: TripRequest) -> HotelQuote:
     occupancy, confirmed = occupancy_for(request)
-    start, end = request.start_date, request.end_date
+    from .journey_service import stay_dates
+    start, end = stay_dates(request)
     return HotelQuote(check_in=start, check_out=end,
                       nights=(date.fromisoformat(end)-date.fromisoformat(start)).days,
                       occupancy=occupancy, occupancy_confirmed=confirmed,

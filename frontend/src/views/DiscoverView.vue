@@ -9,6 +9,7 @@
       </div>
     </header>
 
+    <JourneySummary v-if="formData?.journey" :journey="formData.journey" :city="formData.city" :days="travelDays.map((d:any)=>({date:d.date,travel_window:d.window}))" />
     <!-- 阶段1: 景点发现与选择 -->
     <div v-if="phase === 'discover'" class="discover-layout">
       <!-- 左侧: 景点列表 -->
@@ -283,6 +284,7 @@
 </template>
 
 <script setup lang="ts">
+import JourneySummary from '@/components/JourneySummary.vue'
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
@@ -310,6 +312,7 @@ const router = useRouter()
 const tripLoader = useTripLoader()
 
 const formData = ref<TripFormData | null>(null)
+const travelDays=computed(()=>{try {const p=JSON.parse(sessionStorage.getItem('journeyPreview')||'null');return JSON.stringify(p?.request)===JSON.stringify(formData.value)?p.days:[]}catch{return []}})
 const attractions = reactive<DiscoveredAttraction[]>([])
 const attractionPhotos = ref<Record<string, string>>({})
 const weatherInfo = ref('')
@@ -611,6 +614,15 @@ async function startDayAssignment() {
       if (nameToMinutes[a.name]) a.visit_minutes = nameToMinutes[a.name]
     }
     dayAssignments.value = mergeDayAssignmentsWithSelected(resp.day_assignments, selected)
+    while(dayAssignments.value.length<days) dayAssignments.value.push([])
+    const openDays=travelDays.value.map((d:any,i:number)=>d.window.unavailable?-1:i).filter((i:number)=>i>=0)
+    if(openDays.length && travelDays.value.length===days){
+      for(let i=0;i<days;i++){
+        if(!travelDays.value[i].window.unavailable)continue
+        const moved=dayAssignments.value[i].splice(0)
+        for(const attraction of moved){const target=[...openDays].sort((a,b)=>dayAssignments.value[a].length-dayAssignments.value[b].length)[0];dayAssignments.value[target].push(attraction)}
+      }
+    }
     dayDurations.value = resp.day_durations
     smartAssignmentCache.value = JSON.parse(JSON.stringify(dayAssignments.value))
     phase.value = 'assign'
@@ -682,7 +694,7 @@ function handleDrop(_event: DragEvent, toDay: number) {
 async function confirmAndPlan() {
   if (!formData.value) return
 
-  const hasEmpty = dayAssignments.value.some(d => d.length === 0)
+  const hasEmpty = dayAssignments.value.some((d,i) => d.length === 0 && !travelDays.value[i]?.window.unavailable)
   if (hasEmpty) {
     message.warning('每天至少需要安排一个景点')
     return

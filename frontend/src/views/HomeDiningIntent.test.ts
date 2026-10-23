@@ -4,6 +4,7 @@ import Antd,{DatePicker,Form} from 'ant-design-vue'
 import dayjs from 'dayjs'
 import Home from './Home.vue'
 vi.mock('vue-router',()=>({useRouter:()=>({push:vi.fn()})}))
+vi.mock('@/services/api',()=>({previewJourney:vi.fn(async()=>({days:[]}))}))
 it('carries the explicit meal budget and dietary request through the discovery request',async()=>{
  sessionStorage.clear()
  const w=mount(Home,{global:{plugins:[Antd]}})

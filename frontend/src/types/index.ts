@@ -73,6 +73,7 @@ export interface Budget {
   total_attractions: number
   total_hotels: number
   total_meals: number
+  total_intercity?: number
   total_transportation: number
   total: number
   budget_limit?: number
@@ -89,10 +90,13 @@ export interface RouteSegment {
 }
 
 export interface DayPlan {
+  travel_window?: Record<string, any>
+  rest_periods?: Array<{id:string;date:string;start_time:string;end_time:string;label:string}>
+  schedule_suggestion?: {day_start_time: string; saved_minutes: number; message: string}
   overnight_stay?: boolean
   description_source?: string | null
   pending_confirmations?: string[]
-  timeline_schedule?: Array<{ kind: "attraction" | "meal" | "hotel" | "travel" | "wait" | "free_time"; ref_name: string; start_time: string; end_time: string; start_minutes: number; end_minutes: number; duration: number; cost?: number | null; detail?: string; mode?: string; distance?: string }>
+  timeline_schedule?: Array<{ kind: "attraction" | "meal" | "hotel" | "travel" | "wait" | "free_time" | "rest"; ref_name: string; start_time: string; end_time: string; start_minutes: number; end_minutes: number; duration: number; cost?: number | null; detail?: string; mode?: string; distance?: string }>
   meal_warnings?: string[]
   meal_adjustments?: string[]
   date: string
@@ -126,6 +130,7 @@ export interface WeatherInfo {
 }
 
 export interface TripPlan {
+  journey?: Journey | null
   narrative_source?: string | null
   city: string
   start_date: string
@@ -142,6 +147,8 @@ export interface TripPlan {
 }
 
 export interface TripFormData {
+  journey?: Journey | null
+  rest_periods?: Array<{id:string;date:string;start_time:string;end_time:string;label:string}>
   meal_budget_per_person?: number
   dietary_requirements?: string
   dining_style?: "on_route" | "dedicated"
@@ -295,3 +302,16 @@ export interface Recommendation {
   cautions?: string[]
   matches?: { slot: string; before?: string; after?: string; distance_km?: number | null; extra_walk_minutes?: number | null; style: string; route_basis: string; hours_fit?: boolean | null }[]
 }
+
+export interface JourneyExtras {taxes:number|null;baggage:number|null;transfers:number|null;overnight:number|null}
+export interface JourneyLeg {
+ extra_costs?:JourneyExtras|null;connections?:number|null;seat_class?:string;baggage_policy?:string;refund_policy?:string;quote_expires_at?:string|null
+
+ mode: 'train'|'flight'|'bus'|'driving'|'other'; service_number: string
+ departure_station:string;arrival_station:string;departure_time:string;arrival_time:string
+ departure_timezone:string;arrival_timezone:string;passengers:number
+ booking_status:'planned'|'booked';price_source:'unknown'|'user_estimate'|'user_quote'|'paid'
+ price_note:string;quoted_at:string|null;ticket_total:number|null;extras_total:number|null;currency:string
+ transfer_before_minutes:number;station_buffer_minutes:number;baggage_minutes:number;transfer_after_minutes:number;lodging_buffer_minutes:number
+}
+export interface Journey {origin_city:string;return_city:string;destination_timezone:string;outbound?:JourneyLeg|null;inbound?:JourneyLeg|null}

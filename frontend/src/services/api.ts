@@ -296,3 +296,10 @@ export async function refreshDiningOptions(draftId: string, dayIndex: number) {
   const resp = await apiClient.post(`/api/trip/draft/${draftId}/day/${dayIndex}/dining-options`, {}, { timeout: 85000 })
   return resp.data
 }
+
+export async function previewJourney(request: TripFormData) {
+  return (await apiClient.post('/api/trip/draft/journey-preview',request)).data
+}
+export async function changeJourney(draftId:string, journey:import('@/types').Journey|null, preview_token?:string) {
+  return (await apiClient.post(`/api/trip/draft/${draftId}/journey`,{journey,preview_token})).data
+}

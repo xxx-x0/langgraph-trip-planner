@@ -38,12 +38,22 @@ def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherI
         lines.append(f'如果当天时间不够，可以先缩短{unlocked[-1]}的停留，再看是否保留。')
     elif names:
         lines.append('如果当天时间不够，可以先减少购物或拍照停留；需要删减景点时再调整安排。')
+    rest_items=[x for x in schedule if x.get('kind')=='rest']
+    if rest_items:
+        lines.append('今天把'+ '、'.join(x['start_time']+'—'+x['end_time'] for x in rest_items)+'留给休息，这段时间不再安排景点。可以在当时所在区域歇一歇；如想回酒店，需要重新核对路线。')
+    elif day.rest_periods:
+        lines.append('你想留出的休息时段还没放进当前安排，先处理下方冲突，再决定减少哪些活动。')
     gaps = sorted((x for x in schedule if x.get('kind') == 'free_time' and x.get('duration',0)>60), key=lambda x:x['duration'], reverse=True)
     if gaps:
         lines.append(f"{gaps[0]['start_time']}至{gaps[0]['end_time']}尚未安排，可以留在附近自由活动。如想去别处，先核对后续路程。")
-    pending = []
+    from ....services.journey_service import conflicts
+    travel_notes = day.travel_window.get("notes",[])
+    if travel_notes: lines.append("；".join(travel_notes)+"。")
+    pending = [("与交通或休息安排冲突：" if day.rest_periods else "与抵离交通冲突：")+"；".join(conflicts(day))] if conflicts(day) else []
+    pending.extend(n for n in travel_notes if "超出所填旅行日期" in n)
+    pending += [w for w in day.meal_warnings if '分钟未安排' in w]
     if not day.hotel and day.overnight_stay:
-        pending.append("今晚住宿尚未确定，请先确认住宿再核对晚间回程。")
+        pending.append('今晚住宿尚未确定，请先确认住宿再核对晚间回程。')
     unknown = [a.name for a in day.attractions if a.ticket_price is None]
     if unknown: pending.append('票价待确认：'+'、'.join(unknown)+'；未知不代表免费。')
     if names: pending.append('请核对景点开放日期和预约要求。')
@@ -89,7 +99,7 @@ def _confirmed_overall_suggestions(plan) -> str:
     lines = [f"这次在{plan.city}安排了{len(plan.days)}天，需要{nights}晚住宿。先确认最想去的景点能否预约，再把住宿和往返交通定下来；每天的取舍建议在‘每日行程’里。"]
     budget = plan.budget
     if budget:
-        lines.append(f"目前已知费用预估小计{budget.total:g}元，其中已核对的住宿参考报价为{budget.total_hotels:g}元。餐饮按候选人均价估算，市内交通暂按每人每天50元计；往返大交通尚未纳入，这还不是整趟旅行的最终花费。")
+        lines.append(f"目前已知费用预估小计{budget.total:g}元，其中已核对的住宿参考报价为{budget.total_hotels:g}元。餐饮按候选人均价估算，市内交通暂按每人每天50元计；{f"其中往返大交通已录入小计{budget.total_intercity:g}元（按全体同行人数合计）" if plan.journey else "往返大交通尚未纳入"}，这还不是整趟旅行的最终花费。")
         if not budget.is_complete:
             lines.append('仍需核对：'+'；'.join(budget.unknown_cost_items)+'。未知价格不代表免费。')
         if '旧记录费用完整性未核对' in budget.unknown_cost_items:
@@ -106,6 +116,8 @@ def _confirmed_overall_suggestions(plan) -> str:
     lines.append('本次查询的天气预报：'+'；'.join(forecasts)+'。出发前再看一次最新预报。' if forecasts else
                  '天气数据未获取，请在出发前查询，再决定衣物和雨具。')
     return '\n\n'.join(lines)
+
+
 def _generate_weather_summary_fallback(trip_plan) -> str:
     from collections import Counter
     if not trip_plan.weather_info:
@@ -125,7 +137,11 @@ def _generate_weather_summary_fallback(trip_plan) -> str:
 def refresh_trip_descriptions(plan: TripPlan) -> TripPlan:
     weather_by_date = {w.date: w for w in plan.weather_info}
     for index, day in enumerate(plan.days):
-        if "overnight_stay" not in day.model_fields_set:
+        if plan.journey:
+            from types import SimpleNamespace
+            from ....services.journey_service import apply_context
+            apply_context(day,SimpleNamespace(journey=plan.journey,start_date=plan.start_date,end_date=plan.end_date))
+        if not plan.journey and "overnight_stay" not in day.model_fields_set:
             day.overnight_stay = index < len(plan.days) - 1
         refresh_day_description(day, weather_by_date.get(day.date))
     # Legacy monetary completeness was not recorded; it cannot become confirmed by parsing defaults.

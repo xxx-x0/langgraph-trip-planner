@@ -16,10 +16,10 @@ logger = get_logger(__name__)
 def build_trip_record(plan: TripPlan, request: Optional[TripRequest] = None) -> TripRecord:
     from ..agents.langgraph_agent.assemble.narrative import refresh_trip_descriptions
     plan = refresh_trip_descriptions(plan.model_copy(deep=True))
-    plan_dict = plan.model_dump()
+    plan_dict = plan.model_dump(mode="json")
     request_dict = None
     if request:
-        request_dict = request.model_dump() if hasattr(request, 'model_dump') else request.dict()
+        request_dict = request.model_dump(mode="json") if hasattr(request, 'model_dump') else request.dict()
 
     total_cost = plan.budget.total if plan.budget else 0
     budget_limit = plan.budget.budget_limit if plan.budget else None
@@ -178,7 +178,7 @@ def project_saved_narratives(raw: dict) -> dict:
     for original, day in zip(raw.get("days", []), plan.days):
         original.update(description=day.description, description_source=day.description_source,
                         pending_confirmations=day.pending_confirmations, overnight_stay=day.overnight_stay,
-                        timeline_schedule=day.timeline_schedule)
+                        timeline_schedule=day.timeline_schedule, travel_window=day.travel_window)
     if plan.budget:
         raw["budget"] = {**(raw.get("budget") or {}), **plan.budget.model_dump(mode="json")}
     raw.update(trip_tagline=plan.trip_tagline, overall_suggestions=plan.overall_suggestions,

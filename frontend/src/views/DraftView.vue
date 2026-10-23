@@ -15,6 +15,19 @@
       <template #action><a-button @click="loadDraft">重新加载</a-button></template>
     </a-alert>
     <main v-if="draft && draft.status !== 'finalized' && !loadError" class="draft-content">
+      <JourneySummary :journey="draft.request.journey" :city="draft.city" :days="draft.days" />
+      <details class="journey-change">
+        <summary>编辑往返交通，先查看对行程的影响</summary>
+        <JourneyEditor v-model="journeyEdit" :destination-city="draft.city" :start-date="draft.request.start_date" :end-date="draft.request.end_date" :passengers="draft.request.companions?.count || 1" />
+        <a-button :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @click="previewTravel">查看变更影响</a-button>
+        <p v-if="journeyError" role="alert">{{ journeyError }}</p>
+        <div v-if="journeyPreview" class="travel-preview">
+          <p>{{ journeyPreview.notice }}</p><p>往返大交通已知小计：{{ journeyPreview.intercity_total }} 元</p>
+          <div v-for="day in journeyPreview.impacts" :key="day.date"><p>{{ day.date }} · {{ day.window.unavailable ? '暂无可用时间' : timeLabel(day.window.start_minutes)+'—'+timeLabel(day.window.end_minutes) }}</p><p v-for="problem in day.conflicts" :key="problem" role="alert">{{ problem }}</p></div>
+          <a-button :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @click="saveTravel">确认以上影响并保存交通</a-button>
+        </div>
+        <a-button v-if="journeyDirty || journeyPreview" :disabled="journeyBusy" @click="cancelTravel">取消本次交通变更</a-button>
+      </details>
       <div class="days-container">
         <DayCard
           v-for="(ctx, idx) in draft.days"
@@ -34,7 +47,7 @@
 
       <div class="finalize-bar">
         <a-button type="primary" size="large" @click="onFinalize"
-                  :disabled="!!loadError || Object.keys(dayBusy).length > 0">
+                  :disabled="!!loadError || journeyBusy || journeyDirty || !!journeyPreview || Object.keys(dayBusy).length > 0">
           定稿并保存
         </a-button>
       </div>
@@ -45,13 +58,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, reactive, nextTick } from 'vue'
+import { ref, computed, onMounted, reactive, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
-  getDraft, assembleDay, recomputeDay, aiRearrangeDay,
+  getDraft, assembleDay, recomputeDay, aiRearrangeDay, changeJourney,
   rewriteNarrative, refreshDiningOptions,
 } from '@/services/api'
+import JourneyEditor from '@/components/JourneyEditor.vue'
+import JourneySummary from '@/components/JourneySummary.vue'
+import type {Journey} from '@/types'
 import DayCard from '@/components/draft/DayCard.vue'
 import { useTripLoader } from '@/composables/useTripLoader'
 
@@ -67,12 +83,32 @@ const tripLoader = useTripLoader()
 const dayBusy = reactive<Record<number, string>>({})
 const dayErrors = reactive<Record<number, string>>({})
 
+const journeyEdit=ref<Journey|null>(null)
+const journeyPreview=ref<any>(null)
+const journeyBusy=ref(false)
+const journeyError=ref('')
+const journeyDirty=computed(()=>JSON.stringify(journeyEdit.value)!==JSON.stringify(draft.value?.request?.journey ?? null))
+watch(()=>draft.value?.request?.journey,v=>{journeyEdit.value=v?JSON.parse(JSON.stringify(v)):null;journeyPreview.value=null},{immediate:true})
+watch(journeyEdit,()=>{journeyPreview.value=null},{deep:true})
+function timeLabel(n:number){return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`}
+function cancelTravel(){journeyEdit.value=draft.value?.request?.journey?JSON.parse(JSON.stringify(draft.value.request.journey)):null;journeyPreview.value=null;journeyError.value=''}
+async function previewTravel(){
+ if(journeyBusy.value || Object.keys(dayBusy).length)return
+ journeyBusy.value=true;journeyError.value='';journeyPreview.value=null
+ try{journeyPreview.value=await changeJourney(draftId.value,journeyEdit.value)}catch(e:any){journeyError.value=typeof e?.response?.data?.detail==='string'?e.response.data.detail:'交通输入无效，请检查日期、人数、时区与价格来源'}finally{journeyBusy.value=false}
+}
+async function saveTravel(){
+ if(!journeyPreview.value || journeyBusy.value || Object.keys(dayBusy).length)return
+ journeyBusy.value=true;journeyError.value=''
+ try{await changeJourney(draftId.value,journeyEdit.value,journeyPreview.value.preview_token);draft.value=await getDraft(draftId.value);journeyPreview.value=null;message.success('交通已保存，请核对当天安排')}catch(e:any){journeyError.value=e?.response?.data?.detail || '交通修改未保存，请重新预览';journeyPreview.value=null}finally{journeyBusy.value=false}
+}
+
 async function withDayBusy<T>(
   idx: number,
   label: string,
   fn: () => Promise<T>,
 ): Promise<T | undefined> {
-  if (dayBusy[idx] || loadError.value) return
+  if (dayBusy[idx] || loadError.value || journeyBusy.value) return
   delete dayErrors[idx]
   dayBusy[idx] = label
   try {
@@ -169,7 +205,7 @@ async function onRefreshDining(idx: number) {
 }
 
 async function onFinalize() {
-  if (Object.keys(dayBusy).length || loadError.value) return
+  if (Object.keys(dayBusy).length || loadError.value || journeyBusy.value || journeyDirty.value || journeyPreview.value) return
   // 前置拉起全局 Bauhaus 加载海报（REFINEMENT / 定稿打磨）
   const d = draft.value
   if (d) {

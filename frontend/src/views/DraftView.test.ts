@@ -2,12 +2,12 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Antd from 'ant-design-vue'
 import DraftView from './DraftView.vue'
-import { getDraft, recomputeDay, aiRearrangeDay, refreshDiningOptions } from '@/services/api'
+import { getDraft, recomputeDay, aiRearrangeDay, refreshDiningOptions, changeJourney } from '@/services/api'
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn(), query: {} as Record<string,string> }))
 
 vi.mock('@/services/api', () => ({
-  getDraft: vi.fn(), recomputeDay: vi.fn(), aiRearrangeDay: vi.fn(),
+  changeJourney:vi.fn(), getDraft: vi.fn(), recomputeDay: vi.fn(), aiRearrangeDay: vi.fn(),
   assembleDay: vi.fn(), rewriteNarrative: vi.fn(), refreshDiningOptions: vi.fn(),
 }))
 vi.mock('vue-router', () => ({
@@ -265,4 +265,34 @@ describe('dining changes preserve saved facts',()=>{
   expect(vi.mocked(recomputeDay).mock.calls[0][2].meals?.[0]).toMatchObject({name:'新店',preferred_slot:'lunch',insert_after:'B'})
   expect(w.getComponent({name:'DayCard'}).props('detail').meals[0].name).toBe('原店');w.unmount()
  })
+})
+
+
+it('adopts a later suggestion only on click and keeps locks, removals and manual meals in the edit',async()=>{
+ const d=draft();Object.assign(d.days_detail[0],{schedule_suggestion:{day_start_time:'10:30',saved_minutes:90,message:'减少90分钟空档'},removed_attraction_names:['已删除'],timeline_order:[{kind:'attraction',ref_name:'B'},{kind:'meal',ref_name:'午餐'}],meals:[{name:'午餐',type:'lunch',category:'main',insert_after:'B',schedule_mode:'manual'}]})
+ vi.mocked(getDraft).mockResolvedValue(d)
+ const w=await openDraft()
+ expect(recomputeDay).not.toHaveBeenCalled()
+ vi.mocked(recomputeDay).mockResolvedValue({day_detail:{...d.days_detail[0],day_start_time:'10:30'}} as any)
+ await w.findAll('button').find(b=>b.text()==='采用较晚出发时间')!.trigger('click');await flushPromises()
+ expect(vi.mocked(recomputeDay).mock.calls[0][2]).toMatchObject({day_start_time:'10:30',locked_attraction_names:['B'],removed_attraction_names:['已删除'],meals:[{name:'午餐',insert_after:'B',schedule_mode:'manual'}]})
+ w.unmount()
+})
+
+it('requires preview confirmation for transport, invalidates preview on edits, and blocks finalization while dirty',async()=>{
+ const w=await openDraft()
+ const {default:JourneyEditor}=await import('@/components/JourneyEditor.vue')
+ w.findComponent(JourneyEditor).vm.$emit('update:modelValue',{origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'})
+ await flushPromises()
+ expect(w.findAll('button').find(b=>b.text().includes('定稿并保存'))!.attributes('disabled')).toBeDefined()
+ vi.mocked(changeJourney).mockResolvedValue({preview_token:'preview',notice:'原安排保留',intercity_total:0,impacts:[]})
+ await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
+ expect(vi.mocked(changeJourney).mock.calls[0]).toHaveLength(2)
+ const edited={origin_city:'南京',return_city:'南京',destination_timezone:'Asia/Shanghai'}
+ w.findComponent(JourneyEditor).vm.$emit('update:modelValue',edited);await flushPromises()
+ expect(w.findAll('button').some(b=>b.text()==='确认以上影响并保存交通')).toBe(false)
+ await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
+ await w.findAll('button').find(b=>b.text()==='确认以上影响并保存交通')!.trigger('click');await flushPromises()
+ expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',edited,'preview'])
+ w.unmount()
 })

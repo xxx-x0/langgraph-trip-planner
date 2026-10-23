@@ -4,6 +4,9 @@ from enum import Enum
 from typing import Dict, List, Optional, Union, Any, Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import date
+from .journey import Journey, local_instant
+from .rest import RestPeriod, validate_rest_periods
+from zoneinfo import ZoneInfo
 
 
 # ============ 请求模型 ============
@@ -31,6 +34,8 @@ class HotelOccupancy(BaseModel):
 
 class TripRequest(BaseModel):
     """旅行规划请求"""
+    journey: Optional[Journey] = None
+    rest_periods: List[RestPeriod] = Field(default_factory=list, max_length=60)
     city: str = Field(..., description="目的地城市", example="北京")
     start_date: str = Field(..., description="开始日期 YYYY-MM-DD", example="2025-06-01")
     end_date: str = Field(..., description="结束日期 YYYY-MM-DD", example="2025-06-03")
@@ -56,6 +61,15 @@ class TripRequest(BaseModel):
         start, end = date.fromisoformat(self.start_date), date.fromisoformat(self.end_date)
         if end < start or (end-start).days >= 30:
             raise ValueError('行程日期须正序且不超过30天')
+        validate_rest_periods(self.rest_periods, start, end)
+        if self.journey:
+            for leg in (self.journey.outbound, self.journey.inbound):
+                if not leg: continue
+                if leg.passengers != (self.companions.count if self.companions else 1):
+                    raise ValueError('交通人数须与同行人数一致')
+                for value,zone in ((leg.departure_time,leg.departure_timezone),(leg.arrival_time,leg.arrival_timezone)):
+                    if not start <= local_instant(value,zone).astimezone(ZoneInfo(self.journey.destination_timezone)).date() <= end:
+                        raise ValueError('交通日期（按目的地时区）须在旅行日期范围内；跨日到达请扩大日期范围')
         if self.hotel_occupancy and self.companions:
             o = self.hotel_occupancy
             if o.room_count * (o.adults_per_room + len(o.children_ages)) != self.companions.count:
@@ -300,6 +314,9 @@ class DayPlan(BaseModel):
     overnight_stay: bool = Field(default=True)
     trip_intent: Dict[str, Any] = Field(default_factory=dict)
 
+    schedule_suggestion: Dict[str, Any] = Field(default_factory=dict)
+    travel_window: Dict[str, Any] = Field(default_factory=dict)
+    rest_periods: List[RestPeriod] = Field(default_factory=list)
 
 
 class WeatherInfo(BaseModel):
@@ -331,7 +348,8 @@ class Budget(BaseModel):
     total_attractions: int = Field(default=0, description="景点门票总费用")
     total_hotels: float = Field(default=0, description="酒店已知费用小计")
     total_meals: int = Field(default=0, description="餐饮总费用")
-    total_transportation: int = Field(default=0, description="交通总费用")
+    total_intercity: float = Field(default=0)
+    total_transportation: float = Field(default=0, description="交通总费用")
     total: float = Field(default=0, description="总费用")
     budget_limit: Optional[int] = Field(default=None, description="用户预算上限(元)")
     is_within_budget: Optional[bool] = Field(default=None, description="是否在预算范围内")
@@ -368,6 +386,7 @@ class TripPlan(BaseModel):
     trip_tagline: str = Field(default="", description="行程标语")
     weather_summary: str = Field(default="", description="天气一句话摘要")
 
+    journey: Optional[Journey] = None
 
 class TripPlanResponse(BaseModel):
     """旅行计划响应"""
@@ -507,6 +526,9 @@ class DraftDayContext(BaseModel):
     companion_count: int = Field(default=1, ge=1)
     trip_intent: Dict[str, Any] = Field(default_factory=dict)
 
+    schedule_suggestion: Dict[str, Any] = Field(default_factory=dict)
+    travel_window: Dict[str, Any] = Field(default_factory=dict)
+    rest_periods: List[RestPeriod] = Field(default_factory=list)
 
 
 class DayDetail(BaseModel):
@@ -542,6 +564,9 @@ class DayDetail(BaseModel):
     companion_count: int = Field(default=1, ge=1)
     trip_intent: Dict[str, Any] = Field(default_factory=dict)
 
+    schedule_suggestion: Dict[str, Any] = Field(default_factory=dict)
+    travel_window: Dict[str, Any] = Field(default_factory=dict)
+    rest_periods: List[RestPeriod] = Field(default_factory=list)
 
 
 class TripDraftPayload(BaseModel):

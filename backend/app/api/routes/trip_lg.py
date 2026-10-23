@@ -78,6 +78,8 @@ def _classify_http_error(e: Exception) -> int:
     description="根据用户输入的旅行需求，使用LangGraph多智能体协作生成详细的旅行计划"
 )
 async def plan_trip(request: TripRequest):
+    if request.journey or request.rest_periods:
+        raise HTTPException(422, detail="含抵离交通或固定休息的规划请使用发现→草稿流程，以便核对固定班次与活动冲突")
     try:
         print(f"\n{'='*60}")
         print(f"📥 收到旅行规划请求 (LangGraph):")
@@ -136,6 +138,8 @@ async def plan_trip(request: TripRequest):
     description="使用SSE实时推送LangGraph各节点执行进度，最终返回完整旅行计划"
 )
 async def plan_trip_stream(request: TripRequest):
+    if request.journey or request.rest_periods:
+        raise HTTPException(422, detail="含抵离交通或固定休息的规划请使用发现→草稿流程，以便核对固定班次与活动冲突")
     async def event_generator():
         agent = get_trip_planner_agent()
         try:
