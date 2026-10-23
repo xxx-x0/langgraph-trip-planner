@@ -2,13 +2,13 @@
   <div class="hotel-card">
     <!-- 酒店图片 -->
     <div v-if="showImage" class="hotel-image-wrapper">
-      <img :src="hotel.image_url" :alt="cleanHotelName(hotel.name)" class="hotel-image" @error="handleImageError" />
+      <img :src="hotel.image_url" :alt="hotel.name" class="hotel-image" @error="handleImageError" />
     </div>
 
     <div class="hotel-header">
       <div class="hotel-icon">🏨</div>
       <div class="hotel-title-area">
-        <h4 class="hotel-name">{{ cleanHotelName(hotel.name) }}</h4>
+        <h4 class="hotel-name">{{ hotel.name }}</h4>
         <div class="hotel-tags">
           <span v-if="hotel.type" class="hotel-type">{{ hotel.type }}</span>
           <span v-if="hotel.star_rating" class="hotel-star-badge">
@@ -29,6 +29,11 @@
         <span class="info-text">{{ hotel.address }}</span>
       </div>
 
+      <div v-if="hotel.recommendation" class="recommendation">
+        <strong>为什么把它放在这里</strong>
+        <p v-for="reason in hotel.recommendation.reasons" :key="reason">{{ reason }}</p>
+        <details><summary>选之前再确认</summary><p v-for="note in hotel.recommendation.cautions" :key="note">{{ note }}</p></details>
+      </div>
       <!-- 价格区域 -->
       <div class="hotel-price-section">
         <template v-if="hotel.quote">
@@ -90,7 +95,7 @@
       </div>
 
       <!-- 详细描述 -->
-      <div v-if="cleanedDescription" class="description-section">
+      <details v-if="cleanedDescription" class="description-section"><summary>供应方酒店介绍（未经独立验证）</summary>
         <div class="description-content" :class="{ expanded: isDescExpanded }">
           {{ cleanedDescription }}
         </div>
@@ -101,7 +106,7 @@
         >
           {{ isDescExpanded ? '收起' : '展开' }}
         </button>
-      </div>
+      </details>
 
       <!-- 操作按钮 -->
       <div v-if="hotel.detail_url" class="hotel-actions">
@@ -121,7 +126,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { Hotel } from '@/types'
-import { cleanHotelName } from '@/utils/hotelFormat'
 
 const props = defineProps<{
   hotel: Hotel

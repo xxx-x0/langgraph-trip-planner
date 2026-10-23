@@ -117,3 +117,21 @@ def dining_for_slot(candidates,slot,intent=None):
                 m.get('extra_walk_minutes') if m.get('extra_walk_minutes') is not None else 9999,
                 -(c.rating or 0))
     return sorted(candidates,key=key)
+
+
+def explain_hotel(hotel, request):
+    reasons=[];cautions=[]
+    d=hotel.get('_centroid_distance_km')
+    if d is not None:
+        reasons.append(f'距本次游玩区域中心直线约{d:.1f}公里；优先比较位置，再参考星级')
+        if d>5: cautions.append('距离游玩区域较远，建议先核对每日往返时间再预订')
+    else: cautions.append('缺少可核对的位置，无法判断通勤是否方便')
+    q=hotel.get('quote') or {}
+    reasons.append(f'按本次{max(0,request.travel_days-1)}晚住宿查询')
+    if q.get('occupancy_confirmed') and q.get('status') == 'detail_returned' and not q.get('unsupported_conditions'): reasons.append('详情已回显本次入住人数和房间配置；报价限制仍需核对')
+    else: cautions.append('入住人数、房间配置或房型报价尚未完整匹配')
+    if request.hotel_occupancy and request.hotel_occupancy.children_ages:
+        cautions.append('儿童床位、加床费用及适用年龄须向酒店确认')
+    cautions.append('位置按坐标估算；隔音、卫生和近期入住体验未验证')
+    hotel['recommendation']={'reasons':reasons,'cautions':cautions,'source':'AIGoHotel','queried_at':q.get('queried_at')}
+    return hotel

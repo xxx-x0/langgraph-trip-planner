@@ -27,3 +27,19 @@ describe('hotel quote conditions',()=>{
   expect(open({...quote,amount:0}).text()).toContain('0.00')
  })
 })
+
+
+it('keeps the provider branch name and renders recommendations as plain text',()=>{
+ const name='清风酒店（苏州留园分店）'
+ const w=mount(HotelCard,{props:{hotel:{name,address:'苏州',recommendation:{reasons:['直线约1.2公里','<b>外部文字</b>'],cautions:['近期体验未验证'],source:'AIGoHotel'}} as any}})
+ expect(w.find('.hotel-name').text()).toBe(name)
+ expect(w.text()).toContain('直线约1.2公里');expect(w.text()).toContain('近期体验未验证')
+ expect(w.find('.recommendation b').exists()).toBe(false)
+ expect(w.text()).toContain('<b>外部文字</b>');w.unmount()
+})
+
+it('labels supplier descriptions as unverified separately from saved recommendation facts',()=>{
+ const w=mount(HotelCard,{props:{hotel:{name:'H',address:'苏州',description:'<p>供应方文字</p>'} as any}})
+ expect(w.text()).toContain('供应方酒店介绍（未经独立验证）')
+ expect(w.text()).toContain('供应方文字');w.unmount()
+})

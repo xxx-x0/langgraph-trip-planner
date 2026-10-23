@@ -38,6 +38,7 @@ export interface Meal {
 }
 
 export interface Hotel {
+  recommendation?: Recommendation
   quote?: HotelQuote | null
   name: string
   address: string

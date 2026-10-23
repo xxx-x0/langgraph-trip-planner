@@ -257,6 +257,8 @@ class Hotel(BaseModel):
     detail_url: Optional[str] = Field(default=None, description="酒店详情页链接")
     distance_in_meters: Optional[int] = Field(default=None, description="距中心点距离(米)")
     hotel_id: Optional[Union[int, str]] = Field(default=None, description="AIGoHotel 酒店标识")
+    recommendation: Dict[str, Any] = Field(default_factory=dict)
+
 
 
 class RouteSegment(BaseModel):

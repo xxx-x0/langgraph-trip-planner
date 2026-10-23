@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 from app.models.schemas import Attraction, DiningCandidate, TripRequest, CompanionInfo, DayDetail
 from app.services.recommendations import explain_dining, dining_for_slot, meal_anchors, intent_for
 from app.agents.langgraph_agent.assemble.narrative import refresh_day_description
+from app.agents.langgraph_agent.nodes.search import _rank_day_hotels
 
 
 def attrs():
@@ -105,3 +106,42 @@ def test_invalid_dining_request_is_rejected(overrides):
     with pytest.raises(ValidationError):
         TripRequest(city='苏州',start_date='2026-10-20',end_date='2026-10-20',travel_days=1,
                     transportation='步行',accommodation='酒店',**overrides)
+
+
+def test_hotel_location_precedes_stars():
+    hotels=[{'name':'远处五星','star_rating':5,'_centroid_distance_km':40},{'name':'近处三星','star_rating':3,'_centroid_distance_km':1},{'name':'未知位置','star_rating':5}]
+    assert [h['name'] for h in _rank_day_hotels(hotels)]==['近处三星','远处五星','未知位置']
+
+
+@pytest.mark.parametrize('quote',[
+ {'occupancy_confirmed':True,'status':'search_only'},
+ {'occupancy_confirmed':True,'status':'failed'},
+ {'occupancy_confirmed':True,'status':'detail_returned','unsupported_conditions':['儿童年龄不匹配']},
+])
+def test_hotel_explanation_does_not_call_request_occupancy_a_provider_confirmation(quote):
+    from app.services.recommendations import explain_hotel
+    request=TripRequest(city='苏州',start_date='2026-10-20',end_date='2026-10-21',travel_days=2,transportation='步行',accommodation='酒店')
+    hotel=explain_hotel({'name':'原名（分店）','quote':quote},request)
+    assert not any('已回显' in text for text in hotel['recommendation']['reasons'])
+    assert any('未完整匹配' in text for text in hotel['recommendation']['cautions'])
+
+
+def test_hotel_explanation_keeps_branch_and_quote_and_discloses_unknown_quality():
+    from copy import deepcopy
+    from app.services.recommendations import explain_hotel
+    request=TripRequest(city='苏州',start_date='2026-10-20',end_date='2026-10-21',travel_days=2,transportation='步行',accommodation='酒店')
+    raw={'name':'原名（分店）','quote':{'occupancy_confirmed':True,'status':'detail_returned','unsupported_conditions':[],'queried_at':'2026-10-19T10:00:00Z'},'_centroid_distance_km':7}
+    original=deepcopy(raw)
+    result=explain_hotel(raw,request)
+    assert result['name']==original['name'] and result['quote']==original['quote']
+    assert any('直线约7.0公里' in text for text in result['recommendation']['reasons'])
+    assert any('距离游玩区域较远' in text for text in result['recommendation']['cautions'])
+    assert any('未验证' in text for text in result['recommendation']['cautions'])
+
+
+def test_hotel_explanation_without_location_does_not_claim_nearby():
+    from app.services.recommendations import explain_hotel
+    request=TripRequest(city='苏州',start_date='2026-10-20',end_date='2026-10-21',travel_days=2,transportation='步行',accommodation='酒店')
+    result=explain_hotel({'name':'H'},request)
+    assert any('缺少可核对的位置' in text for text in result['recommendation']['cautions'])
+    assert not any('直线约' in text for text in result['recommendation']['reasons'])

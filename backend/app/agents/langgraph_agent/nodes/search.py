@@ -719,18 +719,17 @@ def _enrich_hotels_with_distance(hotels: List[Dict[str, Any]], centroid: tuple[f
             d_km = _haversine_distance(lat_c, lon_c, loc["latitude"], loc["longitude"])
             h["_centroid_distance_km"] = d_km
             h["distance_in_meters"] = int(d_km * 1000)
-            h["distance"] = f"距当日中心 {d_km:.1f} 公里"
+            h["distance"] = f"距游玩区域中心直线 {d_km:.1f} 公里"
 
 
 def _rank_day_hotels(hotels: List[Dict[str, Any]], top_n: int = 3) -> List[Dict[str, Any]]:
-    """按 (有星级, 星级 desc, 距离 asc) 排序，去重保留 top_n。"""
+    """先比较与本次游玩区域的距离，再参考星级；去重保留 top_n。"""
     def sort_key(h: Dict[str, Any]):
         star = h.get("star_rating")
         dist = h.get("_centroid_distance_km", 999.0)
         return (
-            0 if star is not None else 1,
-            -(star or 0),
             dist,
+            -(star or 0),
         )
     seen_names: set[str] = set()
     deduped = []
@@ -968,6 +967,8 @@ async def search_hotels_by_day_node(state: TripPlannerState) -> Dict[str, Any]:
             detail_tool = None
         ranked[0] = await enrich_selected_hotel(ranked[0], request, aigohotel_service, detail_tool)
     # Shared stay quote; budgets allocate its total, not independent nightly prices.
+    from ....services.recommendations import explain_hotel
+    ranked = [explain_hotel(h, request) for h in ranked]
     hotels_by_day = [ranked for _ in range(travel_days)]
     hotels_info = _format_hotels_by_day_text(hotels_by_day)
     print(f"✅ 行程级酒店搜索完成: {len(ranked)} 家候选, 分配给 {travel_days} 天")
