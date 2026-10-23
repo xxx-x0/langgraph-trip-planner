@@ -30,6 +30,8 @@ def test_day_detail_defaults():
     assert dd.is_assembled is False
     assert dd.meals == []
     assert dd.day_budget is None
+    assert dd.locked_attraction_names == []
+    assert dd.removed_attraction_names == []
 
 
 def test_meal_category_backward_compat():
@@ -43,6 +45,8 @@ def test_day_edit_request_field_omission_semantics():
     """不传 meals 与传空数组是两种意图"""
     r1 = DayEditRequest()
     assert r1.meals is None
+    assert r1.locked_attraction_names is None
+    assert r1.removed_attraction_names is None
     r2 = DayEditRequest(meals=[])
     assert r2.meals == []
 

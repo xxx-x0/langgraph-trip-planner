@@ -3,6 +3,7 @@ from typing import List
 
 from ....models.schemas import DayDetail, RouteSegment
 from ..utils.route import compute_route_segments
+from ....services.external_calls import ExternalServiceError, FailureKind
 
 
 async def compute_day_route(
@@ -50,7 +51,10 @@ async def compute_day_route(
 
     try:
         segments = await compute_route_segments(waypoints, transportation, city)
-    except Exception as e:
-        print(f"⚠️ compute_day_route 失败: {e}")
-        return []
+    except ExternalServiceError:
+        raise
+    except Exception:
+        raise ExternalServiceError('amap', '路线计算', FailureKind.UNAVAILABLE) from None
+    if any(s.get('is_estimated') if isinstance(s, dict) else s.is_estimated for s in segments):
+        raise ExternalServiceError('amap', '路线计算', FailureKind.UNAVAILABLE)
     return segments

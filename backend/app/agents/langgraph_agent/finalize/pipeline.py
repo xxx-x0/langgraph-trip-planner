@@ -80,6 +80,7 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         meals=detail.meals,
         route_segments=detail.route_segments,
         timeline_order=detail.timeline_order,
+        locked_attraction_names=detail.locked_attraction_names,
         day_start_time=detail.day_start_time,
     )
 

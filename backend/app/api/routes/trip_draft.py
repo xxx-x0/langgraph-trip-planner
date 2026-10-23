@@ -19,6 +19,8 @@ from ...agents.langgraph_agent.assemble.narrative import write_day_narrative_llm
 from ...agents.langgraph_agent.exceptions import _invoke_llm_with_retry
 from ...agents.langgraph_agent.finalize.pipeline import finalize_draft
 from ...services import trip_draft_service
+from ...agents.langgraph_agent.assemble.meals import saved_meals as _saved_meals, repair_deleted_anchors
+from ...services.external_calls import ExternalServiceError
 from ...services.llm_service import get_llm
 from ...models.schemas import PlanFromSelectionsRequest
 
@@ -161,7 +163,7 @@ def _load_payload(record) -> TripDraftPayload:
                     for w in weather_info_raw if isinstance(w, dict)]
 
     return TripDraftPayload(
-        draft_id=record.id, status=record.status,
+        draft_id=record.id, status=record.status, finalized_trip_id=record.finalized_trip_id,
         request=request, city=macro_plan.city, macro_plan=macro_plan,
         days=days, days_detail=days_detail,
         weather_info=weather_list,
@@ -206,6 +208,112 @@ def _get_day_context_from_record(record, day_index: int) -> DraftDayContext:
     return payload.days[day_index]
 
 
+def _unique_names(names: Optional[list[str]]) -> list[str]:
+    if not names:
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for name in names:
+        if name and name not in seen:
+            out.append(name)
+            seen.add(name)
+    return out
+
+
+def _build_edit_overrides(
+    *,
+    order: Optional[list[str]],
+    meals: Optional[list[dict]],
+    day_start_time: Optional[str],
+    locked_names: Optional[list[str]],
+    removed_names: Optional[list[str]],
+) -> dict:
+    overrides_dict = {}
+    if order is not None:
+        overrides_dict["attractions_order"] = _unique_names(order)
+    if meals is not None:
+        overrides_dict["meals"] = meals
+    if day_start_time is not None:
+        overrides_dict["day_start_time"] = day_start_time
+    if locked_names is not None:
+        overrides_dict["locked_attraction_names"] = _unique_names(locked_names)
+    if removed_names is not None:
+        overrides_dict["removed_attraction_names"] = _unique_names(removed_names)
+    return overrides_dict
+
+
+def _preserve_locked_positions(
+    *,
+    base_order: list[str],
+    proposed_order: list[str],
+    locked_names: list[str],
+) -> list[str]:
+    """Keep locked attractions at their current indices while accepting AI order for the rest."""
+    base_order = _unique_names(base_order)
+    locked = {name for name in locked_names if name in base_order}
+    unlocked_base = [name for name in base_order if name not in locked]
+    proposed_valid = [
+        name for name in _unique_names(proposed_order)
+        if name in unlocked_base and name not in locked
+    ]
+    for name in unlocked_base:
+        if name not in proposed_valid:
+            proposed_valid.append(name)
+
+    result: list[str] = []
+    next_unlocked = iter(proposed_valid)
+    for name in base_order:
+        if name in locked:
+            result.append(name)
+        else:
+            result.append(next(next_unlocked))
+    return result
+
+
+def _merge_day_edit(
+    ctx: DraftDayContext, current: Optional[DayDetail], edit: DayEditRequest
+) -> dict:
+    """Merge explicit edits with the saved day before validating protected slots."""
+    removed = _unique_names(
+        edit.removed_attraction_names if edit.removed_attraction_names is not None
+        else current.removed_attraction_names if current else []
+    )
+    locked = _unique_names(
+        edit.locked_attraction_names if edit.locked_attraction_names is not None
+        else current.locked_attraction_names if current else []
+    )
+    if set(removed) & set(locked):
+        raise HTTPException(409, detail="删除锁定景点前请先解锁")
+
+    available = {a.name for a in ctx.attractions if a.name not in set(removed)}
+    # Deletion compacts the saved slots; explicit restores join at the end.
+    base_order = [a.name for a in (current.attractions if current else ctx.attractions)
+                  if a.name in available]
+    base_order += [a.name for a in ctx.attractions
+                   if a.name in available and a.name not in base_order]
+    proposed = _preserve_locked_positions(
+        base_order=base_order,
+        proposed_order=edit.attractions_order if edit.attractions_order is not None else base_order,
+        locked_names=[],
+    )
+    protected = [name for name in (current.locked_attraction_names if current else [])
+                 if name in locked]
+    if proposed != _preserve_locked_positions(
+        base_order=base_order, proposed_order=proposed, locked_names=protected
+    ):
+        raise HTTPException(409, detail="移动锁定景点前请先解锁")
+
+    meals = edit.meals if edit.meals is not None else _saved_meals(current) if current else None
+    if meals is not None:
+        meals, _ = repair_deleted_anchors(meals, current, proposed)
+    overrides = _build_edit_overrides(
+        order=proposed, meals=meals,
+        day_start_time=edit.day_start_time or (current.day_start_time if current else None) or ctx.day_start_time,
+        locked_names=locked, removed_names=removed,
+    )
+    return overrides
+
+
 @router.post("/{draft_id}/day/{day_index}/assemble", response_model=DayDetailResponse,
              summary="展开某天：规则装配 + 路线 + LLM 叙述")
 async def assemble_day(
@@ -223,7 +331,8 @@ async def assemble_day(
         return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=cached)
 
     request = TripRequest.model_validate_json(record.request_json)
-    override_dict = overrides.model_dump(exclude_none=True)
+    current = DayDetail.model_validate(existing_days[day_index]) if existing_days[day_index] else None
+    override_dict = _merge_day_edit(ctx, current, overrides)
     detail = rule_assemble_day_timeline(ctx, overrides=override_dict or None)
     detail.route_segments = await compute_day_route(
         detail, request.city, request.transportation
@@ -250,32 +359,7 @@ async def recompute_day(draft_id: str, day_index: int, edit: DayEditRequest):
     current = (DayDetail.model_validate(existing_days[day_index])
                if existing_days[day_index] else None)
 
-    # 合并 overrides：未传字段沿用当前 day_detail
-    final_order = edit.attractions_order
-    if final_order is None and current:
-        final_order = [a.name for a in current.attractions]
-    final_meals = edit.meals
-    if final_meals is None and current:
-        final_meals = [m.model_dump(mode="json") for m in current.meals]
-        # 默认把每个 meal 锚回中点景点之后，避免位置漂移
-        if final_meals and final_order:
-            mid = max(len(final_order) // 2 - 1, 0)
-            for m in final_meals:
-                m.setdefault("insert_after", final_order[mid] if final_order else "")
-    final_day_start_time = edit.day_start_time
-    if final_day_start_time is None:
-        final_day_start_time = (
-            current.day_start_time if current and current.day_start_time
-            else ctx.day_start_time
-        )
-
-    overrides_dict = {}
-    if final_order is not None:
-        overrides_dict["attractions_order"] = final_order
-    if final_meals is not None:
-        overrides_dict["meals"] = final_meals
-    if final_day_start_time is not None:
-        overrides_dict["day_start_time"] = final_day_start_time
+    overrides_dict = _merge_day_edit(ctx, current, edit)
 
     request = TripRequest.model_validate_json(record.request_json)
     detail = rule_assemble_day_timeline(ctx, overrides=overrides_dict or None)
@@ -316,7 +400,8 @@ _AI_REARRANGE_SYSTEM = """你是单日行程优化专家。请从给定的餐饮
 2. 输出 JSON，含 attractions_order (景点名顺序) 和 meals (含 category, name, insert_after, estimated_cost)
 3. category 必须是 main/snack/dessert/cafe/late_night 之一
 4. insert_after 必须是 attractions_order 里的景点名（或 hotel_start / hotel_end）
-5. 不要输出其他字段、不要 markdown、纯 JSON"""
+5. 锁定景点必须保留当前位置；已删除景点禁止加入
+6. 不要输出其他字段、不要 markdown、纯 JSON"""
 
 
 @router.post("/{draft_id}/day/{day_index}/ai-rearrange", response_model=DayDetailResponse,
@@ -327,6 +412,16 @@ async def ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReques
     ctx = _get_day_context_from_record(record, day_index)
     request = TripRequest.model_validate_json(record.request_json)
 
+    existing_days = json.loads(record.days_detail_json)
+    current = (DayDetail.model_validate(existing_days[day_index])
+               if existing_days[day_index] else None)
+    removed_names = current.removed_attraction_names if current else []
+    locked_names = current.locked_attraction_names if current else []
+    base_attractions = current.attractions if current else [
+        a for a in ctx.attractions if a.name not in set(removed_names)
+    ]
+    base_order = [a.name for a in base_attractions]
+
     pool_summary = []
     for cat, items in ctx.dining_pool.model_dump().items():
         if items:
@@ -334,12 +429,16 @@ async def ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReques
             pool_summary.append(f"  {cat}: {names}")
     pool_text = "\n".join(pool_summary) or "（候选池为空）"
 
-    attr_names = "、".join(a.name for a in ctx.attractions) or "（无）"
+    attr_names = "、".join(base_order) or "（无）"
+    locked_text = "、".join(locked_names) or "无"
+    removed_text = "、".join(removed_names) or "无"
     hint = req.hint or ""
 
     prompt = f"""城市: {request.city}, 第 {day_index + 1} 天 ({ctx.date})
 
 景点（可重排）: {attr_names}
+锁定景点（必须保留当前位置）: {locked_text}
+已删除景点（禁止加入）: {removed_text}
 餐饮候选池:
 {pool_text}
 
@@ -356,13 +455,23 @@ async def ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReques
         raw = (resp.content or "").strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        parsed = json.loads(raw)
-    except Exception as e:
-        raise HTTPException(422, detail=f"AI 暂不可用: {str(e)[:120]}")
+        parsed = DayEditRequest.model_validate(json.loads(raw))
+    except ExternalServiceError:
+        raise
+    except Exception:
+        raise HTTPException(422, detail="AI返回的安排格式无效，本次未保存，请重试") from None
 
+    attractions_order = _preserve_locked_positions(
+        base_order=base_order,
+        proposed_order=parsed.attractions_order or base_order,
+        locked_names=locked_names,
+    )
     overrides = {
-        "attractions_order": parsed.get("attractions_order") or [a.name for a in ctx.attractions],
-        "meals": parsed.get("meals") or [],
+        "attractions_order": attractions_order,
+        "meals": parsed.meals or [],
+        "locked_attraction_names": locked_names,
+        "removed_attraction_names": removed_names,
+        "day_start_time": current.day_start_time if current and current.day_start_time else ctx.day_start_time,
     }
     detail = rule_assemble_day_timeline(ctx, overrides=overrides)
     detail.route_segments = await compute_day_route(

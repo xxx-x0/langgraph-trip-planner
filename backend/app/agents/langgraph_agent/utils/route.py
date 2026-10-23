@@ -160,7 +160,8 @@ def _fallback_segment(
         "distance": f"{dist_km:.1f}公里" if dist_km >= 1 else f"{int(dist_km * 1000)}米",
         "duration": f"{duration_min}分钟",
         "mode": transportation if transportation in speed_map else "公交",
-        "detail": f"约{dist_km:.1f}公里，预计{duration_min}分钟",
+        "detail": f"约{dist_km:.1f}公里，预计{duration_min}分钟（地图服务未返回可用路线，仅为估算）",
+        "is_estimated": True,
     }
 
 

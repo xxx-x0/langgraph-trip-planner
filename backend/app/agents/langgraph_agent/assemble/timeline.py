@@ -72,6 +72,7 @@ def _meal_from_override_dict(d: Dict[str, Any]) -> tuple[Meal, str]:
         category=category,
         name=d.get("name", ""),
         address=d.get("address"),
+        description=d.get("description"),
         location=location,
         cuisine=d.get("cuisine"),
         rating=d.get("rating"),
@@ -80,8 +81,8 @@ def _meal_from_override_dict(d: Dict[str, Any]) -> tuple[Meal, str]:
         open_hours=d.get("open_hours"),
         tel=d.get("tel"),
         poi_id=d.get("poi_id"),
-        source=d.get("source") or "user_custom",
-        estimated_cost=avg_cost or _default_cost(category),
+        source=d.get("source", "user_custom"),
+        estimated_cost=(avg_cost if avg_cost is not None else d.get("estimated_cost", _default_cost(category))),
     )
     insert_after = d.get("insert_after") or ""
     return meal, insert_after
@@ -159,10 +160,16 @@ def rule_assemble_day_timeline(
     overrides: Optional[Dict[str, Any]] = None,
 ) -> DayDetail:
     overrides = overrides or {}
+    removed_attraction_names = _unique_names(overrides.get("removed_attraction_names"))
+    locked_attraction_names = _unique_names(overrides.get("locked_attraction_names"))
+    available_attractions = _apply_removed_attractions(ctx.attractions, removed_attraction_names)
 
     attractions = _apply_attraction_order(
-        ctx.attractions, overrides.get("attractions_order")
+        available_attractions, overrides.get("attractions_order")
     )
+
+    present_names = {a.name for a in attractions}
+    locked_attraction_names = [name for name in locked_attraction_names if name in present_names]
 
     if "meals" in overrides:
         meals_with_insert = [
@@ -188,5 +195,28 @@ def rule_assemble_day_timeline(
         hotel=ctx.hotel,
         day_start_time=overrides.get("day_start_time") or ctx.day_start_time,
         timeline_order=timeline,
+        locked_attraction_names=locked_attraction_names,
+        removed_attraction_names=removed_attraction_names,
         is_assembled=True,
     )
+
+
+def _unique_names(names: Optional[List[str]]) -> List[str]:
+    if not names:
+        return []
+    out: List[str] = []
+    seen: set[str] = set()
+    for name in names:
+        if name and name not in seen:
+            out.append(name)
+            seen.add(name)
+    return out
+
+
+def _apply_removed_attractions(
+    attractions: List[Attraction], removed_names: Optional[List[str]]
+) -> List[Attraction]:
+    removed = set(_unique_names(removed_names))
+    if not removed:
+        return list(attractions)
+    return [a for a in attractions if a.name not in removed]

@@ -8,6 +8,14 @@
         </a-tag>
       </div>
     </template>
+    <a-alert v-if="saveError" type="error" show-icon role="alert"
+             :message="saveError" class="save-error" />
+    <a-modal v-model:open="aiDialogOpen" title="AI 重排提示" ok-text="重新安排"
+             cancel-text="取消" @ok="confirmAIRearrange">
+      <a-textarea v-model:value="aiHint" aria-label="AI 重排提示（可选）"
+                  placeholder="可选，比如：我想吃辣的" :rows="3" />
+      <p>锁定景点保留当前位置，已删除景点不会重新加入。</p>
+    </a-modal>
     <template #extra>
       <a-button v-if="!isExpanded" type="link" @click="onExpand"
                 :loading="busy === '装配中'">展开装配 →</a-button>
@@ -51,13 +59,62 @@
           <draggable v-model="orderedAttractions" item-key="name" handle=".drag-handle"
                      @end="onOrderChange" :disabled="!!busy">
             <template #item="{ element }">
-              <div class="attr-row">
-                <span class="drag-handle">⋮⋮</span>
+              <div class="attr-row" :class="{ 'attr-row-locked': isAttractionLocked(element.name) }">
+                <span
+                  :class="isAttractionLocked(element.name) ? 'drag-handle-static' : 'drag-handle'"
+                >
+                  ⋮⋮
+                </span>
                 <span class="kind">📍</span>
                 <span class="name">{{ element.name }}</span>
+                <div class="attr-actions">
+                  <a-tooltip :title="isAttractionLocked(element.name) ? '取消排序锁定' : '锁定当前排序，不代表预约成功'">
+                    <a-button
+                      size="small"
+                      class="icon-action"
+                      :type="isAttractionLocked(element.name) ? 'primary' : 'default'"
+                      :disabled="!!busy"
+                      :aria-label="`${isAttractionLocked(element.name) ? '解锁' : '锁定'} ${element.name}`"
+                      @click="onToggleLock(element.name)"
+                    >
+                      <template #icon>
+                        <LockOutlined v-if="isAttractionLocked(element.name)" />
+                        <UnlockOutlined v-else />
+                      </template>
+                    </a-button>
+                  </a-tooltip>
+                  <a-tooltip title="删除景点">
+                    <a-button
+                      size="small"
+                      danger
+                      class="icon-action"
+                      :disabled="!!busy || isAttractionLocked(element.name)"
+                      :aria-label="`删除 ${element.name}`"
+                      @click="onRemoveAttraction(element.name)"
+                    >
+                      <template #icon><DeleteOutlined /></template>
+                    </a-button>
+                  </a-tooltip>
+                </div>
               </div>
             </template>
           </draggable>
+          <div v-if="removedAttractionNames.length" class="removed-list">
+            <div v-for="name in removedAttractionNames" :key="name" class="removed-row">
+              <span class="name">{{ name }}</span>
+              <a-tooltip title="恢复景点">
+                <a-button
+                  size="small"
+                  class="icon-action"
+                  :disabled="!!busy"
+                :aria-label="`恢复 ${name}`"
+                  @click="onRestoreAttraction(name)"
+                >
+                  <template #icon><UndoOutlined /></template>
+                </a-button>
+              </a-tooltip>
+            </div>
+          </div>
         </section>
 
         <section class="editor-section">
@@ -100,6 +157,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
+import { DeleteOutlined, LockOutlined, UndoOutlined, UnlockOutlined } from '@ant-design/icons-vue'
 import { marked } from 'marked'
 import AddDiningPopover from './AddDiningPopover.vue'
 
@@ -108,8 +166,9 @@ interface Props {
   detail: any | null
   isDefaultExpanded: boolean
   busy?: string
+  saveError?: string
 }
-const props = withDefaults(defineProps<Props>(), { busy: '' })
+const props = withDefaults(defineProps<Props>(), { busy: '', saveError: '' })
 const emit = defineEmits<{
   (e: 'assemble', body: any): void
   (e: 'recompute', body: any): void
@@ -129,17 +188,35 @@ function onExpand() {
 }
 
 function onAIRearrange() {
-  const hint = window.prompt('AI 重排提示（可选，比如"我想吃辣的"）：', '')
-  if (hint === null) return
-  emit('ai-rearrange', hint || '')
+  aiHint.value = ''
+  aiDialogOpen.value = true
+}
+
+const aiDialogOpen = ref(false)
+const aiHint = ref('')
+function confirmAIRearrange() {
+  if (props.busy) return
+  aiDialogOpen.value = false
+  emit('ai-rearrange', aiHint.value)
 }
 
 const orderedAttractions = ref<any[]>([])
 const dayStartTime = ref('08:00')
+const lockedAttractionNames = ref<string[]>([])
+const removedAttractionNames = ref<string[]>([])
 
-watch(() => props.detail, (d) => {
-  if (d?.attractions) orderedAttractions.value = [...d.attractions]
-}, { immediate: true })
+function restoreSavedState() {
+  const d = props.detail
+  orderedAttractions.value = [...(d?.attractions || [])]
+  lockedAttractionNames.value = uniqueNames(d?.locked_attraction_names || [])
+  removedAttractionNames.value = uniqueNames(d?.removed_attraction_names || [])
+  dayStartTime.value = d?.day_start_time || props.context?.day_start_time || '08:00'
+}
+
+watch(() => props.detail, restoreSavedState, { immediate: true })
+watch(() => props.busy, (busy, previous) => {
+  if (previous && !busy) restoreSavedState()
+})
 
 watch(
   () => [props.detail?.day_start_time, props.context?.day_start_time],
@@ -149,43 +226,117 @@ watch(
   { immediate: true },
 )
 
-let debounceTimer: any = null
-function debouncedRecompute() {
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => {
-    emit('recompute', {
-      attractions_order: orderedAttractions.value.map(a => a.name),
-      meals: (props.detail?.meals || []).map((m: any) => ({ ...m })),
-    })
-  }, 500)
+function uniqueNames(names: string[]) {
+  return names.filter((name, index) => !!name && names.indexOf(name) === index)
 }
 
-function onOrderChange() { debouncedRecompute() }
+function currentMeals() {
+  const anchors = new Map<string, string>()
+  let anchor = 'hotel_start'
+  for (const item of props.detail?.timeline_order || []) {
+    if (item.kind === 'attraction') anchor = item.ref_name
+    else if (item.kind === 'hotel') anchor = item.phase === 'start' ? 'hotel_start' : 'hotel_end'
+    else if (item.kind === 'meal') anchors.set(item.ref_name, anchor)
+  }
+  return (props.detail?.meals || []).map((m: any) => ({
+    ...m, insert_after: anchors.get(m.name) || '',
+  }))
+}
+
+function orderedNames() {
+  return orderedAttractions.value.map(a => a.name)
+}
+
+function buildEditBody(extra: Record<string, any> = {}) {
+  return {
+    attractions_order: orderedNames(),
+    locked_attraction_names: lockedAttractionNames.value,
+    removed_attraction_names: removedAttractionNames.value,
+    meals: currentMeals(),
+    ...extra,
+  }
+}
+
+function preserveLockedPositions(proposedNames: string[]) {
+  const baseNames = (props.detail?.attractions || []).map((a: any) => a.name)
+  const locked = new Set(lockedAttractionNames.value)
+  if (!baseNames.length || !locked.size) return proposedNames
+
+  const unlockedBase = baseNames.filter((name: string) => !locked.has(name))
+  const proposedUnlocked = uniqueNames(proposedNames)
+    .filter(name => unlockedBase.includes(name) && !locked.has(name))
+
+  for (const name of unlockedBase) {
+    if (!proposedUnlocked.includes(name)) proposedUnlocked.push(name)
+  }
+
+  const nextUnlocked = [...proposedUnlocked]
+  return baseNames.map((name: string) => (
+    locked.has(name) ? name : nextUnlocked.shift()
+  )).filter(Boolean) as string[]
+}
+
+function reorderLocalAttractions(names: string[]) {
+  const byName = new Map(orderedAttractions.value.map(a => [a.name, a]))
+  orderedAttractions.value = names
+    .map(name => byName.get(name))
+    .filter(Boolean)
+}
+
+function onOrderChange() {
+  const normalized = preserveLockedPositions(orderedNames())
+  if (normalized.join('|') !== orderedNames().join('|')) {
+    reorderLocalAttractions(normalized)
+  }
+  emit('recompute', buildEditBody())
+}
 
 function onStartTimeChange() {
-  emit('recompute', {
-    attractions_order: orderedAttractions.value.map(a => a.name),
-    meals: (props.detail?.meals || []).map((m: any) => ({ ...m })),
+  emit('recompute', buildEditBody({
     day_start_time: dayStartTime.value || props.context?.day_start_time || '08:00',
-  })
+  }))
 }
 
 function onAddMeal(meal: any) {
-  const currentMeals = (props.detail?.meals || []).map((m: any) => ({ ...m }))
-  currentMeals.push(meal)
-  emit('recompute', {
-    attractions_order: orderedAttractions.value.map(a => a.name),
-    meals: currentMeals,
-  })
+  const meals = currentMeals()
+  if (meals.some((m: any) => m.name === meal.name)) return
+  meals.push(meal)
+  emit('recompute', buildEditBody({ meals }))
 }
 
 function onRemoveMeal(meal: any) {
-  const remaining = (props.detail?.meals || [])
+  const remaining = currentMeals()
     .filter((m: any) => !(m.name === meal.name && (m.category || m.type) === (meal.category || meal.type)))
-  emit('recompute', {
-    attractions_order: orderedAttractions.value.map(a => a.name),
-    meals: remaining,
-  })
+  emit('recompute', buildEditBody({ meals: remaining }))
+}
+
+function isAttractionLocked(name: string) {
+  return lockedAttractionNames.value.includes(name)
+}
+
+function onToggleLock(name: string) {
+  lockedAttractionNames.value = isAttractionLocked(name)
+    ? lockedAttractionNames.value.filter(item => item !== name)
+    : [...lockedAttractionNames.value, name]
+  emit('recompute', buildEditBody())
+}
+
+function onRemoveAttraction(name: string) {
+  if (isAttractionLocked(name)) return
+  removedAttractionNames.value = uniqueNames([...removedAttractionNames.value, name])
+  lockedAttractionNames.value = lockedAttractionNames.value.filter(item => item !== name)
+  orderedAttractions.value = orderedAttractions.value.filter(item => item.name !== name)
+  emit('recompute', buildEditBody())
+}
+
+function onRestoreAttraction(name: string) {
+  const restored = props.context?.attractions?.find((item: any) => item.name === name)
+  if (!restored) return
+  removedAttractionNames.value = removedAttractionNames.value.filter(item => item !== name)
+  if (!orderedAttractions.value.some(item => item.name === name)) {
+    orderedAttractions.value = [...orderedAttractions.value, restored]
+  }
+  emit('recompute', buildEditBody())
 }
 
 const mealLabels: Record<string, string> = {
@@ -626,5 +777,52 @@ const renderedDescription = computed(() => {
   color: var(--primary-red, #D02020) !important;
   text-decoration: underline !important;
   text-decoration-thickness: 2px !important;
+}
+.save-error {
+  margin-bottom: 16px;
+}
+.attr-row-locked::before {
+  background: var(--primary-yellow, #F0C020);
+}
+.attr-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+.icon-action {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border, #121212);
+  border-radius: 0;
+  box-shadow: 2px 2px 0px 0px var(--border, #121212);
+}
+.removed-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  margin-top: var(--space-3, 12px);
+}
+.removed-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border: 2px dashed var(--border, #121212);
+  background: var(--background, #F0F0F0);
+  opacity: 0.78;
+}
+.removed-row .name {
+  text-decoration: line-through;
+}
+.drag-handle-static {
+  color: var(--border, #121212);
+  opacity: 0.35;
+  user-select: none;
+  font-weight: var(--font-black, 900);
+  font-size: 18px;
+  padding: 0 4px;
 }
 </style>

@@ -375,3 +375,38 @@ async def test_finalize_missing_history_reports_recoverable_error(client):
         for line in body.splitlines() if line.startswith("data: ")
     ]
     assert any(e["type"] == "error" for e in events)
+
+
+@pytest.mark.asyncio
+async def test_recompute_rejects_deleting_a_locked_attraction(client):
+    draft_id = await _seed_draft()
+
+    with patch(
+        "app.api.routes.trip_draft.compute_day_route",
+        new=AsyncMock(return_value=[]),
+    ):
+        resp = await client.post(
+            f"/api/trip/draft/{draft_id}/day/0/recompute",
+            json={
+                "attractions_order": [],
+                "locked_attraction_names": ["A"],
+                "removed_attraction_names": ["A"],
+                "meals": [],
+            },
+        )
+
+    assert resp.status_code == 409
+    record = await trip_draft_service.get_draft(draft_id)
+    assert json.loads(record.days_detail_json)[0] is None
+
+
+def test_preserve_locked_positions_for_ai_rearrange():
+    from app.api.routes.trip_draft import _preserve_locked_positions
+
+    order = _preserve_locked_positions(
+        base_order=["A", "B", "C"],
+        proposed_order=["C", "B", "A"],
+        locked_names=["A"],
+    )
+
+    assert order == ["A", "C", "B"]

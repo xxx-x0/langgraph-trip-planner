@@ -148,3 +148,30 @@ async def test_narrative_returns_empty_on_failure():
              return_value=object()):
         text = await write_day_narrative_llm(detail, None, None, "北京")
     assert text == ""
+
+
+def test_removed_attractions_are_filtered_before_ordering():
+    ctx = _ctx([_attr("A"), _attr("B"), _attr("C")])
+    detail = rule_assemble_day_timeline(
+        ctx,
+        overrides={
+            "attractions_order": ["C", "B", "A"],
+            "removed_attraction_names": ["B"],
+        },
+    )
+    assert [a.name for a in detail.attractions] == ["C", "A"]
+    assert detail.removed_attraction_names == ["B"]
+    timeline_names = [item["ref_name"] for item in detail.timeline_order]
+    assert "B" not in timeline_names
+
+
+def test_locked_attractions_only_keep_present_names():
+    ctx = _ctx([_attr("A"), _attr("B")])
+    detail = rule_assemble_day_timeline(
+        ctx,
+        overrides={
+            "locked_attraction_names": ["A", "X", "A"],
+            "removed_attraction_names": ["B"],
+        },
+    )
+    assert detail.locked_attraction_names == ["A"]

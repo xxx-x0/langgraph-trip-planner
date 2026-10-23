@@ -204,6 +204,7 @@ class RouteSegment(BaseModel):
     duration: str = Field(default="", description="预计时间(如: 25分钟)")
     mode: str = Field(default="", description="交通方式(如: 地铁/公交/步行/驾车)")
     detail: str = Field(default="", description="路线详情(如: 乘坐地铁1号线天安门东→王府井，约3站)")
+    is_estimated: bool = False
 
 
 class DayPlan(BaseModel):
@@ -225,6 +226,7 @@ class DayPlan(BaseModel):
         default=None,
         description="单日行程开始时间 HH:mm",
     )
+    locked_attraction_names: List[str] = Field(default_factory=list)
 
 
 class WeatherInfo(BaseModel):
@@ -443,6 +445,14 @@ class DayDetail(BaseModel):
     )
     day_budget: Optional[Budget] = Field(default=None, description="当日预算")
     is_assembled: bool = Field(default=False)
+    locked_attraction_names: List[str] = Field(
+        default_factory=list,
+        description="用户锁定在当天当前位置的景点名；AI 重排不可移动这些景点",
+    )
+    removed_attraction_names: List[str] = Field(
+        default_factory=list,
+        description="用户从当天删除的景点名；后续重算和 AI 重排需排除",
+    )
 
 
 class TripDraftPayload(BaseModel):
@@ -457,6 +467,7 @@ class TripDraftPayload(BaseModel):
     weather_info: List[WeatherInfo] = Field(default_factory=list)
     created_at: str
     updated_at: str
+    finalized_trip_id: Optional[int] = None
 
 
 class DayEditRequest(BaseModel):
@@ -473,6 +484,14 @@ class DayEditRequest(BaseModel):
     day_start_time: Optional[str] = Field(
         default=None,
         description="单日行程开始时间 HH:mm；不传则沿用现有或全程默认值",
+    )
+    locked_attraction_names: Optional[List[str]] = Field(
+        default=None,
+        description="当前锁定的景点名完整状态；不传则保留当前 day_detail.locked_attraction_names",
+    )
+    removed_attraction_names: Optional[List[str]] = Field(
+        default=None,
+        description="当前从当天删除的景点名完整状态；不传则保留当前 day_detail.removed_attraction_names",
     )
 
 

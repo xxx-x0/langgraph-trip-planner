@@ -177,6 +177,8 @@ export async function deleteDraft(draftId: string) {
 }
 
 export interface DayEditBody {
+  locked_attraction_names?: string[]
+  removed_attraction_names?: string[]
   attractions_order?: string[]
   meals?: Array<Record<string, any>>
   day_start_time?: string

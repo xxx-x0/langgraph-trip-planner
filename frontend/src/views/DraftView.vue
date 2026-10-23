@@ -11,7 +11,10 @@
       </div>
     </header>
 
-    <main v-if="draft" class="draft-content">
+    <a-alert v-if="loadError" type="error" show-icon :message="loadError">
+      <template #action><a-button @click="loadDraft">重新加载</a-button></template>
+    </a-alert>
+    <main v-if="draft && draft.status !== 'finalized' && !loadError" class="draft-content">
       <div class="days-container">
         <DayCard
           v-for="(ctx, idx) in draft.days"
@@ -20,6 +23,7 @@
           :detail="draft.days_detail[idx] || null"
           :is-default-expanded="idx === 0"
           :busy="dayBusy[idx] || ''"
+          :save-error="dayErrors[idx] || ''"
           @assemble="onAssemble(idx, $event)"
           @recompute="onRecompute(idx, $event)"
           @ai-rearrange="onAIRearrange(idx, $event)"
@@ -28,13 +32,14 @@
       </div>
 
       <div class="finalize-bar">
-        <a-button type="primary" size="large" @click="onFinalize">
+        <a-button type="primary" size="large" @click="onFinalize"
+                  :disabled="!!loadError || Object.keys(dayBusy).length > 0">
           定稿并保存
         </a-button>
       </div>
     </main>
 
-    <a-empty v-else description="草稿不存在或已过期" />
+    <a-empty v-else-if="!loadError && draft?.status !== 'finalized'" description="草稿不存在或已过期" />
   </div>
 </template>
 
@@ -55,22 +60,40 @@ const draftId = computed(() => route.params.id as string)
 
 const draft = ref<any>(null)
 const loading = ref(true)
+const loadError = ref('')
 const tripLoader = useTripLoader()
 
 const dayBusy = reactive<Record<number, string>>({})
+const dayErrors = reactive<Record<number, string>>({})
 
 async function withDayBusy<T>(
   idx: number,
   label: string,
   fn: () => Promise<T>,
 ): Promise<T | undefined> {
+  if (dayBusy[idx] || loadError.value) return
+  delete dayErrors[idx]
   dayBusy[idx] = label
   try {
     const result = await fn()
     message.success(`已更新第 ${idx + 1} 天`)
     return result
   } catch (e: any) {
-    message.error(e?.response?.data?.detail || `第 ${idx + 1} 天操作失败`)
+    if (e?.response?.status === 409) {
+      try {
+        draft.value = await getDraft(draftId.value)
+        if (draft.value?.status === 'finalized' && draft.value.finalized_trip_id) {
+          await router.replace(`/trip/${draft.value.finalized_trip_id}`)
+        }
+        dayErrors[idx] = `本次修改尚未保存，已加载最新保存内容，请核对后重试。${e?.response?.data?.detail || ''}`
+      } catch {
+        loadError.value = '最新草稿读取失败，请重新加载后再编辑。'
+        dayErrors[idx] = '本次修改尚未保存，当前显示上次读取内容，请重新加载。'
+      }
+    } else {
+      dayErrors[idx] = `本次修改尚未保存，已恢复上次成功保存状态。${e?.response?.data?.detail || `第 ${idx + 1} 天操作失败，请重试。`}`
+    }
+    message.error(dayErrors[idx])
   } finally {
     delete dayBusy[idx]
   }
@@ -78,8 +101,14 @@ async function withDayBusy<T>(
 
 async function loadDraft() {
   loading.value = true
+  loadError.value = ''
   try {
     draft.value = await getDraft(draftId.value)
+    if (draft.value?.status === 'finalized' && draft.value.finalized_trip_id) {
+      tripLoader.dismiss()
+      await router.replace(`/trip/${draft.value.finalized_trip_id}`)
+      return
+    }
     // 自动展开并装配第 1 天
     if (draft.value && !draft.value.days_detail[0]) {
       await onAssemble(0, {})
@@ -90,6 +119,7 @@ async function loadDraft() {
       tripLoader.markReady()
     }
   } catch (e: any) {
+    loadError.value = e?.response?.data?.detail || '草稿读取失败，请重新加载；已保存草稿不会被覆盖。'
     tripLoader.dismiss() // 直接撤场，露出下方错误/空态
     message.error(e?.response?.data?.detail || '加载草稿失败')
   } finally {
@@ -126,6 +156,7 @@ async function onRewriteNarrative(idx: number) {
 }
 
 async function onFinalize() {
+  if (Object.keys(dayBusy).length || loadError.value) return
   // 前置拉起全局 Bauhaus 加载海报（REFINEMENT / 定稿打磨）
   const d = draft.value
   if (d) {
