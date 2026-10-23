@@ -131,16 +131,23 @@
         <section class="editor-section">
           <div class="section-header">
             <h4>用餐安排</h4>
+            <a-button size="small" :disabled="!!busy" @click="$emit('refresh-dining')">按当前安排重新找餐厅</a-button>
             <AddDiningPopover
               :pool="context.dining_pool"
+              :intent="context.trip_intent"
+              :excluded-names="detail.meals.map((m: any) => m.name)"
+              :disabled="!!busy"
               @add="onAddMeal"
             />
           </div>
           <div v-if="detail?.meals?.length" class="meal-list">
             <div v-for="m in detail.meals" :key="m.name + (m.category || m.type)" class="meal-row">
               <span class="kind">🍴</span>
-              <span class="name">{{ m.name }}</span>
+              <MealCard class="meal-facts" :meal="m" />
               <a-tag>{{ getMealLabel(m) }}</a-tag>
+              <span>{{ getMealTime(m) }}</span>
+              <label class="meal-placement">安排在<select :aria-label="m.name+'用餐顺序'" :value="m.schedule_mode==='auto'?'':currentMeals().find((x:any)=>x.name===m.name)?.insert_after || ''" :disabled="!!busy" @change="onMealPlacement(m,$event)"><option value="">自动安排</option><option value="hotel_start">首个景点之前</option><option v-for="a in orderedAttractions" :key="a.name" :value="a.name">{{a.name}}之后</option><option value="hotel_end">最后一个景点之后</option></select></label>
+              <AddDiningPopover :pool="context.dining_pool" :intent="context.trip_intent" :excluded-names="detail.meals.map((x: any) => x.name)" :replace-name="m.name" :preferred-slot="m.preferred_slot || m.type" :insert-after="currentMeals().find((x: any) => x.name === m.name)?.insert_after" :disabled="!!busy" @add="onReplaceMeal(m, $event)" />
               <a-button size="small" danger @click="onRemoveMeal(m)" :disabled="!!busy">删除</a-button>
             </div>
           </div>
@@ -175,6 +182,7 @@ import draggable from 'vuedraggable'
 import { DeleteOutlined, LockOutlined, UndoOutlined, UnlockOutlined } from '@ant-design/icons-vue'
 import DayTimeline from '../DayTimeline.vue'
 import HotelCard from '../HotelCard.vue'
+import MealCard from '../MealCard.vue'
 import AddDiningPopover from './AddDiningPopover.vue'
 
 interface Props {
@@ -190,6 +198,7 @@ const emit = defineEmits<{
   (e: 'recompute', body: any): void
   (e: 'ai-rearrange', hint: string): void
   (e: 'rewrite-narrative'): void
+  (e: 'refresh-dining'): void
 }>()
 
 const isExpanded = ref(props.isDefaultExpanded)
@@ -367,14 +376,37 @@ const mealLabels: Record<string, string> = {
 }
 
 function getMealLabel(meal: any) {
+  const slots: Record<string, string> = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐' }
+  if (slots[meal.type]) return slots[meal.type]
   const key = meal.category || meal.type
   return mealLabels[key] || '用餐'
 }
 
 
+function onReplaceMeal(previous: any, replacement: any) {
+  const meals = currentMeals().map((m: any) => m.name === previous.name ? replacement : m)
+  if (new Set(meals.map((m: any) => m.name)).size !== meals.length) return
+  emit('recompute', buildEditBody({ meals }))
+}
+
+function onMealPlacement(meal:any,event:Event){
+  const input=event.target as HTMLSelectElement
+  const position=input.value
+  const meals=currentMeals()
+  const previous=meals.find((m:any)=>m.name===meal.name)
+  input.value=previous?.schedule_mode==='auto'?'':previous?.insert_after || ''
+  emit('recompute',buildEditBody({meals:meals.map((m:any)=>m.name===meal.name?{...m,insert_after:position,schedule_mode:position?'manual':'auto'}:m)}))
+}
+
+function getMealTime(meal: any) {
+  const item = props.detail?.timeline_schedule?.find((entry: any) => entry.kind === 'meal' && entry.ref_name === meal.name)
+  return item ? `${item.start_time}–${item.end_time}` : ''
+}
+
 </script>
 
 <style scoped>
+.meal-facts { flex: 1; min-width: 0; }
 .description-text { white-space: pre-line; }
 /* Bauhaus Card Wrapper */
 :deep(.ant-card) {

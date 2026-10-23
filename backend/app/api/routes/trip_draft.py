@@ -25,11 +25,14 @@ from ...services.external_calls import ExternalServiceError, FailureKind, operat
 from ...services.llm_service import get_llm
 from ...models.schemas import PlanFromSelectionsRequest
 
+from ...services.recommendations import intent_for, explain_dining
+
 router = APIRouter(prefix="/trip/draft", tags=["trip_draft"])
 
 
 
 async def _save_day_detail(draft_id, day_index, detail, *, expected_day, expected_request, weather=None):
+    detail.trip_intent = intent_for(TripRequest.model_validate_json(expected_request))
     refresh_day_description(detail, weather)
     try:
         await trip_draft_service.patch_day_detail(draft_id, day_index, detail, expected_day=expected_day, expected_request=expected_request)
@@ -139,6 +142,7 @@ def _load_payload(record) -> TripDraftPayload:
                 weather_obj = WeatherInfo.model_validate(w)
                 break
         days.append(DraftDayContext(
+            trip_intent=intent_for(request),
             day_index=idx, date=ds.date if ds else "",
             attraction_names=ds.attraction_names if ds else [],
             attractions=attractions, hotel=hotel,
@@ -154,6 +158,7 @@ def _load_payload(record) -> TripDraftPayload:
             days_detail.append(None)
         else:
             detail = DayDetail.model_validate(d)
+            detail.trip_intent = intent_for(request)
             detail.overnight_stay = idx < request.travel_days - 1
             detail.companion_count = request.companions.count if request.companions else 1
             detail.day_budget = compute_day_budget(detail)
@@ -165,6 +170,12 @@ def _load_payload(record) -> TripDraftPayload:
             refresh_day_description(detail, next((ctx.weather for ctx in days if ctx.date == detail.date), None))
             days_detail.append(detail)
 
+    for ctx in days:
+        detail = days_detail[ctx.day_index] if ctx.day_index < len(days_detail) else None
+        for category in type(ctx.dining_pool).model_fields:
+            explain_dining(getattr(ctx.dining_pool, category), detail.attractions if detail else ctx.attractions,
+                           ctx.trip_intent, detail.day_start_time if detail else ctx.day_start_time,
+                           detail.timeline_schedule if detail else None, ctx.hotel, detail.meals if detail else None)
     weather_list = [WeatherInfo.model_validate(w)
                     for w in weather_info_raw if isinstance(w, dict)]
 
@@ -198,6 +209,7 @@ class DayDetailResponse(BaseModel):
     draft_id: str
     day_index: int
     day_detail: DayDetail
+    dining_pool: Optional[DiningPoolDay] = None
 
 
 def _ensure_editable(record):
@@ -359,7 +371,10 @@ async def assemble_day(
         city=request.city,
     )
     await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
-    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
+    for category in type(ctx.dining_pool).model_fields:
+        explain_dining(getattr(ctx.dining_pool, category), detail.attractions, ctx.trip_intent,
+                       detail.day_start_time, detail.timeline_schedule, detail.hotel, detail.meals)
+    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail, dining_pool=ctx.dining_pool)
 
 
 @router.post("/{draft_id}/day/{day_index}/recompute", response_model=DayDetailResponse,
@@ -397,7 +412,10 @@ async def recompute_day(draft_id: str, day_index: int, edit: DayEditRequest):
     # 保留当前 description（recompute 不写 LLM）
     detail.description = current.description if current else ""
     await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
-    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
+    for category in type(ctx.dining_pool).model_fields:
+        explain_dining(getattr(ctx.dining_pool, category), detail.attractions, ctx.trip_intent,
+                       detail.day_start_time, detail.timeline_schedule, detail.hotel, detail.meals)
+    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail, dining_pool=ctx.dining_pool)
 
 
 @router.post("/{draft_id}/day/{day_index}/narrative", response_model=DayDetailResponse,
@@ -417,7 +435,10 @@ async def rewrite_narrative(draft_id: str, day_index: int):
         city=request.city,
     )
     await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
-    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
+    for category in type(ctx.dining_pool).model_fields:
+        explain_dining(getattr(ctx.dining_pool, category), detail.attractions, ctx.trip_intent,
+                       detail.day_start_time, detail.timeline_schedule, detail.hotel, detail.meals)
+    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail, dining_pool=ctx.dining_pool)
 
 
 _AI_REARRANGE_SYSTEM = """你是单日行程优化专家。请从给定的餐饮候选池中给出一份当日最优组合。
@@ -539,7 +560,10 @@ async def _ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReque
     detail.day_budget = compute_day_budget(detail)
     detail.description = current.description if current else ""
     await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
-    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
+    for category in type(ctx.dining_pool).model_fields:
+        explain_dining(getattr(ctx.dining_pool, category), detail.attractions, ctx.trip_intent,
+                       detail.day_start_time, detail.timeline_schedule, detail.hotel, detail.meals)
+    return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail, dining_pool=ctx.dining_pool)
 
 
 @router.post("/{draft_id}/finalize", summary="定稿草稿 → 写 trip_history (SSE)")
@@ -572,3 +596,34 @@ async def finalize_draft_endpoint(draft_id: str):
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive",
                  "X-Accel-Buffering": "no"},
     )
+
+
+@router.post('/{draft_id}/day/{day_index}/dining-options', summary='按当前安排重新查找用餐备选')
+async def refresh_dining_options(draft_id: str, day_index: int):
+    record = await trip_draft_service.get_draft(draft_id)
+    _ensure_editable(record)
+    ctx = _get_day_context_from_record(record, day_index)
+    raw = json.loads(record.days_detail_json)[day_index]
+    current = DayDetail.model_validate(raw) if raw else None
+    request = TripRequest.model_validate_json(record.request_json)
+    from ...agents.langgraph_agent.nodes.food import search_dining_for_day
+    try:
+        async with operation_deadline(80):
+            pool = await search_dining_for_day(request, current.attractions if current else ctx.attractions,
+                current.day_start_time if current else ctx.day_start_time,
+                current.timeline_schedule if current else None, ctx.hotel, current.meals if current else None)
+    except TimeoutError:
+        raise ExternalServiceError('amap','餐厅备选查询',FailureKind.TIMEOUT) from None
+    if not any(pool.values()):
+        raise HTTPException(503, detail='未取得可用餐厅，已保留原备选和用餐安排，请稍后重试')
+    pools = json.loads(record.dining_pool_json)
+    previous = pools[day_index] if day_index < len(pools) else {}
+    # A failed/empty category does not erase previously usable alternatives.
+    retained = [category for category in previous if not pool.get(category) and previous[category]]
+    for category in retained: pool[category] = previous[category]
+    try:
+        await trip_draft_service.patch_dining_pool(draft_id,day_index,pool,expected_day=raw,expected_pool=previous,expected_request=record.request_json)
+    except trip_draft_service.DraftChangedDuringFinalize as error:
+        raise HTTPException(409, detail=str(error)) from error
+    return {'dining_pool':pool, 'retained_categories':retained,
+            'message':'备选已更新；原用餐安排保留。'+('部分分类未取得新结果，保留旧备选及其查询时间。' if retained else '')}

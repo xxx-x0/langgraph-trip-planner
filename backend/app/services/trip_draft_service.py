@@ -241,3 +241,21 @@ async def persist_finalized_trip(draft_id: str, plan: TripPlan, request: TripReq
         await apply_extracted_preferences(session, record.user_id, extracted, request.city)
         await session.commit()
         return plan, trip.id
+
+
+async def patch_dining_pool(draft_id, day_index, pool, *, expected_day, expected_pool, expected_request=None):
+    """Refresh alternatives atomically; never replace the user's saved meals."""
+    async with async_session() as session:
+        await session.execute(text("BEGIN IMMEDIATE"))
+        record = await session.get(TripDraft, draft_id)
+        if record is None or record.status == 'finalized':
+            raise DraftChangedDuringFinalize('草稿已定稿或不存在，本次餐厅查询未保存')
+        days = json.loads(record.days_detail_json)
+        pools = json.loads(record.dining_pool_json)
+        old_pool = pools[day_index] if day_index < len(pools) else {}
+        if (expected_request is not None and record.request_json != expected_request) or days[day_index] != expected_day or old_pool != expected_pool:
+            raise DraftChangedDuringFinalize('安排或备选已更新，本次餐厅查询未保存；请重新查询')
+        while len(pools) <= day_index: pools.append({})
+        pools[day_index] = pool
+        record.dining_pool_json = json.dumps(pools, ensure_ascii=False)
+        await session.commit()

@@ -20,6 +20,8 @@ export interface Attraction {
 }
 
 export interface Meal {
+  open_hours?: string
+  recommendation?: Recommendation
   type: 'breakfast' | 'lunch' | 'dinner' | 'main' | 'snack' | 'dessert' | 'cafe' | 'late_night'
   category?: 'main' | 'snack' | 'dessert' | 'cafe' | 'late_night'
   name: string
@@ -139,6 +141,9 @@ export interface TripPlan {
 }
 
 export interface TripFormData {
+  meal_budget_per_person?: number
+  dietary_requirements?: string
+  dining_style?: "on_route" | "dedicated"
   hotel_occupancy?: HotelOccupancy
   city: string
   start_date: string
@@ -279,4 +284,13 @@ export interface HotelQuote {
   cancellation_policy?: string | null
   taxes_included?: boolean | null
   availability: string
+}
+
+
+export interface Recommendation {
+  source?: string
+  queried_at?: string | null
+  reasons?: string[]
+  cautions?: string[]
+  matches?: { slot: string; before?: string; after?: string; distance_km?: number | null; extra_walk_minutes?: number | null; style: string; route_basis: string; hours_fit?: boolean | null }[]
 }

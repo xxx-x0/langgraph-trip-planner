@@ -199,7 +199,7 @@ async def test_ai_before_first_assembly_uses_current_trip_default_main_slots(cas
         response=await client.post(url+'/ai-rearrange',json={})
     assert response.status_code==200
     day=response.json()['day_detail']
-    assert {m['type'] for m in day['meals']} == {'lunch'}
+    assert {m['type'] for m in day['meals']} == {'lunch','dinner'}
     assert day['is_assembled'] is True
 
 
@@ -211,3 +211,37 @@ async def test_manual_replacement_rejects_closed_window_and_preserves_saved_json
     assert response.status_code==409
     assert '本次修改未保存' in response.json()['detail']
     assert (await trip_draft_service.get_draft(draft)).days_detail_json==before
+
+
+@pytest.mark.asyncio
+async def test_dining_refresh_uses_current_gap_without_changing_saved_meals(case):
+    client,draft,url=case
+    row=await trip_draft_service.get_draft(draft); before=row.days_detail_json
+    pool={'main':[{'name':'新店','category':'main','open_hours':'10:00-22:00','avg_cost':55}]}
+    search=AsyncMock(return_value=pool)
+    with patch('app.agents.langgraph_agent.nodes.food.search_dining_for_day',new=search):
+        response=await client.post(url+'/dining-options')
+    assert response.status_code==200
+    assert response.json()['retained_categories']==['cafe']
+    assert search.call_args.args[3]==json.loads(before)[0]['timeline_schedule']
+    assert (await trip_draft_service.get_draft(draft)).days_detail_json==before
+    with patch('app.agents.langgraph_agent.nodes.food.search_dining_for_day',new=AsyncMock(return_value={} )):
+        response=await client.post(url+'/dining-options')
+    assert response.status_code==503
+    assert json.loads((await trip_draft_service.get_draft(draft)).dining_pool_json)[0]['main'][0]['name']=='新店'
+
+
+@pytest.mark.asyncio
+async def test_late_dining_query_cannot_publish_stale_recommendations(case):
+    client,draft,url=case
+    entered,resume=asyncio.Event(),asyncio.Event()
+    async def query(*args):
+        entered.set();await resume.wait();return {'main':[{'name':'旧位置店','category':'main'}]}
+    before=(await trip_draft_service.get_draft(draft)).dining_pool_json
+    with patch('app.agents.langgraph_agent.nodes.food.search_dining_for_day',side_effect=query):
+        task=asyncio.create_task(client.post(url+'/dining-options'))
+        await asyncio.wait_for(entered.wait(),2)
+        assert (await client.post(url+'/recompute',json={'removed_attraction_names':['A']})).status_code==200
+        resume.set();response=await task
+    assert response.status_code==409
+    assert (await trip_draft_service.get_draft(draft)).dining_pool_json==before

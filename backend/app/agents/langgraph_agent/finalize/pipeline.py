@@ -49,6 +49,7 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         date=detail.date,
         day_index=detail.day_index,
         description=detail.description,
+        trip_intent=detail.trip_intent,
         description_source=detail.description_source,
         pending_confirmations=detail.pending_confirmations,
         transportation=transportation,
@@ -160,12 +161,16 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
                 idx, macro_plan, clusters_data, hotels_by_day, dining_pool,
                 weather_info, request.default_day_start_time,
             )
+            from ....services.recommendations import intent_for
+            ctx.trip_intent = intent_for(request)
             detail = rule_assemble_day_timeline(ctx, overrides=None)
             detail.route_segments = await compute_day_route(
                 detail, request.city, request.transportation
             )
             detail.day_budget = compute_day_budget(detail)
 
+        from ....services.recommendations import intent_for
+        detail.trip_intent = intent_for(request)
         detail.overnight_stay = idx < request.travel_days - 1
         detail.companion_count = request.companions.count if request.companions else 1
         raw_by_name = {c['name']: c for c in (clusters_data[idx] if idx < len(clusters_data) else [])}

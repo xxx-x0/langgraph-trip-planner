@@ -26,6 +26,7 @@
           :save-error="dayErrors[idx] || ''"
           @assemble="onAssemble(idx, $event)"
           @recompute="onRecompute(idx, $event)"
+          @refresh-dining="onRefreshDining(idx)"
           @ai-rearrange="onAIRearrange(idx, $event)"
           @rewrite-narrative="onRewriteNarrative(idx)"
         />
@@ -49,7 +50,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
   getDraft, assembleDay, recomputeDay, aiRearrangeDay,
-  rewriteNarrative,
+  rewriteNarrative, refreshDiningOptions,
 } from '@/services/api'
 import DayCard from '@/components/draft/DayCard.vue'
 import { useTripLoader } from '@/composables/useTripLoader'
@@ -131,6 +132,7 @@ async function onAssemble(idx: number, body: any) {
   await withDayBusy(idx, '装配中', async () => {
     const resp = await assembleDay(draftId.value, idx, body)
     draft.value.days_detail.splice(idx, 1, resp.day_detail)
+    if (resp.dining_pool) draft.value.days[idx].dining_pool = resp.dining_pool
   })
 }
 
@@ -138,6 +140,7 @@ async function onRecompute(idx: number, body: any) {
   await withDayBusy(idx, '重算中', async () => {
     const resp = await recomputeDay(draftId.value, idx, body)
     draft.value.days_detail.splice(idx, 1, resp.day_detail)
+    if (resp.dining_pool) draft.value.days[idx].dining_pool = resp.dining_pool
   })
 }
 
@@ -145,6 +148,7 @@ async function onAIRearrange(idx: number, hint: string) {
   await withDayBusy(idx, 'AI 重排中', async () => {
     const resp = await aiRearrangeDay(draftId.value, idx, hint)
     draft.value.days_detail.splice(idx, 1, resp.day_detail)
+    if (resp.dining_pool) draft.value.days[idx].dining_pool = resp.dining_pool
   })
 }
 
@@ -152,6 +156,15 @@ async function onRewriteNarrative(idx: number) {
   await withDayBusy(idx, '刷新说明中', async () => {
     const resp = await rewriteNarrative(draftId.value, idx)
     draft.value.days_detail.splice(idx, 1, resp.day_detail)
+    if (resp.dining_pool) draft.value.days[idx].dining_pool = resp.dining_pool
+  })
+}
+
+async function onRefreshDining(idx: number) {
+  await withDayBusy(idx, '按当前安排找餐厅', async () => {
+    const resp = await refreshDiningOptions(draftId.value, idx)
+    draft.value.days[idx].dining_pool = resp.dining_pool
+    message.info(resp.message)
   })
 }
 

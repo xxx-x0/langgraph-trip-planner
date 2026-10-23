@@ -38,6 +38,9 @@ class TripRequest(BaseModel):
     transportation: str = Field(..., description="交通方式", example="公共交通")
     accommodation: str = Field(..., description="住宿偏好", example="经济型酒店")
     preferences: List[str] = Field(default=[], description="旅行偏好标签", example=["历史文化", "美食"])
+    meal_budget_per_person: Optional[int] = Field(default=None, ge=1, le=10000)
+    dietary_requirements: str = Field(default="", max_length=300)
+    dining_style: Literal["on_route", "dedicated"] = "on_route"
     food_preference: str = Field(default="本地特色", description="美食偏好", example="本地特色")
     free_text_input: Optional[str] = Field(default="", description="额外要求", example="希望多安排一些博物馆")
     budget: Optional[int] = Field(default=None, description="总预算上限(元)，为空表示不限预算", example=5000)
@@ -166,6 +169,8 @@ class DiningCandidate(BaseModel):
     tel: Optional[str] = Field(default=None, description="联系电话")
     poi_id: Optional[str] = Field(default=None, description="POI ID")
     source: str = Field(default="nearby", description="来源: nearby/popular/user_custom")
+    recommendation: Dict[str, Any] = Field(default_factory=dict)
+
 
 
 class DiningPoolDay(BaseModel):
@@ -199,6 +204,8 @@ class Meal(BaseModel):
     tel: Optional[str] = Field(default=None, description="联系电话")
     schedule_mode: Literal["auto", "manual"] = Field(default="manual", description="默认推荐可随景点排序调整，明确选择保留插入位置")
     preferred_slot: Optional[Literal["breakfast", "lunch", "dinner"]] = Field(default=None)
+    recommendation: Dict[str, Any] = Field(default_factory=dict)
+
 
 
 class HotelQuote(BaseModel):
@@ -289,6 +296,7 @@ class DayPlan(BaseModel):
     meal_warnings: List[str] = Field(default_factory=list, description="缺餐或用餐时段需要确认")
     meal_adjustments: List[str] = Field(default_factory=list, description="本次编辑的用餐保留与调整说明")
     overnight_stay: bool = Field(default=True)
+    trip_intent: Dict[str, Any] = Field(default_factory=dict)
 
 
 
@@ -495,6 +503,7 @@ class DraftDayContext(BaseModel):
     day_start_time: Optional[str] = Field(default=None)
     overnight_stay: bool = Field(default=True)
     companion_count: int = Field(default=1, ge=1)
+    trip_intent: Dict[str, Any] = Field(default_factory=dict)
 
 
 
@@ -529,6 +538,7 @@ class DayDetail(BaseModel):
     meal_adjustments: List[str] = Field(default_factory=list, description="本次编辑的用餐保留与调整说明")
     overnight_stay: bool = Field(default=True)
     companion_count: int = Field(default=1, ge=1)
+    trip_intent: Dict[str, Any] = Field(default_factory=dict)
 
 
 

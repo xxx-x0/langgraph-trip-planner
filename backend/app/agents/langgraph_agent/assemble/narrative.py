@@ -9,6 +9,7 @@ DESCRIPTION_SOURCE = "itinerary_facts_v1"
 
 def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherInfo] = None) -> str:
     """Brief guidance and separate confirmations, projected afresh after every edit."""
+    intent = day.trip_intent
     names = [a.name for a in day.attractions]
     lines = []
     if names:
@@ -28,6 +29,10 @@ def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherI
         lines.append(f'目前游览约{visits//60}小时{visits%60:02d}分，路上约{travel}分钟；这还没有算排队和额外休息。')
     elif names:
         lines.append('活动之间的时间还没有核对，先不要据此预约固定时段。')
+    foodie = intent.get('dining_style') == 'dedicated' or '美食' in intent.get('preferences', [])
+    if day.meals and foodie:
+        meal = next((m for m in day.meals if m.type in {'lunch','dinner'}),day.meals[0])
+        lines.append(f'这次想把美食作为重点，可以先核实{meal.name}的营业时间，再为用餐留出更充裕的时间。')
     unlocked = [n for n in names if n not in getattr(day,'locked_attraction_names',[])]
     if len(names)>1 and unlocked:
         lines.append(f'如果当天时间不够，可以先缩短{unlocked[-1]}的停留，再看是否保留。')
@@ -51,6 +56,8 @@ def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherI
         pending.extend(missing)
     pending.extend(day.meal_adjustments)
     pending.extend(day.meal_warnings)
+    if intent.get('dietary_requirements'):
+        pending.append('饮食要求「'+intent['dietary_requirements']+'」尚未由店家确认。')
     day.pending_confirmations = list(dict.fromkeys(pending))
     day.description = '\n\n'.join(lines)
     day.description_source = DESCRIPTION_SOURCE

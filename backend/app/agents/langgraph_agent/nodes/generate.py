@@ -1439,6 +1439,9 @@ async def global_synthesizer_node(state: TripPlannerState) -> Dict[str, Any]:
     plan = state.get("trip_plan")
     if not plan:
         return {}
+    if state.get("request"):
+        from ....services.recommendations import intent_for
+        for day in plan.days: day.trip_intent = intent_for(state["request"])
     refresh_trip_descriptions(plan)
     return {"trip_plan": plan, "global_narrative": plan.overall_suggestions}
 

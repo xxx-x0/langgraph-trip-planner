@@ -2,20 +2,25 @@
   <div class="meal-card" :class="[`source-${meal.source || 'default'}`]">
     <div class="meal-header">
       <span class="meal-type-badge">{{ getMealLabel(meal.type) }}</span>
-      <span v-if="meal.cuisine" class="meal-cuisine-tag">{{ meal.cuisine }}</span>
+      <span v-if="meal.cuisine && !['餐饮相关', '餐饮相关场所', '餐饮服务', '中餐厅'].includes(meal.cuisine)" class="meal-cuisine-tag">{{ meal.cuisine }}</span>
       <span v-if="meal.source === 'nearby'" class="source-badge nearby">📍 附近</span>
-      <span v-else-if="meal.source === 'popular'" class="source-badge popular">🔥 热门</span>
+      <span v-else-if="meal.source === 'popular'" class="source-badge popular">城市检索</span>
     </div>
     <div class="meal-name">{{ meal.name }}</div>
     <div class="meal-details">
       <span v-if="meal.rating" class="detail-item">
-        <span class="detail-star">★</span>{{ meal.rating }}
+        <span class="detail-star">★</span>{{ meal.rating }} · 高德评分
       </span>
       <span v-if="meal.avg_cost" class="detail-item price">¥{{ meal.avg_cost }}/人</span>
       <span v-if="meal.distance" class="detail-item">📏 {{ meal.distance }}</span>
     </div>
     <div v-if="meal.address" class="meal-address">📍 {{ meal.address }}</div>
-    <div v-if="meal.description" class="meal-desc">{{ meal.description }}</div>
+    <div v-if="meal.recommendation" class="meal-desc">
+      <p v-for="reason in meal.recommendation.reasons" :key="reason">{{ reason }}</p>
+      <p>营业时间：{{ meal.open_hours || '待确认' }}</p>
+      <small>{{ meal.recommendation.source }} · {{ meal.recommendation.queried_at ? new Date(meal.recommendation.queried_at).toLocaleString('zh-CN') : '查询时间未记录' }}</small>
+      <details><summary>选之前再确认</summary><p v-for="note in meal.recommendation.cautions" :key="note">{{ note }}</p></details>
+    </div>
   </div>
 </template>
 
@@ -31,7 +36,7 @@ const getMealLabel = (type: string): string => {
     breakfast: '早餐',
     lunch: '午餐',
     dinner: '晚餐',
-    snack: '小吃'
+    main: '正餐', snack: '小吃', dessert: '甜品', cafe: '咖啡', late_night: '夜宵'
   }
   return labels[type] || type
 }

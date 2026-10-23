@@ -173,6 +173,24 @@
             </a-col>
 
             <a-col :xs="24" :md="12">
+              <a-form-item label="每人每餐预算（可选）">
+                <a-input-number v-model:value="formData.meal_budget_per_person" :min="1" :max="10000" placeholder="元 / 人 / 餐" aria-label="每人每餐预算" />
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :md="12">
+              <a-form-item label="这次想怎么吃">
+                <a-select v-model:value="formData.dining_style" aria-label="这次想怎么吃">
+                  <a-select-option value="on_route">顺路吃，少绕路</a-select-option>
+                  <a-select-option value="dedicated">愿意为喜欢的美食专程去</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :span="24">
+              <a-form-item label="饮食要求（可选，需向店家确认）">
+                <a-input v-model:value="formData.dietary_requirements" :maxlength="300" placeholder="例如：不吃辣、素食、花生过敏" aria-label="饮食要求" />
+              </a-form-item>
+            </a-col>
+            <a-col :xs="24" :md="12">
               <a-form-item name="default_day_start_time">
                 <template #label>
                   <span class="form-label">每日开始时间</span>
@@ -340,6 +358,9 @@ const formData = reactive<{
   transportation: string
   accommodation: string
   food_preference: string
+  meal_budget_per_person?: number
+  dietary_requirements: string
+  dining_style: "on_route" | "dedicated"
   preferences: string[]
   free_text_input: string
   default_day_start_time: string
@@ -353,6 +374,9 @@ const formData = reactive<{
   transportation: '公共交通',
   accommodation: '经济型酒店',
   food_preference: '本地特色',
+  meal_budget_per_person: undefined as number | undefined,
+  dietary_requirements: '',
+  dining_style: 'on_route' as 'on_route' | 'dedicated',
   preferences: [],
   free_text_input: '',
   default_day_start_time: '08:00',
@@ -417,6 +441,9 @@ const handleSubmit = () => {
     transportation: formData.transportation,
     accommodation: formData.accommodation,
     food_preference: formData.food_preference,
+    meal_budget_per_person: formData.meal_budget_per_person,
+    dietary_requirements: formData.dietary_requirements,
+    dining_style: formData.dining_style,
     preferences: formData.preferences,
     free_text_input: formData.free_text_input,
     default_day_start_time: formData.default_day_start_time,

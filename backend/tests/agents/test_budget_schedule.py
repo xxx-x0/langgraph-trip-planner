@@ -79,3 +79,22 @@ def test_departure_day_retains_hotel_position_without_new_night_charge():
     assert detail.hotel is not None and detail.overnight_stay is False
     assert compute_day_budget(detail).total_hotels==0
     assert all(x['cost'] is None for x in detail.timeline_schedule if x['kind']=='hotel')
+
+
+def test_default_meals_reanchor_on_reorder_without_moving_locks():
+    pool = DiningPoolDay(main=[dict(name=n, category='main', avg_cost=60, open_hours='11:00-23:00') for n in ['午餐店', '晚餐店']])
+    ctx = DraftDayContext(day_index=0, date='2026-10-14', day_start_time='10:00',
+                         attractions=[attraction('山塘'), attraction('留园'), attraction('虎丘', 150)], dining_pool=pool)
+    first = rule_assemble_day_timeline(ctx)
+    assert [m.type for m in first.meals] == ['lunch', 'dinner']
+    overrides = {'attractions_order': ['虎丘', '留园', '山塘'], 'locked_attraction_names': ['留园'],
+                 'meals': [m.model_dump() for m in first.meals]}
+    detail = rule_assemble_day_timeline(ctx, overrides)
+    assert [a.name for a in detail.attractions] == ['虎丘', '留园', '山塘']
+    assert detail.locked_attraction_names == ['留园']
+    assert [x['ref_name'] for x in detail.timeline_order] == ['虎丘', '午餐店', '留园', '山塘', '晚餐店']
+    schedule_day(detail)
+    slots = [s for s in detail.timeline_schedule if s['kind'] == 'meal']
+    assert 690 <= slots[0]['start_minutes'] <= 870
+    assert slots[1]['start_minutes'] >= 1050
+    assert not any('午餐未安排' in w or '晚餐未安排' in w for w in detail.meal_warnings)

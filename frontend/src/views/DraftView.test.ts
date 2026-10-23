@@ -2,13 +2,13 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Antd from 'ant-design-vue'
 import DraftView from './DraftView.vue'
-import { getDraft, recomputeDay, aiRearrangeDay } from '@/services/api'
+import { getDraft, recomputeDay, aiRearrangeDay, refreshDiningOptions } from '@/services/api'
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn(), query: {} as Record<string,string> }))
 
 vi.mock('@/services/api', () => ({
   getDraft: vi.fn(), recomputeDay: vi.fn(), aiRearrangeDay: vi.fn(),
-  assembleDay: vi.fn(), rewriteNarrative: vi.fn(),
+  assembleDay: vi.fn(), rewriteNarrative: vi.fn(), refreshDiningOptions: vi.fn(),
 }))
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { id: 'draft-test' }, query: navigation.query }),
@@ -216,7 +216,7 @@ describe('meal intent recovery',()=>{
     vi.mocked(aiRearrangeDay).mockResolvedValue({day_detail:updated} as any)
     wrapper.getComponent({name:'DayCard'}).vm.$emit('ai-rearrange','优化路线')
     await flushPromises()
-    expect(wrapper.findAll('.meal-row .name').map(e=>e.text())).toEqual(['Dinner'])
+    expect(wrapper.findAll('.meal-row .meal-name').map(e=>e.text())).toEqual(['Dinner'])
     expect(wrapper.get('[role="status"]').text()).toContain('已保留Dinner')
     expect(wrapper.get('.narrative').text()).toContain('晚餐：Dinner')
     wrapper.unmount()
@@ -229,10 +229,40 @@ describe('meal intent recovery',()=>{
     expect(wrapper.get('[role="status"]').text()).toContain('首个景点之前')
     const updated={...data.days_detail[0],meals:[],meal_adjustments:[],description:'当前未安排午餐'}
     vi.mocked(recomputeDay).mockResolvedValue({day_detail:updated} as any)
-    await wrapper.get('.meal-row button').trigger('click');await flushPromises()
+    await wrapper.get('.meal-row .ant-btn-dangerous').trigger('click');await flushPromises()
     expect(vi.mocked(recomputeDay).mock.calls[0][2].meals).toEqual([])
     expect(wrapper.find('[role="status"]').exists()).toBe(false)
     expect(wrapper.get('.narrative').text()).not.toContain('11:30–12:30')
     wrapper.unmount()
   })
+})
+
+
+describe('dining changes preserve saved facts',()=>{
+ it('refreshes alternatives without changing saved meals',async()=>{
+  const data=draft();Object.assign(data.days_detail[0],{meals:[{name:'原店',type:'lunch'}]})
+  vi.mocked(getDraft).mockResolvedValue(data)
+  vi.mocked(refreshDiningOptions).mockResolvedValue({dining_pool:{main:[{name:'新店',category:'main'}]},message:'备选已更新'})
+  const w=await openDraft();w.getComponent({name:'DayCard'}).vm.$emit('refresh-dining');await flushPromises()
+  expect(refreshDiningOptions).toHaveBeenCalledWith('draft-test',0)
+  expect(w.getComponent({name:'DayCard'}).props('context').dining_pool.main[0].name).toBe('新店')
+  expect(w.getComponent({name:'DayCard'}).props('detail').meals[0].name).toBe('原店')
+  expect(recomputeDay).not.toHaveBeenCalled();w.unmount()
+ })
+ it('keeps previous candidates when refresh fails',async()=>{
+  const data=draft();data.days[0].dining_pool={main:[{name:'原备选'}]}
+  vi.mocked(getDraft).mockResolvedValue(data);vi.mocked(refreshDiningOptions).mockRejectedValue(new Error('offline'))
+  const w=await openDraft();w.getComponent({name:'DayCard'}).vm.$emit('refresh-dining');await flushPromises()
+  expect(w.getComponent({name:'DayCard'}).props('context').dining_pool.main[0].name).toBe('原备选')
+  expect(w.text()).toContain('尚未保存');w.unmount()
+ })
+ it('rolls back a failed restaurant replacement and sends its slot and anchor',async()=>{
+  const data=draft();Object.assign(data.days_detail[0],{meals:[{name:'原店',type:'lunch',category:'main',schedule_mode:'manual'}],timeline_order:[{kind:'meal',ref_name:'原店'}]})
+  vi.mocked(getDraft).mockResolvedValue(data);vi.mocked(recomputeDay).mockRejectedValue(new Error('route failed'))
+  const w=await openDraft();const chooser=w.findAllComponents({name:'AddDiningPopover'}).find(c=>c.props('replaceName')==='原店')!
+  chooser.vm.$emit('add',{name:'新店',type:'lunch',category:'main',schedule_mode:'manual',preferred_slot:'lunch',insert_after:'B',avg_cost:40})
+  await flushPromises()
+  expect(vi.mocked(recomputeDay).mock.calls[0][2].meals?.[0]).toMatchObject({name:'新店',preferred_slot:'lunch',insert_after:'B'})
+  expect(w.getComponent({name:'DayCard'}).props('detail').meals[0].name).toBe('原店');w.unmount()
+ })
 })

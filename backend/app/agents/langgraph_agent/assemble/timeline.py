@@ -6,7 +6,7 @@
 - timeline_order：[{kind, ref_name}]，hotel 在头尾，meal 按 insert_after 嵌入
 """
 from typing import Dict, Any, List, Optional
-from .schedule import estimated_lunch_anchor
+from .schedule import estimated_lunch_anchor, opening_windows
 
 from ....models.schemas import (
     Attraction, Meal, Location, DayDetail, DraftDayContext,
@@ -37,6 +37,7 @@ def _candidate_to_meal(c: DiningCandidate) -> Meal:
         tel=c.tel,
         poi_id=c.poi_id,
         source=c.source,
+        recommendation=c.recommendation,
         estimated_cost=c.avg_cost if c.avg_cost is not None else _default_cost(c.category),
     )
 
@@ -85,6 +86,7 @@ def _meal_from_override_dict(d: Dict[str, Any]) -> tuple[Meal, str]:
         preferred_slot=d.get("preferred_slot"),
         poi_id=d.get("poi_id"),
         source=d.get("source", "user_custom"),
+        recommendation=d.get("recommendation") or {},
         estimated_cost=(avg_cost if avg_cost is not None else d.get("estimated_cost", _default_cost(category))),
     )
     insert_after = d.get("insert_after") or ""
@@ -110,16 +112,28 @@ def _apply_attraction_order(
     return ordered
 
 
-def _default_main_meal(ctx: DraftDayContext, attractions: List[Attraction]) -> tuple[Optional[Meal], str]:
+def _default_meals(ctx: DraftDayContext, attractions: List[Attraction]):
     if not attractions or not ctx.dining_pool.main:
-        return None, ""
-    top1 = ctx.dining_pool.main[0]
-    meal = _candidate_to_meal(top1)
-    meal.schedule_mode = "auto"
-    meal.preferred_slot = "lunch"
-    mid_idx = max(len(attractions) // 2 - 1, 0)
-    return meal, attractions[mid_idx].name
-
+        return []
+    from ....services.recommendations import explain_dining, dining_for_slot
+    explain_dining(ctx.dining_pool.main, attractions, ctx.trip_intent, ctx.day_start_time, hotel=ctx.hotel)
+    result = []
+    used = set()
+    for slot, start, end in [("lunch", 690, 870), ("dinner", 1050, 1230)]:
+        candidates = [c for c in ctx.dining_pool.main if c.name not in used and not any(w in (c.name+' '+(c.open_hours or '')) for w in ('暂停营业','永久关闭','已歇业')) and
+                      (not opening_windows(c.open_hours) or any(
+                          max(a, start) + 60 <= min(b, end + 60)
+                          for a, b in opening_windows(c.open_hours)))]
+        if not candidates:
+            continue
+        meal = _candidate_to_meal(dining_for_slot(candidates, slot, ctx.trip_intent)[0])
+        meal.type = slot
+        meal.schedule_mode = "auto"
+        meal.preferred_slot = slot
+        anchor = estimated_lunch_anchor(attractions, ctx.day_start_time) if slot == "lunch" else attractions[-1].name
+        result.append((meal, anchor))
+        used.add(meal.name)
+    return result
 
 def _build_timeline_order(
     attractions: List[Attraction],
@@ -190,18 +204,14 @@ def rule_assemble_day_timeline(
         ]
         meals = [m for m, _ in meals_with_insert]
     else:
-        default_meal, default_after = _default_main_meal(ctx, attractions)
-        if default_meal is not None:
-            meals_with_insert = [(default_meal, default_after)]
-            meals = [default_meal]
-        else:
-            meals_with_insert = []
-            meals = []
+        meals_with_insert = _default_meals(ctx, attractions)
+        meals = [m for m, _ in meals_with_insert]
 
     timeline = _build_timeline_order(attractions, meals_with_insert, ctx.hotel)
 
     return DayDetail(
         day_index=ctx.day_index,
+        trip_intent=ctx.trip_intent,
         date=ctx.date,
         attractions=attractions,
         meals=meals,

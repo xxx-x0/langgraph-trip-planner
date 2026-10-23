@@ -290,3 +290,9 @@ export async function aiSelectAttractions(req: AISelectRequest): Promise<AISelec
 }
 
 export default apiClient
+
+
+export async function refreshDiningOptions(draftId: string, dayIndex: number) {
+  const resp = await apiClient.post(`/api/trip/draft/${draftId}/day/${dayIndex}/dining-options`, {}, { timeout: 85000 })
+  return resp.data
+}

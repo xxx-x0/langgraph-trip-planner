@@ -509,9 +509,12 @@ async def _search_dining_category(
     category: DiningCategory,
     center: Optional[tuple[float, float]],
     city: str,
+    food_preference: str = "",
 ) -> List[Dict[str, Any]]:
     """跑一次 amap POI 搜索；center 为 None 时走城市文本搜索"""
     keyword, _top_n = _DINING_KEYWORDS[category]
+    if category == DiningCategory.MAIN and food_preference:
+        keyword = CITY_FOOD_MAP.get(city, {}).get("cuisine", "餐厅") if food_preference == "本地特色" else ("餐厅" if food_preference == "无特殊要求" else food_preference)
     service = get_langchain_amap_service()
 
     if center is not None:
@@ -522,7 +525,7 @@ async def _search_dining_category(
             raw = await _invoke_tool_with_retry(
                 tool,
                 {"keywords": keyword, "location": f"{center[0]},{center[1]}", "radius": "1500"},
-                max_retries=1, per_attempt_timeout=15.0,
+                max_retries=2, per_attempt_timeout=15.0,
             )
         except Exception as e:
             print(f" ⚠️ dining[{category.value}] around 失败: {str(e)[:80]}")
@@ -534,7 +537,7 @@ async def _search_dining_category(
         try:
             raw = await _invoke_tool_with_retry(
                 tool, {"keywords": keyword, "city": city},
-                max_retries=1, per_attempt_timeout=15.0,
+                max_retries=2, per_attempt_timeout=15.0,
             )
         except Exception as e:
             print(f" ⚠️ dining[{category.value}] text 失败: {str(e)[:80]}")
@@ -566,14 +569,16 @@ def _poi_to_dining_candidate(
         cand["tel"] = p["tel"]
     if p.get("poi_id"):
         cand["poi_id"] = p["poi_id"]
-    cuisine_tag = (p.get("type") or "").split(";")[0].strip()
+    cuisine_tag = (p.get("type") or "").split(";")[-1].strip()
     if cuisine_tag:
         cand["cuisine"] = cuisine_tag
+    from datetime import datetime, timezone
+    cand['recommendation'] = {'source':'高德地图 POI', 'queried_at':datetime.now(timezone.utc).isoformat()}
     return cand
 
 
 async def search_dining_pool_node(state: Dict[str, Any]) -> Dict[str, Any]:
-    """骨架阶段：按 5 类并发搜索每日餐饮候选池，返回 List[DiningPoolDay-shape dict]"""
+    """骨架阶段：逐类搜索避免同一高德接口的并发限流，并补齐候选坐标。"""
     print("🍴 执行节点: search_dining_pool_node")
     request = state["request"]
     clusters_data: List[List[Dict[str, Any]]] = state.get("clusters_data", []) or []
@@ -585,28 +590,63 @@ async def search_dining_pool_node(state: Dict[str, Any]) -> Dict[str, Any]:
     pools: List[Dict[str, Any]] = []
     for day_idx in range(travel_days):
         day_cluster = clusters_data[day_idx] if day_idx < len(clusters_data) else []
-        center = _day_center(day_cluster)
-        source = "nearby" if center is not None else "popular"
-
-        tasks = [
-            _search_dining_category(cat, center, request.city)
-            for cat in DiningCategory
-        ]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        pool: Dict[str, List[Dict[str, Any]]] = {}
-        for cat, res in zip(DiningCategory, results):
-            if isinstance(res, Exception):
-                print(f" ⚠️ dining[{cat.value}] 异常: {res}")
-                pool[cat.value] = []
-                continue
-            _, top_n = _DINING_KEYWORDS[cat]
-            ranked = _rank_food_pois(res, None, None, set(), top_n=top_n)
-            pool[cat.value] = [
-                _poi_to_dining_candidate(p, cat, source) for p in ranked
-            ]
+        from ....services.recommendations import cluster_attractions
+        pool = await search_dining_for_day(request, cluster_attractions(day_cluster))
         pools.append(pool)
         total = sum(len(v) for v in pool.values())
         print(f" ✅ 第{day_idx + 1}天餐饮候选池: 共 {total} 家")
 
     return {"dining_pool": pools}
+
+
+async def search_dining_for_day(request, attractions, start_time=None, schedule=None, hotel=None, meals=None):
+    from ....services.recommendations import cluster_attractions, meal_anchors, intent_for, explain_dining, dining_for_slot
+    from ....models.schemas import DiningCandidate
+    anchors = meal_anchors(attractions, start_time or request.default_day_start_time, schedule, hotel, meals)
+    centers = []
+    for before, after, _ in anchors.values():
+        loc = before.location if before else (after.location if after else None)
+        center = (loc.longitude, loc.latitude) if loc else None
+        if center not in centers: centers.append(center)
+    results = []
+    for cat in DiningCategory:
+        found = []
+        for center in ((centers + [None] if request.dining_style == "dedicated" and None not in centers else centers) if cat == DiningCategory.MAIN else centers[:1]):
+            try:
+                found.extend(await _search_dining_category(cat, center, request.city, food_preference=request.food_preference))
+            except Exception as error:
+                print(f"餐饮查询未成功: {type(error).__name__}")
+        if cat == DiningCategory.MAIN and request.meal_budget_per_person and not any(
+                p.get('avg_cost') is not None and p['avg_cost'] <= request.meal_budget_per_person for p in found):
+            # Cuisine-specific restaurants may all exceed the requested cap. Offer ordinary meals too.
+            supplement = []
+            for center in centers:
+                try:
+                    supplement.extend(await _search_dining_category(cat, center, request.city, food_preference='快餐'))
+                except Exception as error:
+                    print(f'餐饮预算补充查询未成功: {type(error).__name__}')
+            # Around-search may omit ALL coordinates/prices. Reserve detail calls for both queries
+            # instead of spending the whole bounded batch on the first cuisine's expensive venues.
+            from itertools import zip_longest
+            found = [p for pair in zip_longest(found,supplement) for p in pair if p is not None]
+        results.append(found)
+    pool = {}
+    for cat, res in zip(DiningCategory, results):
+        # Preserve spatial variety before ratings; deduplicate actual POI IDs.
+        unique = {p.get('poi_id') or p['name']:p for p in res}
+        candidates = [DiningCandidate.model_validate(_poi_to_dining_candidate(p,cat,'nearby' if any(centers) else 'city_search')) for p in unique.values()]
+        explain_dining(candidates, attractions, intent_for(request), start_time or request.default_day_start_time, schedule, hotel, meals)
+        selected = []
+        for slot in ('lunch','dinner') if cat == DiningCategory.MAIN else ('lunch',):
+            for candidate in dining_for_slot(candidates,slot,intent_for(request))[:(5 if cat == DiningCategory.MAIN else 3)]:
+                if candidate not in selected: selected.append(candidate)
+        selected = selected[:8]
+        raw_selected = [unique[c.poi_id or c.name] for c in selected]
+        if any(p.get('poi_id') and (not p.get('open_hours') or not p.get('longitude')) for p in raw_selected):
+            detail_tool = await get_langchain_amap_service().get_tool('maps_search_detail')
+            await _enrich_pois_with_detail(raw_selected,detail_tool,max_calls=len(raw_selected))
+        selected = [DiningCandidate.model_validate(_poi_to_dining_candidate(p,cat,'nearby' if any(centers) else 'city_search')) for p in raw_selected]
+        # A closure supplied by the provider is retained as a reason, never advertised as open.
+        explain_dining(selected,attractions,intent_for(request),start_time or request.default_day_start_time,schedule,hotel,meals)
+        pool[cat.value] = [c.model_dump(mode='json') for c in selected]
+    return pool
