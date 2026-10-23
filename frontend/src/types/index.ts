@@ -83,6 +83,11 @@ export interface RouteSegment {
 }
 
 export interface DayPlan {
+  description_source?: string | null
+  pending_confirmations?: string[]
+  timeline_schedule?: Array<{ kind: "attraction" | "meal" | "hotel" | "travel" | "wait" | "free_time"; ref_name: string; start_time: string; end_time: string; start_minutes: number; end_minutes: number; duration: number; cost?: number | null; detail?: string; mode?: string; distance?: string }>
+  meal_warnings?: string[]
+  meal_adjustments?: string[]
   date: string
   day_index: number
   description: string
@@ -114,6 +119,7 @@ export interface WeatherInfo {
 }
 
 export interface TripPlan {
+  narrative_source?: string | null
   city: string
   start_date: string
   end_date: string

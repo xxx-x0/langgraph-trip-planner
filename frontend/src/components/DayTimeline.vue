@@ -46,7 +46,7 @@ import type { Attraction, DayPlan, Hotel, Meal } from '@/types'
 import { cleanHotelName } from '@/utils/hotelFormat'
 
 interface TimelineItem {
-  type: 'attraction' | 'meal' | 'hotel' | 'travel'
+  type: 'attraction' | 'meal' | 'hotel' | 'travel' | 'wait' | 'free_time'
   name: string
   startTime: string
   endTime: string
@@ -82,6 +82,15 @@ const rawTimelineItems = computed<TimelineItem[]>(() => {
   const day = props.day
 
   if (!day) return items
+
+  if (day.timeline_schedule?.length) {
+    return day.timeline_schedule.map(item => ({
+      type: item.kind, name: item.ref_name, startTime: item.start_time,
+      endTime: item.end_time, startMinutes: item.start_minutes, endMinutes: item.end_minutes,
+      duration: item.duration, cost: item.cost ?? undefined,
+      detail: item.detail, mode: item.mode, distance: item.distance,
+    }))
+  }
 
   let currentMinutes = parseClockTime(day.day_start_time)
 
@@ -417,6 +426,8 @@ function getIcon(type: string): string {
     meal: '🍽️',
     hotel: '🏨',
     travel: '🚗',
+    wait: '⏳',
+    free_time: '☕',
   }
   return map[type] || '📍'
 }

@@ -7,30 +7,19 @@
         <span class="card-title">旅行建议</span>
       </div>
       <div class="card-body">
-        <div class="suggestions-content" v-html="renderedSuggestions"></div>
+        <div class="suggestions-content" >{{ tripPlan.narrative_source === 'itinerary_facts_v1' ? tripPlan.overall_suggestions : '旧版说明尚未核对，请以行程数据为参考。' }}</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { marked } from 'marked'
 import type { TripPlan } from '@/types'
 
-const props = defineProps<{
+defineProps<{
   tripPlan: TripPlan
 }>()
 
-marked.setOptions({
-  breaks: true,
-  gfm: true,
-})
-
-const renderedSuggestions = computed(() => {
-  if (!props.tripPlan.overall_suggestions) return ''
-  return marked.parse(props.tripPlan.overall_suggestions) as string
-})
 </script>
 
 <style scoped>

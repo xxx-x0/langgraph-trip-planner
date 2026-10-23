@@ -23,7 +23,7 @@
         <a-button type="link" @click="onAIRearrange"
                   :disabled="!!busy">AI 重新安排</a-button>
         <a-button type="link" @click="$emit('rewrite-narrative')"
-                  :disabled="!!busy">重写叙述</a-button>
+                  :disabled="!!busy">刷新行程说明</a-button>
       </template>
     </template>
 
@@ -35,9 +35,20 @@
 
     <!-- 已装配内容（可叠加遮罩） -->
     <div v-else-if="isExpanded && detail" class="day-content">
-      <div v-if="detail.description" class="narrative">
-        <div v-html="renderedDescription"></div>
+      <div class="narrative">
+        <small>今天怎么逛 · 随你的修改更新</small>
+        <div v-if="detail.description_source === 'itinerary_facts_v1'" class="description-text">{{ detail.description }}</div>
+        <div v-else>旧版说明尚未核对当前安排，请刷新行程说明。</div>
       </div>
+      <p v-if="detail.pending_confirmations?.length" class="next-step">下一步：{{ detail.pending_confirmations[0] }}</p>
+      <details v-if="detail.pending_confirmations?.length" class="pending-confirmations">
+        <summary>出发前还要确认 {{ detail.pending_confirmations.length }} 项</summary>
+        <ul><li v-for="item in detail.pending_confirmations" :key="item">{{ item }}</li></ul>
+      </details>
+      <details v-if="detail.timeline_schedule?.length" class="schedule-details">
+        <summary>查看时间安排和路上用时</summary>
+        <DayTimeline :day="detail" />
+      </details>
       <div class="timeline-editor">
         <section class="editor-section">
           <div class="section-header">
@@ -157,10 +168,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { DeleteOutlined, LockOutlined, UndoOutlined, UnlockOutlined } from '@ant-design/icons-vue'
-import { marked } from 'marked'
+import DayTimeline from '../DayTimeline.vue'
 import AddDiningPopover from './AddDiningPopover.vue'
 
 interface Props {
@@ -357,12 +368,11 @@ function getMealLabel(meal: any) {
   return mealLabels[key] || '用餐'
 }
 
-const renderedDescription = computed(() => {
-  return marked.parse(props.detail?.description || '') as string
-})
+
 </script>
 
 <style scoped>
+.description-text { white-space: pre-line; }
 /* Bauhaus Card Wrapper */
 :deep(.ant-card) {
   background: var(--white, #fff);

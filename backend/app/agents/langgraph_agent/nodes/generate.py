@@ -1440,89 +1440,11 @@ async def reduce_assemble_node(state: TripPlannerState) -> Dict[str, Any]:
 
 
 async def global_synthesizer_node(state: TripPlannerState) -> Dict[str, Any]:
-    print("💡 执行节点: global_synthesizer_node (全局综合)")
-    trip_plan = state.get("trip_plan")
-    if not trip_plan:
-        print("⚠️ trip_plan为空，跳过全局综合")
+    plan = state.get("trip_plan")
+    if not plan:
         return {}
-
-    summary_lines = [f"城市：{trip_plan.city}，{len(trip_plan.days)}天行程"]
-    for day in trip_plan.days:
-        attr_names = "、".join(a.name for a in day.attractions)
-        hotel_name = day.hotel.name if day.hotel else "未定"
-        summary_lines.append(f"第{day.day_index + 1}天：{attr_names} → 酒店：{hotel_name}")
-
-    if trip_plan.budget:
-        summary_lines.append(
-            f"总门票：{trip_plan.budget.total_attractions}元，"
-            f"总餐饮：{trip_plan.budget.total_meals}元，"
-            f"总住宿：{trip_plan.budget.total_hotels}元，"
-            f"总交通：{trip_plan.budget.total_transportation}元，"
-            f"合计：{trip_plan.budget.total}元"
-        )
-
-    weather_info = state.get("weather_info", "")
-    if weather_info:
-        summary_lines.append(f"天气概况：{_truncate_info(str(weather_info), 300)}")
-
-    request = state.get("request")
-    if request and request.free_text_input:
-        summary_lines.append(f"用户额外要求：{request.free_text_input}")
-
-    summary_text = "\n".join(summary_lines)
-
-    prompt = f"""根据以下行程摘要，请以JSON格式返回三个字段。
-
-**行程摘要:**
-{summary_text}
-
-**要求返回严格JSON格式:**
-{{
-  "trip_tagline": "8-15字的行程主题标语，体现目的地特色和旅行主题，如'广府文化与寻味之旅'、'江南水乡诗意漫游'",
-  "weather_summary": "一句话天气概况，如'晴间多云为主'、'多云转阴，偶有小雨'",
-  "overall_suggestions": "使用Markdown格式的完整旅行建议，包含：## 出行建议、## 消费分析、## 天气提醒等章节，使用列表和加粗等格式"
-}}
-
-注意：
-- trip_tagline 要朗朗上口，体现城市文化特色
-- weather_summary 要简洁，不超过10个字
-- overall_suggestions 必须使用Markdown格式（标题、列表、加粗等）
-- 只返回JSON，不要其他内容"""
-
-    llm = get_llm()
-    messages = [SystemMessage(content=GLOBAL_SYNTHESIZER_PROMPT), HumanMessage(content=prompt)]
-
-    try:
-        response = await _invoke_llm_with_retry(llm, messages)
-        raw = response.content.strip()
-        import json as _json
-        if raw.startswith("```"):
-            raw = raw.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        parsed = _json.loads(raw)
-        suggestions = parsed.get("overall_suggestions", "")
-        tagline = parsed.get("trip_tagline", "")
-        weather_summary = parsed.get("weather_summary", "")
-        print(f"💡 全局建议生成完成: tagline={tagline}, weather={weather_summary}")
-    except Exception as e:
-        print(f"⚠️ 全局建议JSON解析失败，回退纯文本: {str(e)[:80]}")
-        try:
-            response = await _invoke_llm_with_retry(llm, messages)
-            suggestions = response.content.strip()
-        except Exception:
-            suggestions = "请根据行程安排提前确认景点开放时间和交通信息。建议携带雨具和防晒用品。"
-        tagline = ""
-        weather_summary = _generate_weather_summary_fallback(trip_plan)
-
-    if not weather_summary:
-        weather_summary = _generate_weather_summary_fallback(trip_plan)
-
-    if trip_plan:
-        trip_plan.overall_suggestions = suggestions
-        trip_plan.trip_tagline = tagline
-        trip_plan.weather_summary = weather_summary
-
-    return {"trip_plan": trip_plan, "global_narrative": suggestions}
-
+    refresh_trip_descriptions(plan)
+    return {"trip_plan": plan, "global_narrative": plan.overall_suggestions}
 
 def _generate_weather_summary_fallback(trip_plan) -> str:
     from collections import Counter
@@ -1537,3 +1459,6 @@ def _generate_weather_summary_fallback(trip_plan) -> str:
         return f"{most_common}为主"
     second = counter.most_common(2)[1][0] if len(counter) > 1 else ""
     return f"{most_common}间{second}为主" if second else f"{most_common}为主"
+
+
+from ..assemble.narrative import refresh_trip_descriptions

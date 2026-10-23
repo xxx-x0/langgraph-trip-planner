@@ -119,35 +119,22 @@ from app.models.schemas import DayDetail, WeatherInfo
 
 
 @pytest.mark.asyncio
-async def test_narrative_returns_stripped_text():
-    detail = DayDetail(
-        day_index=0, date="2026-06-01",
-        attractions=[_attr("A")],
-    )
-    fake_response = type("Resp", (), {"content": "  ## Day 1\n\n好天气，多带水。  "})
-
-    with patch(
-        "app.agents.langgraph_agent.assemble.narrative._invoke_llm_with_retry",
-        new=AsyncMock(return_value=fake_response),
-    ), patch("app.agents.langgraph_agent.assemble.narrative.get_llm",
-             return_value=object()):
-        text = await write_day_narrative_llm(
-            detail, weather=None, free_text_input=None, city="北京"
-        )
-    assert "Day 1" in text
-    assert not text.startswith(" ")
+async def test_narrative_projects_saved_facts_without_model():
+    detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
+    with patch("app.services.llm_service.get_llm", side_effect=AssertionError("no model")):
+        text = await write_day_narrative_llm(detail, free_text_input="晴天，已预约成功")
+    assert "A" in text and "已预约成功" not in text
+    assert detail.description_source == "itinerary_facts_v1"
+    assert "当日天气尚未获取" in "；".join(detail.pending_confirmations)
 
 
 @pytest.mark.asyncio
-async def test_narrative_returns_empty_on_failure():
+async def test_narrative_refresh_is_deterministic_and_keeps_arrangement():
     detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
-    with patch(
-        "app.agents.langgraph_agent.assemble.narrative._invoke_llm_with_retry",
-        side_effect=RuntimeError("LLM down"),
-    ), patch("app.agents.langgraph_agent.assemble.narrative.get_llm",
-             return_value=object()):
-        text = await write_day_narrative_llm(detail, None, None, "北京")
-    assert text == ""
+    before = detail.model_dump(exclude={"description", "description_source", "pending_confirmations"})
+    first = await write_day_narrative_llm(detail)
+    assert await write_day_narrative_llm(detail) == first
+    assert detail.model_dump(exclude={"description", "description_source", "pending_confirmations"}) == before
 
 
 def test_removed_attractions_are_filtered_before_ordering():

@@ -73,8 +73,9 @@ async def test_finalize_assembles_missing_days_and_writes_trip_history():
     assert trip_id > 0
     assert trip_plan.city == "北京"
     assert len(trip_plan.days) == 2
-    assert trip_plan.trip_tagline == "行程标语"
-    assert trip_plan.weather_summary == "晴间多云"
+    assert trip_plan.trip_tagline == "北京 · 2日行程"
+    assert trip_plan.narrative_source == "itinerary_facts_v1"
+    assert trip_plan.weather_summary == ""
     # draft 已标记 finalized
     record = await trip_draft_service.get_draft(draft_id)
     assert record.status == "finalized"

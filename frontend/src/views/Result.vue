@@ -29,17 +29,8 @@
       <div class="hero-content">
         <h1 class="hero-title">{{ tripPlan.title || tripPlan.city + '旅行计划' }}</h1>
         <div class="hero-actions">
-          <button class="hero-btn" @click="handleSaveTrip" :disabled="savingTrip">
+          <button class="hero-btn" @click="handleSaveTrip" :disabled="savingTrip || isSaved">
             💾 {{ isSaved ? '已保存' : '保存行程' }}
-          </button>
-          <button class="hero-btn" @click="toggleEditMode" v-if="!editMode">
-            ✏️ 编辑
-          </button>
-          <button class="hero-btn" @click="saveChanges" v-if="editMode">
-            ✅ 保存修改
-          </button>
-          <button class="hero-btn" @click="cancelEdit" v-if="editMode">
-            ❌ 取消
           </button>
           <button class="hero-btn" @click="exportAsImage">
             📥 导出图片
@@ -108,11 +99,9 @@
         <TabItinerary
           v-if="activeTab === 'itinerary' || isExporting"
           :trip-plan="tripPlan"
-          :edit-mode="editMode"
+          :edit-mode="false"
           :attraction-photos="attractionPhotos"
           v-model:active-days="activeDays"
-          @delete-attraction="deleteAttraction"
-          @move-attraction="moveAttraction"
           :key="'itinerary'"
         />
       </Transition>
@@ -165,8 +154,6 @@ const skeletonStage = ref<'init' | 'hero' | 'itinerary' | 'done' | 'error'>('ini
 const streamError = ref<string | null>(null)
 
 const tripPlan = ref<TripPlan | null>(null)
-const editMode = ref(false)
-const originalPlan = ref<TripPlan | null>(null)
 const attractionPhotos = ref<Record<string, string>>({})
 const activeTab = ref('overview')
 const activeDays = ref<number[]>([0])
@@ -183,7 +170,7 @@ const totalAttractions = computed(() => {
 
 const transportLabel = computed(() => {
   if (!tripPlan.value) return '-'
-  const transport = tripPlan.value.transport_mode || tripPlan.value.days?.[0]?.transport_mode || ''
+  const transport = tripPlan.value.transport_mode || tripPlan.value.days?.[0]?.transport_mode || tripPlan.value.days?.[0]?.transportation || ''
   const labels: Record<string, string> = {
     'driving': '自驾',
     'transit': '公交',
@@ -252,6 +239,7 @@ async function startStreaming() {
         tripLoader.updateProgress(event.step, event.message, 0)
       } else if (event.type === 'complete') {
         tripPlan.value = event.trip_plan
+        isSaved.value = !!event.trip_id
         skeletonStage.value = 'done'
         // 把 URL 改成 /trip/:id 以便后续分享和刷新；但 tripPlan 已填充，无需重新加载
         if (event.trip_id) {
@@ -298,7 +286,7 @@ const loadTripFromHistory = async (tripId: number) => {
 }
 
 const handleSaveTrip = async () => {
-  if (!tripPlan.value) return
+  if (!tripPlan.value || isSaved.value) return
   savingTrip.value = true
   try {
     const formData = sessionStorage.getItem('tripFormData')
@@ -310,52 +298,6 @@ const handleSaveTrip = async () => {
     message.error('保存失败：' + (e.message || '未知错误'))
   } finally {
     savingTrip.value = false
-  }
-}
-
-const toggleEditMode = () => {
-  editMode.value = true
-  originalPlan.value = JSON.parse(JSON.stringify(tripPlan.value))
-  activeTab.value = 'itinerary'
-  message.info('进入编辑模式')
-}
-
-const saveChanges = () => {
-  editMode.value = false
-  if (tripPlan.value) {
-    sessionStorage.setItem('tripPlan', JSON.stringify(tripPlan.value))
-  }
-  message.success('修改已保存')
-  tabMapRef.value?.refreshMap()
-}
-
-const cancelEdit = () => {
-  if (originalPlan.value) {
-    tripPlan.value = JSON.parse(JSON.stringify(originalPlan.value))
-  }
-  editMode.value = false
-  message.info('已取消编辑')
-}
-
-const deleteAttraction = (dayIndex: number, attrIndex: number) => {
-  if (!tripPlan.value) return
-  const day = tripPlan.value.days[dayIndex]
-  if (day.attractions.length <= 1) {
-    message.warning('每天至少需要保留一个景点')
-    return
-  }
-  day.attractions.splice(attrIndex, 1)
-  message.success('景点已删除')
-}
-
-const moveAttraction = (dayIndex: number, attrIndex: number, direction: 'up' | 'down') => {
-  if (!tripPlan.value) return
-  const day = tripPlan.value.days[dayIndex]
-  const attractions = day.attractions
-  if (direction === 'up' && attrIndex > 0) {
-    [attractions[attrIndex], attractions[attrIndex - 1]] = [attractions[attrIndex - 1], attractions[attrIndex]]
-  } else if (direction === 'down' && attrIndex < attractions.length - 1) {
-    [attractions[attrIndex], attractions[attrIndex + 1]] = [attractions[attrIndex + 1], attractions[attrIndex]]
   }
 }
 

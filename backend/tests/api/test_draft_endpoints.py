@@ -156,7 +156,8 @@ async def test_assemble_returns_day_detail_and_writes_back(client):
     body = resp.json()
     assert body["day_index"] == 0
     assert body["day_detail"]["is_assembled"] is True
-    assert body["day_detail"]["description"] == "今天是晴天，多带水。"
+    assert body["day_detail"]["description_source"] == "itinerary_facts_v1"
+    assert "A" in body["day_detail"]["description"]
     # 服务端已 patch 进去
     record = await trip_draft_service.get_draft(draft_id)
     days = json.loads(record.days_detail_json)
@@ -187,7 +188,8 @@ async def test_assemble_idempotent_returns_cached(client):
             f"/api/trip/draft/{draft_id}/day/0/assemble?force=true", json={}
         )
         assert narrative_mock.await_count == 2
-        assert r3.json()["day_detail"]["description"] == "V2 文案"
+        assert r3.json()["day_detail"]["description_source"] == "itinerary_facts_v1"
+        assert "A" in r3.json()["day_detail"]["description"]
 
 
 @pytest.mark.asyncio
@@ -226,8 +228,9 @@ async def test_recompute_with_attractions_order_change(client):
     body = resp.json()
     assert [a["name"] for a in body["day_detail"]["attractions"]] == ["A"]
     assert body["day_detail"]["meals"] == []
-    # 文案保留旧的（recompute 不重写）
-    assert body["day_detail"]["description"] == "V1"
+    # 说明随当前事实刷新，不保留测试替身返回的旧文案
+    assert body["day_detail"]["description_source"] == "itinerary_facts_v1"
+    assert "A" in body["day_detail"]["description"]
 
 
 @pytest.mark.asyncio
@@ -294,7 +297,8 @@ async def test_narrative_endpoint_rewrites_description_only(client):
         resp = await client.post(f"/api/trip/draft/{draft_id}/day/0/narrative", json={})
     assert resp.status_code == 200
     body = resp.json()
-    assert body["day_detail"]["description"] == "V2 新文案"
+    assert body["day_detail"]["description_source"] == "itinerary_facts_v1"
+    assert "A" in body["day_detail"]["description"]
     # 景点未动
     assert [a["name"] for a in body["day_detail"]["attractions"]] == ["A"]
 

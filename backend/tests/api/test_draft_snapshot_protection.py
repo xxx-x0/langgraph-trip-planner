@@ -125,7 +125,8 @@ async def test_snapshot_checks_relevant_state_at_write_time(case, competitor):
         assert response.status_code == 200, response.text
         days = json.loads(record.days_detail_json)
         assert days[1] == json.loads(saved)[1]
-        assert days[0]["description"] == "当前日新说明"
+        assert days[0]["description_source"] == "itinerary_facts_v1"
+        assert "甲园" in days[0]["description"]
     else:
         assert response.status_code == 409, response.text
         assert record.days_detail_json == saved
@@ -169,8 +170,8 @@ async def test_finalize_generation_failure_writes_nothing_and_sse_retry_recovers
     async with async_session() as session:
         history = await session.get(TripRecord, first["trip_id"])
         assert json.loads(history.plan_data) == first["trip_plan"]
-    assert first["trip_plan"]["trip_tagline"] == "标语"
-    assert first["trip_plan"]["weather_summary"] == "天气"
+    assert first["trip_plan"]["trip_tagline"] == f"{user} · 2日行程"
+    assert first["trip_plan"]["weather_summary"] == ""
 
 
 @pytest.mark.asyncio

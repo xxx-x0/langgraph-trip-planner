@@ -16,7 +16,7 @@ from ...agents.langgraph_agent.assemble.timeline import rule_assemble_day_timeli
 from ...agents.langgraph_agent.assemble.route import compute_day_route
 from ...agents.langgraph_agent.assemble.budget import compute_day_budget
 from ...agents.langgraph_agent.assemble.schedule import schedule_day
-from ...agents.langgraph_agent.assemble.narrative import write_day_narrative_llm
+from ...agents.langgraph_agent.assemble.narrative import write_day_narrative_llm, refresh_day_description
 from ...agents.langgraph_agent.exceptions import _invoke_llm_with_retry
 from ...agents.langgraph_agent.finalize.pipeline import finalize_draft
 from ...services import trip_draft_service
@@ -37,7 +37,8 @@ def _parse_ticket_price(value) -> int:
     return int(match.group()) if match else 0
 
 
-async def _save_day_detail(draft_id, day_index, detail, *, expected_day, expected_request):
+async def _save_day_detail(draft_id, day_index, detail, *, expected_day, expected_request, weather=None):
+    refresh_day_description(detail, weather)
     try:
         await trip_draft_service.patch_day_detail(draft_id, day_index, detail, expected_day=expected_day, expected_request=expected_request)
     except trip_draft_service.DraftChangedDuringFinalize as error:
@@ -158,7 +159,9 @@ def _load_payload(record) -> TripDraftPayload:
         if d is None:
             days_detail.append(None)
         else:
-            days_detail.append(DayDetail.model_validate(d))
+            detail = DayDetail.model_validate(d)
+            refresh_day_description(detail, next((ctx.weather for ctx in days if ctx.date == detail.date), None))
+            days_detail.append(detail)
 
     weather_list = [WeatherInfo.model_validate(w)
                     for w in weather_info_raw if isinstance(w, dict)]
@@ -324,7 +327,7 @@ def _merge_day_edit(
 
 
 @router.post("/{draft_id}/day/{day_index}/assemble", response_model=DayDetailResponse,
-             summary="展开某天：规则装配 + 路线 + LLM 叙述")
+             summary="展开某天：规则装配、路线与当前行程说明")
 async def assemble_day(
     draft_id: str, day_index: int,
     overrides: DayEditRequest, force: bool = Query(False),
@@ -336,7 +339,7 @@ async def assemble_day(
     existing_days = json.loads(record.days_detail_json)
     if (not force) and existing_days[day_index] is not None and \
        existing_days[day_index].get("is_assembled"):
-        cached = DayDetail.model_validate(existing_days[day_index])
+        cached = _load_payload(record).days_detail[day_index]
         return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=cached)
 
     request = TripRequest.model_validate_json(record.request_json)
@@ -353,7 +356,7 @@ async def assemble_day(
         free_text_input=request.free_text_input or "",
         city=request.city,
     )
-    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
 
 
@@ -391,12 +394,12 @@ async def recompute_day(draft_id: str, day_index: int, edit: DayEditRequest):
     detail.day_budget = compute_day_budget(detail)
     # 保留当前 description（recompute 不写 LLM）
     detail.description = current.description if current else ""
-    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
 
 
 @router.post("/{draft_id}/day/{day_index}/narrative", response_model=DayDetailResponse,
-             summary="重写当日叙述文案（仅刷新 description）")
+             summary="刷新当日行程说明（依据已保存安排，无模型调用）")
 async def rewrite_narrative(draft_id: str, day_index: int):
     record = await trip_draft_service.get_draft(draft_id)
     _ensure_editable(record)
@@ -411,7 +414,7 @@ async def rewrite_narrative(draft_id: str, day_index: int):
         free_text_input=request.free_text_input or "",
         city=request.city,
     )
-    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
 
 
@@ -533,7 +536,7 @@ async def _ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReque
             raise HTTPException(422, detail='无法保留已有正餐时段，本次重排未保存；请先核对开始时间、景点时长和用餐安排')
     detail.day_budget = compute_day_budget(detail)
     detail.description = current.description if current else ""
-    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail)
 
 

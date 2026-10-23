@@ -149,7 +149,7 @@ async function onAIRearrange(idx: number, hint: string) {
 }
 
 async function onRewriteNarrative(idx: number) {
-  await withDayBusy(idx, '重写叙述中', async () => {
+  await withDayBusy(idx, '刷新说明中', async () => {
     const resp = await rewriteNarrative(draftId.value, idx)
     draft.value.days_detail.splice(idx, 1, resp.day_detail)
   })

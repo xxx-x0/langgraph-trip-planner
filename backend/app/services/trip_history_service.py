@@ -14,6 +14,8 @@ logger = get_logger(__name__)
 
 
 def build_trip_record(plan: TripPlan, request: Optional[TripRequest] = None) -> TripRecord:
+    from ..agents.langgraph_agent.assemble.narrative import refresh_trip_descriptions
+    plan = refresh_trip_descriptions(plan.model_copy(deep=True))
     plan_dict = plan.model_dump()
     request_dict = None
     if request:
@@ -153,3 +155,29 @@ def record_to_dict(record: TripRecord) -> dict:
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
+
+
+def project_saved_narratives(raw: dict) -> dict:
+    """Read-only view projection; do not rewrite the original stored JSON or extra fields."""
+    from ..agents.langgraph_agent.assemble.narrative import refresh_trip_descriptions
+    if not isinstance(raw, dict):
+        return None
+    try:
+        plan = refresh_trip_descriptions(TripPlan.model_validate(raw))
+    except (ValueError, TypeError):
+        raw["trip_tagline"] = ""
+        raw["overall_suggestions"] = "旧记录缺少可核对安排，请以原始行程数据为参考。"
+        raw["weather_summary"] = ""
+        raw.pop("narrative_source", None)
+        days = raw.get("days")
+        for day in days if isinstance(days, list) else []:
+            if isinstance(day, dict):
+                day.pop("description_source", None)
+                day["description"] = "旧记录缺少可核对安排，未展示旧版说明。"
+        return raw
+    for original, day in zip(raw.get("days", []), plan.days):
+        original.update(description=day.description, description_source=day.description_source,
+                        pending_confirmations=day.pending_confirmations)
+    raw.update(trip_tagline=plan.trip_tagline, overall_suggestions=plan.overall_suggestions,
+               weather_summary=plan.weather_summary, narrative_source=plan.narrative_source)
+    return raw

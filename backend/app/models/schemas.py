@@ -211,6 +211,8 @@ class RouteSegment(BaseModel):
 
 class DayPlan(BaseModel):
     """单日行程"""
+    description_source: Optional[str] = None
+    pending_confirmations: List[str] = Field(default_factory=list)
     date: str = Field(..., description="日期 YYYY-MM-DD")
     day_index: int = Field(..., description="第几天(从0开始)")
     description: str = Field(..., description="当日行程描述")
@@ -286,6 +288,7 @@ class MacroPlan(BaseModel):
 
 class TripPlan(BaseModel):
     """旅行计划"""
+    narrative_source: Optional[str] = None
     city: str = Field(..., description="目的地城市")
     start_date: str = Field(..., description="开始日期")
     end_date: str = Field(..., description="结束日期")
@@ -436,9 +439,11 @@ class DraftDayContext(BaseModel):
 
 class DayDetail(BaseModel):
     """详细阶段产物（每日装配后的完整时间轴）"""
+    description_source: Optional[str] = None
+    pending_confirmations: List[str] = Field(default_factory=list)
     day_index: int
     date: str
-    description: str = Field(default="", description="LLM 写的当日叙述")
+    description: str = Field(default="", description="按当前保存安排生成的说明")
     attractions: List[Attraction] = Field(default_factory=list)
     hotel: Optional[Hotel] = Field(default=None)
     meals: List[Meal] = Field(default_factory=list)

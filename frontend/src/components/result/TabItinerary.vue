@@ -26,7 +26,7 @@
                 <div class="info-card-icon">📝</div>
                 <div class="info-card-content">
                   <div class="info-card-label">行程描述</div>
-                  <div class="info-card-value">{{ day.description }}</div>
+                  <div class="info-card-value">{{ day.description_source === 'itinerary_facts_v1' ? day.description : '旧版说明尚未核对，请以行程数据为参考。' }}</div>
                 </div>
               </div>
               <div class="info-row-pair">
@@ -47,6 +47,7 @@
               </div>
             </div>
 
+            <ul v-if="day.pending_confirmations?.length"><li v-for="item in day.pending_confirmations" :key="item">{{ item }}</li></ul>
             <!-- 日程时间轴 -->
             <div class="section-block section-block-blue">
               <div class="section-block-title">⏰ 日程时间轴</div>

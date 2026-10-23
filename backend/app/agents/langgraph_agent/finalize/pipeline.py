@@ -14,27 +14,15 @@ from ..assemble.timeline import rule_assemble_day_timeline
 from ..assemble.route import compute_day_route
 from ..assemble.budget import compute_day_budget
 from ..assemble.schedule import schedule_day
+from ..assemble.narrative import refresh_day_description, refresh_trip_descriptions
 
 
 _finalize_locks = WeakValueDictionary()
 
 
 async def _run_global_synthesizer(trip_plan: TripPlan, free_text: str) -> Tuple[str, str, str]:
-    """复用旧 global_synthesizer_node 的核心 LLM 调用，返回 (tagline, suggestions, summary)"""
-    from ..nodes.generate import global_synthesizer_node, _generate_weather_summary_fallback
-    state = {
-        "trip_plan": trip_plan,
-        "request": _make_pseudo_request(trip_plan, free_text),
-        "weather_info": "",
-    }
-    try:
-        result = await global_synthesizer_node(state)
-        plan = result.get("trip_plan") or trip_plan
-        return plan.trip_tagline, plan.overall_suggestions, plan.weather_summary
-    except Exception as e:
-        print(f"⚠️ global_synthesizer 失败，使用兜底: {e}")
-        return "", "", _generate_weather_summary_fallback(trip_plan)
-
+    refresh_trip_descriptions(trip_plan)
+    return trip_plan.trip_tagline, trip_plan.overall_suggestions, trip_plan.weather_summary
 
 def _parse_ticket_price(val) -> int:
     """把发现页门票字段转成 int 元。
@@ -74,6 +62,8 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         date=detail.date,
         day_index=detail.day_index,
         description=detail.description,
+        description_source=detail.description_source,
+        pending_confirmations=detail.pending_confirmations,
         transportation=transportation,
         accommodation=accommodation,
         hotel=detail.hotel,
@@ -188,6 +178,7 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
             detail.day_budget = compute_day_budget(detail)
 
         schedule_day(detail)
+        refresh_day_description(detail, next((WeatherInfo.model_validate(w) for w in weather_info if isinstance(w, dict) and w.get("date") == detail.date), None))
         day_plans.append(_day_detail_to_day_plan(
             detail, request.transportation, request.accommodation
         ))

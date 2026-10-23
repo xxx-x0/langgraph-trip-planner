@@ -205,13 +205,15 @@ async def read_finalized_trip(record: TripDraft) -> tuple[TripPlan, int]:
         trip = await session.get(TripRecord, record.finalized_trip_id)
         if trip is None:
             raise ValueError("已定稿草稿的历史记录不存在，请检查或恢复历史记录")
-        return TripPlan.model_validate_json(trip.plan_data), trip.id
+        from ..agents.langgraph_agent.assemble.narrative import refresh_trip_descriptions
+        return refresh_trip_descriptions(TripPlan.model_validate_json(trip.plan_data)), trip.id
 
 
 async def persist_finalized_trip(draft_id: str, plan: TripPlan, request: TripRequest,
                                  expected_days_detail: str, extracted: dict | None, *, expected_request: str | None = None) -> tuple[TripPlan, int]:
     """One durable commit for history, draft and preferences, using existing tables."""
     from .trip_history_service import build_trip_record
+    from ..agents.langgraph_agent.assemble.narrative import refresh_trip_descriptions
     from .preferences_service import apply_extracted_preferences
     async with async_session() as session:
         # SQLite's write reservation serializes the check and insert across workers.
@@ -223,9 +225,10 @@ async def persist_finalized_trip(draft_id: str, plan: TripPlan, request: TripReq
             trip = await session.get(TripRecord, record.finalized_trip_id)
             if trip is None:
                 raise ValueError("已定稿草稿的历史记录不存在")
-            return TripPlan.model_validate_json(trip.plan_data), trip.id
+            return refresh_trip_descriptions(TripPlan.model_validate_json(trip.plan_data)), trip.id
         if (expected_request is not None and record.request_json != expected_request) or record.days_detail_json != expected_days_detail:
             raise DraftChangedDuringFinalize("定稿期间草稿已更新，本次未保存；请核对最新草稿后重试")
+        plan = refresh_trip_descriptions(plan.model_copy(deep=True))
         trip = build_trip_record(plan, request)
         session.add(trip)
         await session.flush()

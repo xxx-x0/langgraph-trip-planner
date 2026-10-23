@@ -52,7 +52,7 @@ async def get_trip(trip_id: int):
         raise HTTPException(status_code=404, detail="行程不存在")
     result = trip_history_service.record_to_dict(record)
     try:
-        result["plan"] = json.loads(record.plan_data)
+        result["plan"] = trip_history_service.project_saved_narratives(json.loads(record.plan_data))
     except (json.JSONDecodeError, TypeError):
         result["plan"] = None
     try:

@@ -1,65 +1,107 @@
-"""单日叙述文案（独立 LLM 调用，不参与时间轴编排）"""
+"""Descriptions are projections of saved itinerary facts, never free-form claims."""
+from collections import Counter
 from typing import Optional
 
-from langchain_core.messages import SystemMessage, HumanMessage
+from ....models.schemas import DayDetail, DayPlan, WeatherInfo, TripPlan
 
-from ....models.schemas import DayDetail, WeatherInfo
-from ....services.llm_service import get_llm
-from ..exceptions import _invoke_llm_with_retry
+DESCRIPTION_SOURCE = "itinerary_facts_v1"
 
 
-_DAY_NARRATIVE_PROMPT = """你是旅行文案专家。请根据已确定的当日行程，写一段简短的当日叙述文案。
+def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherInfo] = None) -> str:
+    """Brief guidance and separate confirmations, projected afresh after every edit."""
+    names = [a.name for a in day.attractions]
+    lines = []
+    if names:
+        focus = '、'.join(names[:2])
+        lines.append(f"今天先把时间留给{focus}。" if len(names) <= 2 else
+                     f"今天从{names[0]}开始，接着去{names[1]}，后面还有{len(names)-2}处安排。")
+    else:
+        lines.append('今天还没有安排景点，可以先把用餐和休息时间定下来。')
+    expected = Counter([('attraction',a.name) for a in day.attractions]+[('meal',m.name) for m in day.meals])
+    order = [(i.get('kind'),i.get('ref_name')) for i in day.timeline_order if i.get('kind') in {'attraction','meal'}]
+    entries = [(i.get('kind'),i.get('ref_name')) for i in day.timeline_schedule if i.get('kind') in {'attraction','meal'}]
+    valid = Counter(order) == expected and order == entries and bool(day.timeline_schedule) and day.timeline_schedule[0].get('start_time') == (day.day_start_time or '08:00')
+    schedule = day.timeline_schedule if valid else []
+    travel = sum(i.get('duration',0) for i in schedule if i.get('kind') == 'travel')
+    visits = sum(a.visit_duration or 120 for a in day.attractions)
+    if schedule and names:
+        lines.append(f'目前游览约{visits//60}小时{visits%60:02d}分，路上约{travel}分钟；这还没有算排队和额外休息。')
+    elif names:
+        lines.append('活动之间的时间还没有核对，先不要据此预约固定时段。')
+    unlocked = [n for n in names if n not in getattr(day,'locked_attraction_names',[])]
+    if len(names)>1 and unlocked:
+        lines.append(f'如果当天时间不够，可以先缩短{unlocked[-1]}的停留，再看是否保留。')
+    elif names:
+        lines.append('如果当天时间不够，可以先减少购物或拍照停留；需要删减景点时再调整安排。')
+    gaps = sorted((x for x in schedule if x.get('kind') == 'free_time' and x.get('duration',0)>60), key=lambda x:x['duration'], reverse=True)
+    if gaps:
+        lines.append(f"{gaps[0]['start_time']}至{gaps[0]['end_time']}尚未安排，可以留在附近自由活动。如想去别处，先核对后续路程。")
+    pending = []
+    unknown = [a.name for a in day.attractions if a.ticket_price is None]
+    if unknown: pending.append('票价待确认：'+'、'.join(unknown)+'；未知不代表免费。')
+    if names: pending.append('请核对景点开放日期和预约要求。')
+    if weather and weather.date == day.date and _weather_fact(weather):
+        pending.append('本次天气预报：'+_weather_fact(weather)+'；出发前再看一次最新预报。')
+    else: pending.append('当日天气尚未获取，出发前请查看预报。')
+    pending.extend(day.meal_adjustments)
+    pending.extend(day.meal_warnings)
+    day.pending_confirmations = list(dict.fromkeys(pending))
+    day.description = '\n\n'.join(lines)
+    day.description_source = DESCRIPTION_SOURCE
+    return day.description
 
-**严格约束:**
-1. 不要重新编排顺序、不要推荐新景点/餐厅、不要生成时间轴
-2. 仅输出 2-3 段 Markdown 文案（含穿衣建议、亮点、注意事项）
-3. 字数 200-400 字之间
-4. 不要列出门票价格、不要列出路线段距离时间
-"""
+
+async def write_day_narrative_llm(day_detail: DayDetail, weather: Optional[WeatherInfo] = None,
+                                  free_text_input: Optional[str] = None, city: str = "") -> str:
+    """Compatibility callable; refreshes facts without an LLM or extra service request."""
+    return refresh_day_description(day_detail, weather)
 
 
-async def write_day_narrative_llm(
-    day_detail: DayDetail,
-    weather: Optional[WeatherInfo] = None,
-    free_text_input: Optional[str] = None,
-    city: str = "",
-) -> str:
-    attrs = "、".join(a.name for a in day_detail.attractions)
-    meals = "、".join(f"{m.name}({(m.category or m.type)})" for m in day_detail.meals)
-    hotel_name = day_detail.hotel.name if day_detail.hotel else "未定"
-
-    weather_line = ""
-    if weather:
-        weather_line = (
-            f"天气: 白天{weather.day_weather} {weather.day_temp}°C / "
-            f"夜间{weather.night_weather} {weather.night_temp}°C, "
-            f"{weather.wind_direction} {weather.wind_power}"
-        )
-
-    free_text_line = ""
-    if free_text_input:
-        free_text_line = f"\n用户额外要求: {free_text_input}"
-
-    prompt = f"""请为 {city} 的第 {day_detail.day_index + 1} 天 ({day_detail.date}) 写一段叙述文案。
-
-已确定的安排:
-- 景点: {attrs or '无'}
-- 餐饮: {meals or '无（用户未选择）'}
-- 入住: {hotel_name}
-{weather_line}{free_text_line}
-
-请按要求输出 Markdown 文案。"""
-
-    llm = get_llm()
-    try:
-        response = await _invoke_llm_with_retry(
-            llm, [SystemMessage(content=_DAY_NARRATIVE_PROMPT),
-                  HumanMessage(content=prompt)]
-        )
-        text = (response.content or "").strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-        return text
-    except Exception as e:
-        print(f"⚠️ write_day_narrative_llm 失败: {e}")
+def _weather_fact(weather: Optional[WeatherInfo]) -> str:
+    if not weather:
         return ""
+    parts = []
+    for prefix, label in [("day", "白天"), ("night", "夜间")]:
+        condition = getattr(weather, prefix + "_weather")
+        if condition:
+            temperature = getattr(weather, prefix + "_temp")
+            has_temp = prefix + "_temp" in weather.model_fields_set and str(temperature).strip()
+            parts.append(label + condition + (f" {temperature}°C" if has_temp else ""))
+    return "，".join(parts)
+
+
+def _confirmed_overall_suggestions(plan) -> str:
+    lines = [f"这次在{plan.city}安排了{len(plan.days)}天；请按每日保存的安排核对开放日期和预约要求。"]
+    if plan.budget:
+        lines.append(f"当前保存的费用预估为{plan.budget.total:g}元；费用口径和缺项尚未核对，不能据此判断最终花费或是否在预算上限内。")
+    notes = list(dict.fromkeys(note for day in plan.days for note in day.meal_adjustments + day.meal_warnings))
+    if notes: lines.append('用餐待确认：'+'；'.join(notes)+'。')
+    forecasts = [f'{w.date}：{_weather_fact(w)}' for w in plan.weather_info if _weather_fact(w)]
+    lines.append('本次查询的天气预报：'+'；'.join(forecasts)+'。出发前再看一次最新预报。' if forecasts else '天气数据未获取，请在出发前查询预报。')
+    return '\n\n'.join(lines)
+
+def _generate_weather_summary_fallback(trip_plan) -> str:
+    from collections import Counter
+    if not trip_plan.weather_info:
+        return ""
+    weathers = [w.day_weather for w in trip_plan.weather_info if w.day_weather]
+    if not weathers:
+        return ""
+    counter = Counter(weathers)
+    most_common = counter.most_common(1)[0][0]
+    if len(counter) == 1:
+        return f"{most_common}为主"
+    second = counter.most_common(2)[1][0] if len(counter) > 1 else ""
+    return f"{most_common}间{second}为主" if second else f"{most_common}为主"
+
+
+
+def refresh_trip_descriptions(plan: TripPlan) -> TripPlan:
+    weather_by_date = {w.date: w for w in plan.weather_info}
+    for day in plan.days:
+        refresh_day_description(day, weather_by_date.get(day.date))
+    plan.trip_tagline = f"{plan.city} · {len(plan.days)}日行程"
+    plan.overall_suggestions = _confirmed_overall_suggestions(plan)
+    plan.weather_summary = _generate_weather_summary_fallback(plan)
+    plan.narrative_source = DESCRIPTION_SOURCE
+    return plan
