@@ -8,6 +8,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from langgraph.graph import StateGraph, START, END
 
 from ..exceptions import _invoke_llm_with_retry
+from ....services.external_calls import ExternalServiceError, FailureKind
 from ..prompts import PLANNER_AGENT_PROMPT
 from ..state import TripPlannerState, DayPlanLocalState
 from ..utils.parsing import _parse_response, _validate_plan_coordinates, _create_fallback_plan
@@ -599,11 +600,14 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
         try:
             if structured_llm is not None:
                 try:
-                    trip_plan = await structured_llm.ainvoke(messages)
+                    from ....services.llm_service import invoke_structured_or_json
+                    trip_plan = await invoke_structured_or_json(llm, messages, TripPlan)
                     if trip_plan is not None:
                         return {"trip_plan": _validate_plan_coordinates(trip_plan)}
                     print("⚠️ Structured Output 返回空结果，降级到手动解析")
                 except Exception as e:
+                    if isinstance(e, ExternalServiceError):
+                        raise
                     err_msg = str(e)
                     if "response_format" in err_msg or "unavailable" in err_msg or "400" in err_msg:
                         print(f"⚠️ Structured Output 不受API支持，降级到手动解析: {err_msg[:100]}")
@@ -615,6 +619,8 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
             trip_plan = _parse_response(response.content, request)
             return {"trip_plan": trip_plan}
         except Exception as e:
+            if isinstance(e, ExternalServiceError):
+                raise
             print(f"⚠️ 解析计划失败 (尝试 {attempt + 1}/{max_attempts}): {str(e)[:200]}")
             if attempt < max_attempts - 1:
                 prompt = f"""上一次生成的JSON格式有误或被截断。请重新生成，确保：
@@ -735,7 +741,8 @@ async def macro_planner_node(state: TripPlannerState) -> Dict[str, Any]:
 
     if structured_llm is not None:
         try:
-            macro_plan = await structured_llm.ainvoke(messages)
+            from ....services.llm_service import invoke_structured_or_json
+            macro_plan = await invoke_structured_or_json(llm, messages, MacroPlan)
             if macro_plan is not None:
                 # 后处理：强制天数等于 travel_days
                 from datetime import datetime, timedelta
@@ -773,6 +780,8 @@ async def macro_planner_node(state: TripPlannerState) -> Dict[str, Any]:
                 return {"macro_plan": macro_plan}
             print("⚠️ Structured Output 返回空结果，降级到手动解析")
         except Exception as e:
+            if isinstance(e, ExternalServiceError):
+                raise ExternalServiceError('llm', 'macro_planner', e.kind) from None
             print(f"⚠️ Structured Output 失败，降级到手动解析: {str(e)[:100]}")
 
     try:
@@ -833,6 +842,10 @@ async def macro_planner_node(state: TripPlannerState) -> Dict[str, Any]:
         print(f"✅ 宏观编排完成(手动解析): {macro_plan.total_days}天, 共{sum(len(d.attraction_names) for d in macro_plan.days)}个景点")
         return {"macro_plan": macro_plan}
     except Exception as e:
+        if isinstance(e, ExternalServiceError):
+            raise ExternalServiceError('llm', 'macro_planner', e.kind) from None
+        if state.get('user_selected_attractions'):
+            raise ExternalServiceError('llm', 'macro_planner', FailureKind.INVALID_RESPONSE) from None
         print(f"❌ 宏观编排失败，使用默认骨架: {str(e)[:200]}")
         from datetime import datetime, timedelta
         start_date = datetime.strptime(request.start_date, "%Y-%m-%d")
@@ -1099,7 +1112,7 @@ async def day_plan_generator_node(state: DayPlanLocalState) -> Dict[str, Any]:
         print(f"⚠️ 第{day_index + 1}天生成失败 (重试{retry_count + 1}): {err_msg}")
         return {
             "day_plan": None,
-            "retry_count": retry_count + 1,
+            "retry_count": (state.get("max_retries", 3) if isinstance(e, ExternalServiceError) else retry_count + 1),
             "last_error": err_msg,
         }
 

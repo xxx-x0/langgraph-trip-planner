@@ -10,6 +10,8 @@ import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from ..services.external_calls import ExternalServiceError
 from ..config import get_settings, validate_config, print_config
 from ..logger import setup_logging, log_print, LOG_FILE
 
@@ -35,6 +37,13 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+
+@app.exception_handler(ExternalServiceError)
+async def external_failure_handler(request, error):
+    return JSONResponse(status_code=504 if error.kind == 'timeout' else 503,
+                        content={'detail': str(error), 'step': error.operation,
+                                 'retryable': error.retryable})
 
 # 配置CORS
 app.add_middleware(
@@ -114,6 +123,13 @@ async def shutdown_event():
             await task
         except asyncio.CancelledError:
             pass
+    from ..services import langchain_amap_tools, aigohotel_mcp_service, bing_mcp_service
+    from ..services.external_calls import clear_external_state
+    from ..services.llm_service import close_llm
+    await asyncio.gather(*(module._reset_mcp_client() for module in
+        [langchain_amap_tools, aigohotel_mcp_service, bing_mcp_service]), return_exceptions=True)
+    await close_llm()
+    clear_external_state()
 
 
 @app.get("/")

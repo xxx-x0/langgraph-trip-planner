@@ -145,24 +145,16 @@ def _route_to_day_plans(state: TripPlannerState) -> List[Send]:
 
 
 def create_trip_planner_graph():
-    from langgraph.types import RetryPolicy
 
     workflow = StateGraph(TripPlannerState)
 
-    search_retry = RetryPolicy(
-        max_attempts=2,
-        initial_interval=1.0,
-        backoff_factor=2.0,
-        retry_on=lambda e: isinstance(e, RetryableError),
-    )
-
     workflow.add_node("load_user_preferences", load_user_preferences_node)
-    workflow.add_node("search_attractions", search_attractions_node, retry=search_retry)
-    workflow.add_node("search_weather", search_weather_node, retry=search_retry)
+    workflow.add_node("search_attractions", search_attractions_node)
+    workflow.add_node("search_weather", search_weather_node)
     workflow.add_node("gather_search", gather_search_node)
     workflow.add_node("error_handler", error_handler_node)
     workflow.add_node("cluster_attractions", cluster_attractions_node)
-    workflow.add_node("search_hotels_by_day", search_hotels_by_day_node, retry=search_retry)
+    workflow.add_node("search_hotels_by_day", search_hotels_by_day_node)
     workflow.add_node("search_food", search_food_node)
     workflow.add_node("plan_route", plan_route_node)
     workflow.add_node("macro_planner", macro_planner_node)
@@ -209,19 +201,11 @@ def create_trip_planner_graph():
 
 def create_discovery_graph():
     """创建景点发现 Graph — 大量搜索景点并返回结构化数据供用户选择，分批流式输出"""
-    from langgraph.types import RetryPolicy
 
     workflow = StateGraph(DiscoveryState)
 
-    search_retry = RetryPolicy(
-        max_attempts=2,
-        initial_interval=1.0,
-        backoff_factor=2.0,
-        retry_on=lambda e: isinstance(e, RetryableError),
-    )
-
-    workflow.add_node("search_attractions_discovery", search_attractions_discovery_node, retry=search_retry)
-    workflow.add_node("search_weather", search_weather_node, retry=search_retry)
+    workflow.add_node("search_attractions_discovery", search_attractions_discovery_node)
+    workflow.add_node("search_weather", search_weather_node)
     workflow.add_node("gather_discovery", gather_discovery_node)
 
     workflow.add_edge(START, "search_attractions_discovery")
@@ -239,21 +223,13 @@ def create_planning_graph():
     详细阶段（day_plan_subgraph、reduce_assemble、global_synthesizer、
     extract_preferences）不再在此图中执行，改由 API 端点和 finalize 流程触发。
     """
-    from langgraph.types import RetryPolicy
 
     workflow = StateGraph(TripPlannerState)
-
-    search_retry = RetryPolicy(
-        max_attempts=2,
-        initial_interval=1.0,
-        backoff_factor=2.0,
-        retry_on=lambda e: isinstance(e, RetryableError),
-    )
 
     workflow.add_node("load_user_preferences", load_user_preferences_node)
     workflow.add_node("cluster_from_selections", cluster_from_selections_node)
     workflow.add_node("search_dining_pool", search_dining_pool_node)
-    workflow.add_node("search_hotels_by_day", search_hotels_by_day_node, retry=search_retry)
+    workflow.add_node("search_hotels_by_day", search_hotels_by_day_node)
     workflow.add_node("macro_planner", macro_planner_node)
     workflow.add_node("save_draft", save_draft_node)
 

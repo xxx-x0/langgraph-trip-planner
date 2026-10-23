@@ -1,5 +1,6 @@
 """从旅游攻略文本提取景点名，并模糊匹配到当前景点池。"""
 
+import asyncio
 import json
 import logging
 import re
@@ -9,6 +10,7 @@ from ....services.llm_service import get_llm, is_structured_output_supported
 
 
 logger = logging.getLogger(__name__)
+_PICK_TIMEOUT_SECONDS = 60.0
 
 
 # 按长度降序，确保更长的后缀优先匹配
@@ -179,11 +181,11 @@ async def extract_attractions_from_strategy(
             class _Out(BaseModel):
                 attractions: _L[str]
 
-            structured_llm = llm.with_structured_output(_Out, method="function_calling")
-            resp = await structured_llm.ainvoke(prompt)
+            from ....services.llm_service import invoke_structured_or_json
+            resp = await invoke_structured_or_json(llm, prompt, _Out)
             names = list(resp.attractions or [])
         else:
-            raw = await llm.ainvoke(prompt)
+            raw = await _invoke_llm_with_retry(llm, prompt)
             text = raw.content if hasattr(raw, "content") else str(raw)
             m = re.search(r"\{.*\}", text, re.DOTALL)
             names = json.loads(m.group(0)).get("attractions", []) if m else []
@@ -205,6 +207,7 @@ async def extract_attractions_from_strategy(
 # ============================================================================
 
 from .duration import estimate_durations_batch
+from ..exceptions import _invoke_llm_with_retry
 
 
 def _parse_rating(value: Any) -> float:
@@ -372,16 +375,18 @@ async def pick_attractions_from_pool(
                 must: List[_PickItem] = Field(default_factory=list)
                 optional: List[_PickItem] = Field(default_factory=list)
 
-            resp = await llm.with_structured_output(
-                _PickOut, method="function_calling"
-            ).ainvoke(prompt)
+            from ....services.llm_service import invoke_structured_or_json
+            resp = await asyncio.wait_for(
+                invoke_structured_or_json(llm, prompt, _PickOut, timeout=_PICK_TIMEOUT_SECONDS),
+                timeout=_PICK_TIMEOUT_SECONDS,
+            )
             must_ids = [m.poi_id for m in resp.must]
             optional_ids = [o.poi_id for o in resp.optional]
             summary = resp.summary
             raw_must = [m.model_dump() for m in resp.must]
             raw_optional = [o.model_dump() for o in resp.optional]
         else:
-            raw = await llm.ainvoke(prompt)
+            raw = await _invoke_llm_with_retry(llm, prompt, max_retries=1, per_attempt_timeout=_PICK_TIMEOUT_SECONDS)
             text = raw.content if hasattr(raw, "content") else str(raw)
             m = re.search(r"\{.*\}", text, re.DOTALL)
             if not m:

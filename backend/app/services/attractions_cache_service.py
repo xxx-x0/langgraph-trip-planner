@@ -338,19 +338,9 @@ async def _invoke_tool_with_retry_local(
     max_retries: int = 2,
     per_attempt_timeout: float = 15.0,
 ) -> Any:
-    last_error: Optional[Exception] = None
-    for attempt in range(max_retries + 1):
-        try:
-            return await asyncio.wait_for(tool.ainvoke(args), timeout=per_attempt_timeout)
-        except Exception as e:
-            last_error = e
-            if attempt < max_retries:
-                await asyncio.sleep(0.5 * (attempt + 1))
-                continue
-            raise
-    if last_error:
-        raise last_error
-    raise RuntimeError("工具调用失败")
+    from ..agents.langgraph_agent.exceptions import _invoke_tool_with_retry
+    return await _invoke_tool_with_retry(tool, args, max_retries=min(max_retries+1, 2),
+                                         per_attempt_timeout=per_attempt_timeout)
 
 
 class AttractionsCacheService:

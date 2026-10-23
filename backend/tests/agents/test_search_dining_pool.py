@@ -87,3 +87,18 @@ async def test_no_coordinates_falls_back_to_city_search():
     for _, center, city in called_with:
         assert center is None
         assert city == "北京"
+
+
+@pytest.mark.asyncio
+async def test_detail_batch_can_recover_after_previous_batch_trips_circuit():
+    from app.agents.langgraph_agent.nodes.food import _enrich_pois_with_detail
+    failed=[{'name':str(i),'poi_id':str(i)} for i in range(3)]
+    healthy=[{'name':'recovered','poi_id':'recovered'}]
+    response={'id':'recovered','name':'recovered','location':'116.4,39.9','cost':'68','open_time':'11:00-23:00'}
+    with patch('app.agents.langgraph_agent.nodes.food._invoke_tool_with_retry',
+               new=AsyncMock(side_effect=[ConnectionError('down')]*3+[response])) as call, patch(
+                   'app.agents.langgraph_agent.nodes.food.asyncio.sleep',new=AsyncMock()):
+        await _enrich_pois_with_detail(failed,object())
+        await _enrich_pois_with_detail(healthy,object())
+    assert call.await_count==4
+    assert healthy[0]['longitude']==116.4 and healthy[0]['avg_cost']==68

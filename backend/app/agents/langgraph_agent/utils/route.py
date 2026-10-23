@@ -212,33 +212,21 @@ async def _invoke_route_tool(
     tool: Any,
     args: Dict[str, Any],
 ) -> tuple[Any, Any]:
-    """Call a route tool with the existing reconnect behavior."""
-    last_err: Optional[Exception] = None
-    result = None
-    for attempt in range(3):
-        try:
-            result = await asyncio.wait_for(tool.ainvoke(args), timeout=30.0)
-            return tool, result
-        except Exception as retry_e:
-            last_err = retry_e
-            if _is_connection_error(retry_e):
-                print(f"⚠️ 路线工具连接异常 (尝试 {attempt+1}/3): {str(retry_e)[:100]}")
-                await _reset_mcp_client()
-                try:
-                    tool = await service.get_tool(tool_name)
-                except Exception:
-                    tool = None
-                if tool is None:
-                    break
-            elif attempt < 2:
-                print(f"⚠️ 路线工具调用失败 (尝试 {attempt+1}/3): {str(retry_e)[:100]}")
-                await asyncio.sleep(min(2 ** attempt, 5))
-            else:
-                break
-    raise last_err or RuntimeError("路线工具调用失败")
+    """All tool handles, including get_tool callers, use the same retry owner."""
+    from ..exceptions import _invoke_tool_with_retry
+    return tool, await _invoke_tool_with_retry(tool, args)
 
 
-async def compute_route_segments(
+async def compute_route_segments(waypoints, transportation, city):
+    from ....services.external_calls import operation_deadline, ExternalServiceError, FailureKind
+    try:
+        async with operation_deadline(60):
+            return await _compute_route_segments(waypoints, transportation, city)
+    except TimeoutError:
+        raise ExternalServiceError('amap', '路线计算', FailureKind.TIMEOUT) from None
+
+
+async def _compute_route_segments(
     waypoints: List[Dict],
     transportation: str,
     city: str,

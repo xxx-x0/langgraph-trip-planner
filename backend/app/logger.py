@@ -5,6 +5,7 @@
 
 import logging
 import sys
+from .services.safe_errors import RedactingFormatter
 from pathlib import Path
 from datetime import datetime
 
@@ -16,7 +17,7 @@ LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOG_DIR / f"app_{datetime.now().strftime('%Y%m%d')}.log"
 
 # 创建日志格式
-formatter = logging.Formatter(
+formatter = RedactingFormatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )

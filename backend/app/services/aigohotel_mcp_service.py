@@ -12,12 +12,15 @@
 import asyncio
 import json
 import threading
+from datetime import date, timedelta
 from typing import Optional, Dict, Any, List
 
 from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from ..config import get_settings
+from .mcp_gateway import MCPGateway
+from .external_calls import decode_tool_result
 
 _mcp_client: Optional[MultiServerMCPClient] = None
 _mcp_tools: Optional[List[BaseTool]] = None
@@ -104,28 +107,24 @@ async def _init_mcp_client() -> None:
                 print(f"     ... 还有 {len(_mcp_tools) - 5} 个工具")
 
 
-async def get_mcp_tools() -> List[BaseTool]:
+async def _load_raw_tools():
     await _init_mcp_client()
     return _mcp_tools
 
 
+_gateway = MCPGateway('aigohotel', _load_raw_tools, _reset_mcp_client)
+
+
+async def get_mcp_tools() -> List[BaseTool]:
+    return await _gateway.tools()
+
+
 async def get_mcp_tool_by_name(name: str) -> Optional[BaseTool]:
-    tools = await get_mcp_tools()
-    for t in tools:
-        if t.name == name or t.name.lower() == name.lower():
-            return t
-    return None
+    return await _gateway.tool(name)
 
 
-def _parse_result(result: Any) -> Any:
-    if isinstance(result, (dict, list)):
-        return result
-    if isinstance(result, str):
-        try:
-            return json.loads(result)
-        except (json.JSONDecodeError, TypeError):
-            return {"raw_result": result}
-    return {"raw_result": str(result)}
+def _parse_result(result):
+    return decode_tool_result(result)
 
 
 class AIGoHotelService:
@@ -140,48 +139,12 @@ class AIGoHotelService:
     async def _ensure_initialized(self) -> None:
         await _init_mcp_client()
 
-    async def _call_tool(
-        self,
-        tool_name: str,
-        arguments: Dict[str, Any],
-        timeout: float = 30.0,
-    ) -> Any:
-        await self._ensure_initialized()
-        tool = await get_mcp_tool_by_name(tool_name)
-        if tool is None:
-            raise ValueError(f"AIGoHotel MCP 工具不存在: {tool_name}")
-
-        try:
-            result = await asyncio.wait_for(
-                tool.ainvoke(arguments), timeout=timeout
-            )
-            return result
-        except Exception as e:
-            if _is_connection_error(e):
-                print(f"🔄 AIGoHotel MCP 连接异常 [{tool_name}]: {str(e)[:150]}")
-                print("   尝试重置客户端并重新连接...")
-                await _reset_mcp_client()
-                try:
-                    await self._ensure_initialized()
-                    tool = await get_mcp_tool_by_name(tool_name)
-                    if tool is None:
-                        raise ValueError(
-                            f"重连后 AIGoHotel MCP 工具仍不存在: {tool_name}"
-                        )
-                    result = await asyncio.wait_for(
-                        tool.ainvoke(arguments), timeout=timeout
-                    )
-                    print(f"✅ AIGoHotel MCP 重连后工具调用成功 [{tool_name}]")
-                    return result
-                except Exception as reconnect_err:
-                    print(f"❌ AIGoHotel MCP 重连后调用仍失败 [{tool_name}]: {str(reconnect_err)[:150]}")
-                    raise
-            raise
+    async def _call_tool(self, tool_name: str, arguments: Dict[str, Any], timeout: float = 30.0) -> Any:
+        return await _gateway.call(tool_name, arguments, timeout=timeout)
 
     async def health_check(self) -> bool:
         try:
-            await self._ensure_initialized()
-            return _mcp_tools is not None and len(_mcp_tools) > 0
+            return bool(await _gateway.tools())
         except Exception:
             return False
 
@@ -267,8 +230,7 @@ class AIGoHotelService:
         return _parse_result(result)
 
     async def get_tools(self) -> List[BaseTool]:
-        await self._ensure_initialized()
-        return _mcp_tools
+        return await _gateway.tools()
 
     async def get_tool(self, name: str) -> Optional[BaseTool]:
         return await get_mcp_tool_by_name(name)

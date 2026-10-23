@@ -12,6 +12,7 @@ from typing import Any, Optional
 import httpx
 
 from ..models.schemas import WeatherInfo
+from .external_calls import invoke_external, CallPolicy
 
 
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
@@ -111,6 +112,13 @@ class OpenMeteoWeatherService:
         return None
 
     async def fetch_daily_weather(
+        self, city: str, start_date: str, end_date: str,
+    ) -> list[WeatherInfo]:
+        return await invoke_external('open_meteo', 'daily_forecast',
+            lambda: self._fetch_daily_weather(city, start_date, end_date),
+            policy=CallPolicy(total_timeout=20, attempt_timeout=12, max_attempts=2))
+
+    async def _fetch_daily_weather(
         self,
         city: str,
         start_date: str,

@@ -13,6 +13,8 @@ from langchain_core.tools import BaseTool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from ..config import get_settings
+from .mcp_gateway import MCPGateway
+from .external_calls import decode_tool_result
 
 _mcp_client: Optional[MultiServerMCPClient] = None
 _mcp_tools: Optional[List[BaseTool]] = None
@@ -98,17 +100,20 @@ async def _init_mcp_client() -> None:
                 print(f"     - {t.name}")
 
 
-async def get_mcp_tools() -> List[BaseTool]:
+async def _load_raw_tools():
     await _init_mcp_client()
     return _mcp_tools
 
 
+_gateway = MCPGateway('bing', _load_raw_tools, _reset_mcp_client)
+
+
+async def get_mcp_tools() -> List[BaseTool]:
+    return await _gateway.tools()
+
+
 async def get_mcp_tool_by_name(name: str) -> Optional[BaseTool]:
-    tools = await get_mcp_tools()
-    for t in tools:
-        if t.name == name or t.name.lower() == name.lower():
-            return t
-    return None
+    return await _gateway.tool(name)
 
 
 class BingMCPService:
@@ -117,43 +122,8 @@ class BingMCPService:
     async def _ensure_initialized(self) -> None:
         await _init_mcp_client()
 
-    async def _call_tool(
-        self,
-        tool_name: str,
-        arguments: Dict[str, Any],
-        timeout: float = 30.0,
-    ) -> Any:
-        await self._ensure_initialized()
-        tool = await get_mcp_tool_by_name(tool_name)
-        if tool is None:
-            raise ValueError(f"必应 MCP 工具不存在: {tool_name}")
-
-        try:
-            result = await asyncio.wait_for(
-                tool.ainvoke(arguments), timeout=timeout
-            )
-            return result
-        except Exception as e:
-            if _is_connection_error(e):
-                print(f"🔄 必应 MCP 连接异常 [{tool_name}]: {str(e)[:150]}")
-                print("   尝试重置客户端并重新连接...")
-                await _reset_mcp_client()
-                try:
-                    await self._ensure_initialized()
-                    tool = await get_mcp_tool_by_name(tool_name)
-                    if tool is None:
-                        raise ValueError(
-                            f"重连后必应 MCP 工具仍不存在: {tool_name}"
-                        )
-                    result = await asyncio.wait_for(
-                        tool.ainvoke(arguments), timeout=timeout
-                    )
-                    print(f"✅ 必应 MCP 重连后工具调用成功 [{tool_name}]")
-                    return result
-                except Exception as reconnect_err:
-                    print(f"❌ 必应 MCP 重连后调用仍失败 [{tool_name}]: {str(reconnect_err)[:150]}")
-                    raise
-            raise
+    async def _call_tool(self, tool_name: str, arguments: Dict[str, Any], timeout: float = 30.0) -> Any:
+        return await _gateway.call(tool_name, arguments, timeout=timeout)
 
     async def search(self, query: str, count: int = 5, offset: int = 0) -> Any:
         """必应搜索"""
@@ -164,18 +134,17 @@ class BingMCPService:
         )
         return result
 
-    async def crawl_webpage(self, url: str) -> Any:
+    async def crawl_webpage(self, uuids: List[str], url_map: Dict[str, str]) -> Any:
         """抓取网页内容"""
         result = await self._call_tool(
             "crawl_webpage",
-            {"url": url},
+            {"uuids": uuids, "urlMap": url_map},
             timeout=30.0,
         )
         return result
 
     async def get_tools(self) -> List[BaseTool]:
-        await self._ensure_initialized()
-        return _mcp_tools
+        return await _gateway.tools()
 
     async def get_tool(self, name: str) -> Optional[BaseTool]:
         return await get_mcp_tool_by_name(name)

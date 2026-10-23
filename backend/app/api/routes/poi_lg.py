@@ -16,6 +16,7 @@ from ...models.schemas import (
 )
 from ...services.langchain_amap_tools import get_langchain_amap_service
 from ...services.unsplash_service import get_unsplash_service
+from ...services.external_calls import operation_deadline
 
 router = APIRouter(prefix="/poi", tags=["POI"])
 
@@ -80,14 +81,17 @@ async def get_attraction_photo(
         unsplash_service = get_unsplash_service()
 
         query = f"{name} {city} scenic" if city else f"{name} China landmark"
-        photo_url = unsplash_service.get_photo_url(query)
-
-        if not photo_url:
-            photo_url = unsplash_service.get_photo_url(name)
+        try:
+            async with operation_deadline(12):
+                photo_url = await unsplash_service.get_photo_url(query)
+                if not photo_url:
+                    photo_url = await unsplash_service.get_photo_url(name)
+        except TimeoutError:
+            photo_url = None
 
         return {
-            "success": True,
-            "message": "获取图片成功",
+            "success": bool(photo_url),
+            "message": "获取图片成功" if photo_url else "图片暂不可用，可稍后重试；行程已保留",
             "data": {
                 "name": name,
                 "photo_url": photo_url

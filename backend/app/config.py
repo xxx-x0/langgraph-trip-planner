@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Literal
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_base_url: str = ""
     llm_model_name: str = ""
+    llm_thinking_mode: Literal["enabled", "disabled"] = "disabled"
+    llm_structured_output_mode: Literal["json_prompt", "function_calling", "auto"] = "json_prompt"
+    external_llm_timeout: float = 60.0
 
     # 日志配置
     log_level: str = "INFO"
@@ -116,7 +119,7 @@ def print_config():
     llm_model = settings.llm_model_name or os.getenv("LLM_MODEL_ID") or settings.openai_model
 
     print(f"LLM API Key: {'已配置' if llm_api_key else '未配置'}")
-    print(f"LLM Base URL: {llm_base_url}")
+    print(f"LLM Base URL: {'已配置' if llm_base_url else '默认'}")
     print(f"LLM Model: {llm_model}")
     print(f"日志级别: {settings.log_level}")
 

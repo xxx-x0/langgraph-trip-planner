@@ -2,6 +2,8 @@
 
 import os
 import threading
+import json
+import re
 from typing import Optional
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_openai import ChatOpenAI
@@ -41,86 +43,80 @@ def get_llm() -> BaseChatModel:
             base_url=base_url,
             temperature=0.2,
             request_timeout=120,
-            max_retries=2,
+            max_retries=0,
             max_tokens=8192,
+            extra_body=(
+                {"thinking": {"type": settings.llm_thinking_mode}}
+                if model_name.lower().startswith("deepseek-v4") or model_name.lower() == "deepseek-flash"
+                else None
+            ),
         )
 
         print(f"✅ LangChain LLM服务初始化成功")
-        print(f"   基础URL: {base_url or '默认 OpenAI 节点'}")
+        print("   基础URL: 已配置" if base_url else "   基础URL: 默认 OpenAI 节点")
         print(f"   模型名称: {model_name}")
 
     return _llm_instance
 
-_STRUCTURED_OUTPUT_UNSUPPORTED_PATTERNS = [
-    "deepseek",
-    "qwen",
-    "doubao",
-    "yi",
-    "zhipu",
-    "glm",
-    "moonshot",
-    "minimax",
-    "baichuan",
-]
+_structured_capability: Optional[bool] = None
 
 
 def is_structured_output_supported() -> bool:
-    global _llm_instance
-    if _llm_instance is None:
-        get_llm()
-    model_name = (_llm_instance.model_name or "").lower()
-    base_url = ""
-    if hasattr(_llm_instance, 'openai_api_base') and _llm_instance.openai_api_base:
-        base_url = _llm_instance.openai_api_base.lower()
-    elif hasattr(_llm_instance, 'base_url') and _llm_instance.base_url:
-        base_url = str(_llm_instance.base_url).lower()
-    combined = model_name + " " + base_url
-    for pattern in _STRUCTURED_OUTPUT_UNSUPPORTED_PATTERNS:
-        if pattern in combined:
-            return False
-    return True
+    return get_settings().llm_structured_output_mode != 'json_prompt' and _structured_capability is not False
+
+
+async def invoke_structured_or_json(llm, messages, schema, *, timeout=60):
+    from .external_calls import ExternalServiceError, FailureKind
+    try:
+        return await _invoke_structured_or_json(llm, messages, schema, timeout=timeout)
+    except TimeoutError:
+        raise ExternalServiceError('llm', 'structured_output', FailureKind.TIMEOUT) from None
+
+
+async def _invoke_structured_or_json(llm, messages, schema, *, timeout=60):
+    """The first requested structured call probes support; fallback shares its deadline."""
+    global _structured_capability
+    from .external_calls import invoke_llm, ExternalServiceError, FailureKind, operation_deadline
+    async with operation_deadline(min(timeout, get_settings().external_llm_timeout)):
+        if is_structured_output_supported():
+            try:
+                result = await invoke_llm(llm.with_structured_output(schema, method='function_calling'),
+                                          messages, max_attempts=1, timeout=timeout)
+                _structured_capability = True
+                return result
+            except (ValueError, NotImplementedError):
+                _structured_capability = False
+            except ExternalServiceError as error:
+                # Authentication, outages and timeouts are not capability probes.
+                if error.kind != FailureKind.INVALID_REQUEST:
+                    raise
+                _structured_capability = False
+        result = await invoke_llm(llm, messages, max_attempts=1, timeout=timeout)
+        text = result.content if hasattr(result, 'content') else str(result)
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if not match:
+            raise ExternalServiceError('llm', 'json_parse', FailureKind.INVALID_RESPONSE)
+        try:
+            return schema.model_validate(json.loads(match.group()))
+        except (ValueError, TypeError):
+            raise ExternalServiceError('llm', 'json_parse', FailureKind.INVALID_RESPONSE) from None
 
 
 def reset_llm():
     """重置LLM实例(用于测试或重新配置)"""
-    global _llm_instance
+    global _llm_instance, _structured_capability
     _llm_instance = None
-
-    
-# """LLM服务模块"""
-
-# from hello_agents import HelloAgentsLLM
-# from ..config import get_settings
-
-# # 全局LLM实例
-# _llm_instance = None
+    _structured_capability = None
 
 
-# def get_llm() -> HelloAgentsLLM:
-#     """
-#     获取LLM实例(单例模式)
-    
-#     Returns:
-#         HelloAgentsLLM实例
-#     """
-#     global _llm_instance
-    
-#     if _llm_instance is None:
-#         settings = get_settings()
-        
-#         # HelloAgentsLLM会自动从环境变量读取配置
-#         # 包括OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL等
-#         _llm_instance = HelloAgentsLLM()
-        
-#         print(f"✅ LLM服务初始化成功")
-#         print(f"   提供商: {_llm_instance.provider}")
-#         print(f"   模型: {_llm_instance.model}")
-    
-#     return _llm_instance
-
-
-# def reset_llm():
-#     """重置LLM实例(用于测试或重新配置)"""
-#     global _llm_instance
-#     _llm_instance = None
-
+async def close_llm():
+    global _llm_instance
+    instance = _llm_instance
+    reset_llm()
+    if instance is not None:
+        client = getattr(instance, 'root_async_client', None)
+        if client:
+            await client.close()
+        client = getattr(instance, 'root_client', None)
+        if client:
+            client.close()

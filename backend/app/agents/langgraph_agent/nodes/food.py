@@ -12,13 +12,10 @@ from ....services.llm_service import get_llm
 from ....services.preferences_service import format_preference_hint
 from ....models.schemas import DiningCategory
 
-# ============ 全局速率控制: maps_search_detail QPS 限流 + 缓存 + 熔断 ============
+# maps_search_detail节点内限速；缓存归公共边界，失败计数仅限当前批次。
 _detail_semaphore = asyncio.Semaphore(2)       # 最多 2 个并发 detail 请求
-_detail_cache: Dict[str, Dict[str, Any]] = {}  # poi_id → 解析后的 dict
-_detail_lock = asyncio.Lock()                   # 保护 _detail_cache 写入
-_detail_consecutive_failures = 0                # 连续失败计数
-_DETAIL_CIRCUIT_BREAKER_THRESHOLD = 3           # 连续失败 ≥3 则熔断，跳过后续所有 detail 调用
-_detail_circuit_open = False                    # 熔断状态
+_detail_lock = asyncio.Lock()                   # 保护当前批次失败计数
+_DETAIL_CIRCUIT_BREAKER_THRESHOLD = 3           # 连续失败 ≥3 暂停当前批次
 
 
 CITY_FOOD_MAP = {
@@ -164,7 +161,9 @@ def _parse_amap_poi_list(raw: Any) -> List[Dict[str, Any]]:
 
     pois = []
     if isinstance(data, dict):
-        pois = data.get("pois") or data.get("data", {}).get("pois") if isinstance(data.get("data"), dict) else data.get("pois", [])
+        pois = [data] if data.get("name") else data.get("pois", [])
+        if not pois and isinstance(data.get("data"), dict):
+            pois = data["data"].get("pois", [])
         if not pois:
             for v in data.values():
                 if isinstance(v, list) and v and isinstance(v[0], dict):
@@ -198,7 +197,7 @@ def _parse_amap_poi_list(raw: Any) -> List[Dict[str, Any]]:
                     item["latitude"] = lat
             except (ValueError, IndexError):
                 pass
-        biz = p.get("biz_ext") or p.get("business") or {}
+        biz = p.get("biz_ext") or p.get("business") or p
         if isinstance(biz, dict):
             rating = biz.get("rating") or biz.get("score")
             if rating:
@@ -212,7 +211,7 @@ def _parse_amap_poi_list(raw: Any) -> List[Dict[str, Any]]:
                     item["avg_cost"] = int(float(cost))
                 except (TypeError, ValueError):
                     pass
-            opentime = biz.get("opentime_today") or biz.get("opentime_week")
+            opentime = biz.get("opentime_today") or biz.get("opentime_week") or biz.get("open_time") or biz.get("opentime2")
             if opentime:
                 item["open_hours"] = str(opentime)
             tel = biz.get("tel") or p.get("tel")
@@ -231,42 +230,27 @@ async def _enrich_pois_with_detail(
 ) -> None:
     """对前 N 个无评分/营业时间的 POI 调 maps_search_detail 补全 business.rating/cost/opentime。
 
-    全局限流: Semaphore(2) 控制跨子图并发; poi_id 缓存避免重复请求;
-    熔断器: 连续失败 >=3 跳过所有后续 detail 调用。
+    调用入口统一限流和短期缓存；本批连续失败3次后停止，下一批允许恢复。
     """
-    global _detail_consecutive_failures, _detail_circuit_open
+    consecutive_failures = 0
 
     if not detail_tool or not pois:
-        return
-
-    # 熔断检查
-    if _detail_circuit_open:
         return
 
     candidates: List[Dict[str, Any]] = []
     for p in pois[:max_calls]:
         if not p.get("poi_id"):
             continue
-        # 缓存命中 -> 直接合并
-        cached = _detail_cache.get(p["poi_id"])
-        if cached:
-            for key in ("rating", "avg_cost", "open_hours", "tel"):
-                if cached.get(key) and not p.get(key):
-                    p[key] = cached[key]
-            if cached.get("longitude") and not p.get("longitude"):
-                p["longitude"] = cached["longitude"]
-                p["latitude"] = cached["latitude"]
-            continue
-        if not p.get("rating") or not p.get("open_hours"):
+        if not p.get("rating") or not p.get("open_hours") or not p.get("longitude"):
             candidates.append(p)
 
     if not candidates:
         return
 
     async def _one(poi: Dict[str, Any]) -> None:
-        global _detail_consecutive_failures, _detail_circuit_open
+        nonlocal consecutive_failures
 
-        if _detail_circuit_open:
+        if consecutive_failures >= _DETAIL_CIRCUIT_BREAKER_THRESHOLD:
             return
         async with _detail_semaphore:
             # 调用前等 0.5s，拉低 QPS
@@ -279,27 +263,25 @@ async def _enrich_pois_with_detail(
             except Exception as e:
                 print(f" ⚠️ maps_search_detail[{poi.get('name')}] 失败: {str(e)[:80]}")
                 async with _detail_lock:
-                    _detail_consecutive_failures += 1
-                    if _detail_consecutive_failures >= _DETAIL_CIRCUIT_BREAKER_THRESHOLD:
-                        _detail_circuit_open = True
-                        print(f" 🔴 maps_search_detail 熔断器触发 (连续失败{_detail_consecutive_failures}次)，后续跳过详情增强")
+                    consecutive_failures += 1
+                    if consecutive_failures >= _DETAIL_CIRCUIT_BREAKER_THRESHOLD:
+                        print(" 🔴 当前批次详情查询失败，暂停本批，下一批可重试")
                 return
 
         enriched = _parse_amap_poi_list(raw)
         if not enriched:
             return
         detail = enriched[0]
-        for key in ("rating", "avg_cost", "open_hours", "tel"):
+        for key in ("rating", "avg_cost", "open_hours", "tel", "type"):
             if detail.get(key) and not poi.get(key):
                 poi[key] = detail[key]
         if detail.get("longitude") and not poi.get("longitude"):
             poi["longitude"] = detail["longitude"]
             poi["latitude"] = detail["latitude"]
 
-        # 成功 -> 重置连续失败计数 + 写入缓存
+        # Candidate cache ownership is in the gateway; no permanent node cache/circuit.
         async with _detail_lock:
-            _detail_consecutive_failures = 0
-            _detail_cache[poi["poi_id"]] = {k: poi.get(k) for k in ("rating", "avg_cost", "open_hours", "tel", "longitude", "latitude") if poi.get(k)}
+            consecutive_failures = 0
 
     # 串行执行以拉低 QPS（全局限流 + 0.5s 间隔 = 最高 ~2 QPS）
     for poi in candidates:

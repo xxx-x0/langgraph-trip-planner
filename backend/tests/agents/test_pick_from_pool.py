@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import AsyncMock, patch
 import pytest
 
@@ -78,6 +79,24 @@ async def test_pick_from_pool_falls_back_when_llm_fails():
     assert "must_ids" in result and "optional_ids" in result
     assert result["must_ids"] == ["0", "1", "2"]  # 按 rating 降序
     assert result["optional_ids"] == ["3", "4"]
+
+
+@pytest.mark.asyncio
+async def test_pick_from_pool_releases_selection_when_llm_never_finishes():
+    pool = [{"poi_id": str(i), "name": f"P{i}", "rating": 5-i/10} for i in range(5)]
+    async def stuck_response(*args):
+        await asyncio.Event().wait()
+    fake_llm = AsyncMock()
+    fake_llm.ainvoke.side_effect = stuck_response
+    with patch("app.agents.langgraph_agent.utils.strategy_extract.estimate_durations_batch", new=AsyncMock(return_value={})), patch(
+        "app.agents.langgraph_agent.utils.strategy_extract.get_llm", return_value=fake_llm
+    ), patch("app.agents.langgraph_agent.utils.strategy_extract.is_structured_output_supported", return_value=False), patch(
+        "app.agents.langgraph_agent.utils.strategy_extract._PICK_TIMEOUT_SECONDS", 0.01
+    ):
+        result = await asyncio.wait_for(pick_attractions_from_pool("苏州", 1, pool), timeout=0.5)
+    assert result["must_ids"] == ["0", "1", "2"]
+    assert result["optional_ids"] == ["3", "4"]
+    assert "AI 推荐暂不可用" in result["summary"]
 
 
 @pytest.mark.asyncio
