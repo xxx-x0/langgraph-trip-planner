@@ -35,7 +35,7 @@
 | 真实模型及隔离API | 首次连接失败走规则；第二次`ranked_by=ai`，选出G28 | 输入为本次17:28左右浏览器公开字段留样的手工转录，非扩展采集或新的实时核价。G28事实保留，采用→只读预览→保存→GET回读通过，未知全体票价/预算保持未知 |
 | 本机页面 | 隔离多城草稿显示新入口，未安装时明确提示安装，原已选班次保持 | 未验证真实扩展跨标签、桌面权限安装或真人体验 |
 
-证据目录：`/Users/finn/.local/share/nexo-codex/handoffs/2026-10-19-ticket-browser/`，含`public-list-replay-request.json`、`actual-model-response.json`、`isolated-saved-demo.json`、`verification.json`和源码哈希清单。隔离示例无市内地图活动，不能冒充完整真实旅行。
+证据目录：`${EVIDENCE_ROOT}/2026-10-19-ticket-browser/`，含`public-list-replay-request.json`、`actual-model-response.json`、`isolated-saved-demo.json`、`verification.json`和源码哈希清单。隔离示例无市内地图活动，不能冒充完整真实旅行。
 
 复验脚本：`backend/tests/manual/ticket_browser_demo.py`，仅针对18026隔离后端；前端15173代理到该后端。脚本会新建隔离演示草稿并调用当前LLM，**不应将18026换成业务库后端**。源码单测分别运行`frontend/npm run test`和隔离DATABASE_URL下的`backend/.venv/bin/python -m pytest`。
 
@@ -43,7 +43,7 @@
 
 由用户决定是否安装开发版扩展。安装后在隔离环境分别实测铁路和航班：应用发起→条件预填→列表读取→自动切回→AI筛选→采用预览→保存回读；补登录/验证码、无票、改查询、换交通段、关闭原页、15分钟过期和多人票价场景。未验证项保持NOT_VERIFIED，USER体验验收不代办。
 
-Nexo：[LTP-26](http://127.0.0.1:3000/projects/72369225-f2dd-4fa0-ad69-9dc53532395f/issues/5cf5d317-bf67-4999-b0b4-5024e996acb0)。本轮用户的新选择是推进依据，不代签已有待验收事项。依赖锁、ORM与业务库未改，无Git提交；保留所有原未提交改动。
+Nexo：LTP-26（本机内部记录，链接未公开）。本轮用户的新选择是推进依据，不代签已有待验收事项。依赖锁、ORM与业务库未改，无Git提交；保留所有原未提交改动。
 
 ## 2026-10-19 继续实装验证：等待握手诊断
 
@@ -51,7 +51,7 @@ Nexo：[LTP-26](http://127.0.0.1:3000/projects/72369225-f2dd-4fa0-ad69-9dc535323
 
 在Chrome刷新隔离规划页并点击查询，尚未收到扩展回复，未打开票务结果页；`127.0.0.1:15173`和`localhost:15173`均未观察到握手，页面控制台未报告错误。未读取Chrome配置文件或扩展内部状态来绕过限制，也未把用户“已安装”的报告当作运行成功。已请用户提供扩展卡片启用状态、红色错误提示及ID，待此信息继续定位，**当前高铁/飞机真实完整闭环仍NOT_VERIFIED**。
 
-本次隔离证据根目录：`/Users/finn/.local/share/nexo-codex/handoffs/2026-10-19-ticket-browser-live/`，含`live.db`、`cases.json`、两份初始草稿、`environment.json`及安装前源码副本/哈希。后端18026、前端15173已启动并保留待继续，业务数据库未使用。Chrome待接手页：`http://127.0.0.1:15173/multi-trip/mc_6008577634db472aa04d471403a327eb`；航班草稿`mc_91cd44ff4e6e407db6887ced781bf24c`尚未开始查询。没有新模型或票务服务调用，没有Git提交。
+本次隔离证据根目录：`${EVIDENCE_ROOT}/2026-10-19-ticket-browser-live/`，含`live.db`、`cases.json`、两份初始草稿、`environment.json`及安装前源码副本/哈希。后端18026、前端15173已启动并保留待继续，业务数据库未使用。Chrome待接手页：`（本机成果入口已省略）`；航班草稿`sample-trip-14`尚未开始查询。没有新模型或票务服务调用，没有Git提交。
 
 
 ## 2026-10-19 Chrome 0.1.1实装：高铁通过，飞机待登录
@@ -71,7 +71,7 @@ Nexo：[LTP-26](http://127.0.0.1:3000/projects/72369225-f2dd-4fa0-ad69-9dc535323
 
 新证据：`flight-before-recommend.json`、`flight-before-confirm.json`、`flight-saved.json`、`flight-verification.json`，截图`flight-saved.jpg`、`train-saved.jpg`；与之前无结果的`flight-empty-unchanged.json`分开保留。两类交通合计43项回读/打包检查（高铁22、飞机21），两次真实模型调用、浏览器UI路径与站点公开字段均有观察，不使用人工注入消息或API写入代替UI。当前只自动带回已加载且可识别的直达部分；部分卡片航班号未加载会跳过，不声称覆盖全部航班、最优票价或最适合完整日程。未测试真实购票、多人/儿童核价、真实15分钟过期、关闭原页等全部边界，相关自动化覆盖与真实验证分层。没有新运行源码修改，因此不重复上一轮136前端/构建和447后端回归；本轮仅更新文档与重打包。
 
-高铁只读成果：`http://127.0.0.1:15173/multi-trip/mc_6008577634db472aa04d471403a327eb`。飞机只读成果：`http://127.0.0.1:15173/multi-trip/mc_91cd44ff4e6e407db6887ced781bf24c`。18026/15173隔离服务保持，数据库为上述证据目录live.db，应用常规业务库未改。USER验收不代办，Nexo提交最新事实供用户审阅。
+高铁只读成果：`（本机成果入口已省略）`。飞机只读成果：`（本机成果入口已省略）`。18026/15173隔离服务保持，数据库为上述证据目录live.db，应用常规业务库未改。USER验收不代办，Nexo提交最新事实供用户审阅。
 
 
 ## 2026-10-19 已有完整安排的后续实测

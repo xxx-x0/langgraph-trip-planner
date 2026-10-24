@@ -22,7 +22,7 @@
 
 ## 验证与证据分层
 
-证据目录：`/Users/finn/.local/share/nexo-codex/handoffs/2026-10-15-ltp17/`。
+证据目录：`${EVIDENCE_ROOT}/2026-10-15-ltp17/`。
 
 - `baseline-files/`、`baseline-manifest.json`、`baseline.patch`：本轮起点 255 个文件；`task-only.patch`、`preservation.json` 是本轮差异与保留核对。
 - `backend-tests.txt`：最终后端 **380 passed / 4 smoke skipped**，原 75 包隔离环境，显式临时 SQLite。覆盖交通金额/人数、缺项、跨日、时区、营业和空档建议、空在途日、变更预览、迟到重算/定稿、历史投影与既有回归。

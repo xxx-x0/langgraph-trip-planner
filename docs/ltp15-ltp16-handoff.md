@@ -18,7 +18,7 @@
 
 ## 验证与证据
 
-证据根目录：`/Users/finn/.local/share/nexo-codex/handoffs/2026-10-15-ltp15-16/`。
+证据根目录：`${EVIDENCE_ROOT}/2026-10-15-ltp15-16/`。
 
 - `baseline-files/`、`baseline-manifest.json`：开始前的 249 个非忽略文件；已有修改保留。`task-only.patch`、`preservation.json`：本轮差异与保留核对。
 - `backend-tests.txt`、`frontend-tests.txt`、`frontend-build.txt`：最终自动检查。使用原 75 包隔离 Python 环境与显式临时 SQLite；外部 smoke 默认跳过。具体最终数量见文件末尾和本页后续记录。

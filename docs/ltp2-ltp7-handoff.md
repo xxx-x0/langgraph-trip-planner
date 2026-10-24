@@ -2,9 +2,9 @@
 
 > 历史快照：本页的版本、测试数、端口、未提交/无Git提交与验收状态对应页内日期，不代表当前状态。当前源码和回归口径见[维护基线](../README.md#verification-baseline)；本机证据未随仓库发布。
 
-2026-10-14，本机单用户。正式工作项为 [LTP-2](http://127.0.0.1:3000/issues/3977c172-e7fa-44f7-a3f2-4e3ba982b052) 和 [LTP-7](http://127.0.0.1:3000/issues/5b654991-7e05-45a9-a7c5-2844b1d6d548)，来源 codex-ltp。保留原 main 工作区及所有未提交改动，没有创建 Git 提交，HEAD 仍为 `57bd8a46f5d4ea3c638ca23998f78bed19806f3e`。未升级框架、修改业务数据库结构或修改 Nexo。
+2026-10-14，本机单用户。正式工作项为 LTP-2（本机内部记录，链接未公开） 和 LTP-7（本机内部记录，链接未公开），来源 codex-ltp。保留原 main 工作区及所有未提交改动，没有创建 Git 提交，HEAD 仍为 `57bd8a46f5d4ea3c638ca23998f78bed19806f3e`。未升级框架、修改业务数据库结构或修改 Nexo。
 
-执行会话分别为 `ad609f1c-2eb3-4a24-a957-d1e7f8db6e4c`（LTP-2）和 `24a82f0b-64c0-4d6e-aae4-979c7a6d39f6`（LTP-7），均已COMPLETED、无活跃会话。两个USER验收请求均已提交并回读PENDING，详见文末；不代替用户验收LTP-3/5/6。
+执行会话分别为 `internal-record-050`（LTP-2）和 `internal-record-007`（LTP-7），均已COMPLETED、无活跃会话。两个USER验收请求均已提交并回读PENDING，详见文末；不代替用户验收LTP-3/5/6。
 
 ## 实现结果
 
@@ -28,7 +28,7 @@
 
 ## 验证
 
-本机证据根目录为 `/Users/finn/.local/share/nexo-codex/handoffs/2026-10-14-ltp2-ltp7/`，下表路径相对此目录。完整业务回执在本机，仓库仅保存测试、说明与交接。
+本机证据根目录为 `${EVIDENCE_ROOT}/2026-10-14-ltp2-ltp7/`，下表路径相对此目录。完整业务回执在本机，仓库仅保存测试、说明与交接。
 
 起点为 `baseline.patch` / `baseline-files/` / `baseline-manifest.json`，最终为 `final.patch` / `final-files/` / `final-manifest.json`。`final.patch`包含先前未提交改动；`task-changes.patch`以本次起点为对照，辅助区分本次修改。复验、保存审计与MCP客户端脚本也复制到证据目录；凭据文件未复制。
 
@@ -52,7 +52,7 @@
 
 **Bing实际未通过可用性验证**：正常“苏州博物馆 官方网站”查询被上游返回“当前输入可能包含不当内容，请修改后重试”，首次失败19.163秒；工具列表正常，HTTP200并不表示工具成功。记录为不可重试的请求拒绝，未绕过服务限制，未推断根因。网页抓取参数按实际工具schema修正并单测，但真实抓取未验证。Open-Meteo/Unsplash也未在本次真实主链调用。
 
-初次草稿 `34803ebe774e450ab022e327186f6249` 暴露多行天气解析缺陷，保留且未定稿。修复后换新请求ID，复用同一份实际天气与景点输入，重新执行酒店、餐饮、路线及模型规划，得到最终草稿 `0673ad25a45145ab892ad090d3e10777`，并在页面定稿为历史 **1**。修复前后证据均保留，不把初次缺陷结果计作通过。
+初次草稿 `sample-draft-07` 暴露多行天气解析缺陷，保留且未定稿。修复后换新请求ID，复用同一份实际天气与景点输入，重新执行酒店、餐饮、路线及模型规划，得到最终草稿 `sample-draft-01`，并在页面定稿为历史 **1**。修复前后证据均保留，不把初次缺陷结果计作通过。
 
 | 日期 | 最终顺序与锁定 | 用餐与天气 |
 | --- | --- | --- |
@@ -61,7 +61,7 @@
 
 四家餐厅的坐标、价格、来源、营业时间和POI与真实候选共20项匹配。酒店为“花筑·苏州山塘御苑精品民宿”292元/晚，仅报价，无预订。已知费用 **667元**（一晚292、餐饮275、交通估算100）；六个未知门票及第二日早餐共7项缺项，不表示完整费用或已低于预算上限。
 
-当前 [真实结果页面](http://127.0.0.1:5177/trip/1)，截图 `real-saved-overview.png`、`real-saved-weather.png`。重新打开已定稿草稿会进入只读历史。三次并发重复定稿均为历史1、相同计划，创建重放返回同一草稿；重复前后历史1条、草稿2条（含未定稿缺陷样本）、偏好学习1次，出站记录709条不变。详见 `real-final-verification.json`。
+当前 真实结果页面（本机内部记录，链接未公开），截图 `real-saved-overview.png`、`real-saved-weather.png`。重新打开已定稿草稿会进入只读历史。三次并发重复定稿均为历史1、相同计划，创建重放返回同一草稿；重复前后历史1条、草稿2条（含未定稿缺陷样本）、偏好学习1次，出站记录709条不变。详见 `real-final-verification.json`。
 
 | 阶段 | 本次秒数 | LTP-6参考秒数 |
 | --- | ---: | ---: |
@@ -101,9 +101,9 @@ npm run build
 
 | Issue | 会话与交接 | USER验收请求 |
 | --- | --- | --- |
-| LTP-2 | 会话COMPLETED v5；交接 `7870958a-6f76-4e64-9dc6-bc4aef577617` | `ed038032-fbc2-4455-9db7-a4fd65684d6b`，PENDING，4项逐条来源证据 |
-| LTP-7 | 会话COMPLETED v5；交接 `62e43a79-df6e-40d3-99ef-b36caf61eff8` | `dd25f0d6-d4fc-40c8-90f3-db2daddf8b34`，PENDING，5项逐条来源证据 |
+| LTP-2 | 会话COMPLETED v5；交接 `internal-record-037` | `internal-record-068`，PENDING，4项逐条来源证据 |
+| LTP-7 | 会话COMPLETED v5；交接 `internal-record-031` | `internal-record-060`，PENDING，5项逐条来源证据 |
 
-两个Issue仍为IN_PROGRESS，均无活跃会话。学习记录分别为 `72259ed8-c833-4ad2-abf1-c2bf5c26f158` 与 `3f588fee-cee4-44f7-93b7-ff063e45d99c`。项目v15的下一步指向用户审查LTP-2/7，保留LTP-3/5/6待验收状态。完整请求/回执在证据目录 `nexo/`；LTP-7验收页面已只读核对，截图 `nexo-ltp7-acceptance.png`，未保存用户反馈或执行验收。
+两个Issue仍为IN_PROGRESS，均无活跃会话。学习记录分别为 `internal-record-035` 与 `internal-record-020`。项目v15的下一步指向用户审查LTP-2/7，保留LTP-3/5/6待验收状态。完整请求/回执在证据目录 `nexo/`；LTP-7验收页面已只读核对，截图 `nexo-ltp7-acceptance.png`，未保存用户反馈或执行验收。
 
-Nexo原有NXUSE-002连接入口和NXUSE-006待验收指引问题再次观察；未提交成果在只读差异入口的适配疑问记为NXUSE-007。台账学习索引 `7f2ac1fd-48b5-45aa-96c4-7930e71aa082`。详见台账，未自行修改Nexo。
+Nexo原有NXUSE-002连接入口和NXUSE-006待验收指引问题再次观察；未提交成果在只读差异入口的适配疑问记为NXUSE-007。台账学习索引 `internal-record-040`。详见台账，未自行修改Nexo。

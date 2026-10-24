@@ -6,10 +6,10 @@
 
 ## 实测入口与数据范围
 
-- 新只读成果：[苏杭五日交通联动版](http://127.0.0.1:15173/multi-trip/mc_55a84e5571b64b84b08ab3bc768cadda?section=transport)，revision 7。
-- 原只读版本 `mc_153ee4ea1f6c471cbe2462e8ec9a6208` revision 6 完整保留；先通过 UI 复制后实测。
+- 新只读成果：苏杭五日交通联动版（本机内部记录，链接未公开），revision 7。
+- 原只读版本 `sample-trip-03` revision 6 完整保留；先通过 UI 复制后实测。
 - 前端15173与15174运行同一份新版源码；0.2.1扩展只连接5173/4173/15173，因此这次在用户Chrome使用15173。没有修改扩展源码、安装版本或权限。
-- 后端18026使用 `~/.local/share/nexo-codex/handoffs/2026-10-19-ticket-browser-live/live.db` 隔离库。为加载新服务重启了此端口；未动主8000/5173、业务库、ORM、依赖锁，无Git提交。
+- 后端18026使用 `${EVIDENCE_ROOT}/2026-10-19-ticket-browser-live/live.db` 隔离库。为加载新服务重启了此端口；未动主8000/5173、业务库、ORM、依赖锁，无Git提交。
 
 ## 真实旅程
 

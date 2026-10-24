@@ -86,7 +86,7 @@ Expected: PASS（6 个参数全过）
 - [ ] **Step 5: 提交**
 
 ```bash
-cd /Users/finn/Developer/langgraph-trip-planner/langgraph-trip-planner
+cd ${PROJECT_ROOT}
 git add backend/app/agents/langgraph_agent/finalize/pipeline.py backend/tests/agents/test_finalize_pipeline.py
 git commit -m "feat(finalize): 加 _parse_ticket_price 门票字符串转int helper"
 ```
@@ -230,7 +230,7 @@ Expected: PASS（新增 3 个 + 原有 2 个 `test_visit_minutes_*` 仍通过，
 - [ ] **Step 5: 提交**
 
 ```bash
-cd /Users/finn/Developer/langgraph-trip-planner/langgraph-trip-planner
+cd ${PROJECT_ROOT}
 git add backend/app/agents/langgraph_agent/nodes/cluster.py backend/tests/agents/test_cluster_from_selections.py
 git commit -m "fix(cluster): cluster_from_selections 保留已选景点全字段，不再砍成name+坐标"
 ```
@@ -330,7 +330,7 @@ Expected: PASS（新增 2 个 + 原有 3 个 finalize 测试仍通过——它�
 - [ ] **Step 5: 提交**
 
 ```bash
-cd /Users/finn/Developer/langgraph-trip-planner/langgraph-trip-planner
+cd ${PROJECT_ROOT}
 git add backend/app/agents/langgraph_agent/finalize/pipeline.py backend/tests/agents/test_finalize_pipeline.py
 git commit -m "feat(finalize): _build_day_context 完整映射景点字段(地址/评分/门票/类别/时长/封面图)"
 ```
@@ -410,7 +410,7 @@ Run: `cd frontend && npm run dev`（后端 `cd backend && python run.py` 同时�
 - [ ] **Step 6: 提交**
 
 ```bash
-cd /Users/finn/Developer/langgraph-trip-planner/langgraph-trip-planner
+cd ${PROJECT_ROOT}
 git add frontend/src/views/Result.vue
 git commit -m "feat(result): 标签栏改为不固定，切换标签平滑回顶"
 ```

@@ -35,10 +35,10 @@ class Settings(BaseSettings):
     amap_api_key: str = ""
 
     # AIGoHotel MCP配置 (通过魔搭社区接入)
-    aigohotel_mcp_url: str = "https://mcp.api-inference.modelscope.net/127abe70fe684b/mcp"
+    aigohotel_mcp_url: str = ""
 
     # 必应搜索 MCP配置 (通过魔搭社区接入)
-    bing_mcp_url: str = "https://mcp.api-inference.modelscope.net/3b67c347b4004c/sse"
+    bing_mcp_url: str = ""
 
     # Unsplash API配置
     unsplash_access_key: str = ""

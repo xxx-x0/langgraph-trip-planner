@@ -2,7 +2,7 @@
 
 > 历史快照：本页的版本、测试数、端口、未提交/无Git提交与验收状态对应页内日期，不代表当前状态。当前源码和回归口径见[维护基线](../README.md#verification-baseline)；本机证据未随仓库发布。
 
-2026-10-14，本机单用户、单城市多日旅行。[LTP-10](http://127.0.0.1:3000/issues/92aaa209-943f-44b8-a8d5-1ae893baa3fe)，来源codex-ltp，执行会话 `36c3e0ad-42d7-49d2-a970-50a822e8f506`。会话已COMPLETED v5，无活跃会话，五项USER请求已提交并回读PENDING，最终回执见下文。原main与HEAD `57bd8a46f5d4ea3c638ca23998f78bed19806f3e` 保留，无Git提交、框架升级、数据库迁移或Nexo产品修改。此前USER验收继续由用户判断。
+2026-10-14，本机单用户、单城市多日旅行。LTP-10（本机内部记录，链接未公开），来源codex-ltp，执行会话 `internal-record-015`。会话已COMPLETED v5，无活跃会话，五项USER请求已提交并回读PENDING，最终回执见下文。原main与HEAD `57bd8a46f5d4ea3c638ca23998f78bed19806f3e` 保留，无Git提交、框架升级、数据库迁移或Nexo产品修改。此前USER验收继续由用户判断。
 
 ## 改动与原因
 
@@ -18,7 +18,7 @@
 
 ## 自动验证与保留
 
-全部证据在 `/Users/finn/.local/share/nexo-codex/handoffs/2026-10-14-ltp10/`，下列文件相对此目录。
+全部证据在 `${EVIDENCE_ROOT}/2026-10-14-ltp10/`，下列文件相对此目录。
 
 | 验证 | 结果与证据 |
 | --- | --- |
@@ -34,7 +34,7 @@
 
 ## 真实两日编辑与逐条核对
 
-新建隔离库 `validation.db`，用户ltp10-current-trip，草稿 `62e23a38cbe5498b8ad96815d3ed19a2`，定稿历史1。复用LTP-8草稿 `1583b14fbd6d4b63bd7f1426971fc34c` 中真实查询的苏州2026-10-15～16景点、酒店、餐饮和天气；原数据及来源保存在reused-real-source.json。没有把本轮复用算成重新发现、酒店可订或最新天气查询成功。
+新建隔离库 `validation.db`，用户ltp10-current-trip，草稿 `sample-draft-08`，定稿历史1。复用LTP-8草稿 `sample-draft-02` 中真实查询的苏州2026-10-15～16景点、酒店、餐饮和天气；原数据及来源保存在reused-real-source.json。没有把本轮复用算成重新发现、酒店可订或最新天气查询成功。
 
 本轮实际调用高德路线45次工具请求（31步行、14公交）与DeepSeek V4 Pro一次重排，均有脱敏出站观测和实际结果对照。HTTP200协议回执本身不算业务成功；另核对所有保存路线非估算、候选来源/价格/坐标及最终活动事实。`outbound.jsonl`、`real-service-summary.json`与`api/`保存原始脱敏证据。
 
@@ -72,9 +72,9 @@ Nexo问题继续按 [台账](nexo-usage-log.md)记录操作、预期/实际、�
 
 ## Nexo 最终记录
 
-- 工作会话：`36c3e0ad-42d7-49d2-a970-50a822e8f506`，COMPLETED v5；交接 `f9987e9d-c6bd-43a4-b2d9-eecb32c1662a`。
-- USER请求：`5d192537-ce06-4a0c-9a20-d5b16a27641e`，PENDING；5项均有实现证据，未代用户接受。
-- 实现学习：`3c9bbf90-bbd1-44c1-8423-5e9b1ec55bc7` v1；使用反馈索引 `66102db5-0b2e-4187-b076-9ffeaa047c46` v1，关联NXUSE-002/006/007。
+- 工作会话：`internal-record-015`，COMPLETED v5；交接 `internal-record-072`。
+- USER请求：`internal-record-027`，PENDING；5项均有实现证据，未代用户接受。
+- 实现学习：`internal-record-017` v1；使用反馈索引 `internal-record-033` v1，关联NXUSE-002/006/007。
 - 最终回读：`nexo/issue-final.json`（Issue v4、currentAcceptanceRequest PENDING、sessions.active=null）、`session-final.json`（COMPLETED v5）、close/acceptance的精确输入及回执均保留。
 
 最终台账补充后再次回读 `nexo/issue-after-ui-readonly.json`：USER仍PENDING、feedbackVersion=0、无活跃会话，5项证据保留。未执行用户逐项反馈或验收。

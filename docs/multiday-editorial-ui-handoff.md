@@ -19,14 +19,14 @@
 - IAB 浏览器复用真实苏杭五日已存数据：封面跳城市、城市/日期切换、键盘 Enter 切日期、节奏条点击展开路程与定位、折叠回主要活动、工作区切换、费用和交通展示。
 - 实际读取到日期过渡的 `day-page-enter-active`、opacity 0.423143、translateY 3.70297px、transition 0.26s/0.32s，确认并非仅定义静态样式。
 - 默认桌面 1280 宽、390×844 手机亮/暗色检查；手机 documentWidth=390，无整页横向溢出。系统减少动态效果分支由实现提供，本轮未修改操作系统设置来实测。
-- 通过 UI 复制原只读版本，在隔离库新增 `mc_37296cda3fdc4cdd84047a90d360d00f`，名称「设计走查 · 苏杭五日旅行」。编辑名称→跨工作区输入保留→变更预览→确认保存，revision 2；继续切到苏州→杭州段，已选 G8359 和两城当天安排仍正确展示。
-- API 回读 9 项核对：原 `mc_55a84e5571b64b84b08ab3bc768cadda` 的 plan、snapshots、revision 7、saved_summary、status 均与之前留证相同；新副本只保存名称修改，交通与城市快照不变。
+- 通过 UI 复制原只读版本，在隔离库新增 `sample-trip-08`，名称「设计走查 · 苏杭五日旅行」。编辑名称→跨工作区输入保留→变更预览→确认保存，revision 2；继续切到苏州→杭州段，已选 G8359 和两城当天安排仍正确展示。
+- API 回读 9 项核对：原 `sample-trip-10` 的 plan、snapshots、revision 7、saved_summary、status 均与之前留证相同；新副本只保存名称修改，交通与城市快照不变。
 - 此轮没有新查票、地图重算、酒店核价或购票，不把展示与名称保存回归称为新的交通全链路验收。
 
 ## 入口与证据
 
-- 可编辑体验副本：http://127.0.0.1:15173/multi-trip/mc_37296cda3fdc4cdd84047a90d360d00f
-- 原只读版：http://127.0.0.1:15173/multi-trip/mc_55a84e5571b64b84b08ab3bc768cadda
+- 可编辑体验副本：（本机成果入口已省略）
+- 原只读版：（本机成果入口已省略）
 - 隔离后端 18026、前端 15173；启动方式沿用上一份 `multiday-ticket-flow-handoff.md`。
 - `output/playwright/editorial-redesign/`：tests.log、build.log、data-verification.json、桌面与手机截图。
 

@@ -2,7 +2,7 @@
 
 > 历史快照：本页的版本、测试数、端口、未提交/无Git提交与验收状态对应页内日期，不代表当前状态。当前源码和回归口径见[维护基线](../README.md#verification-baseline)；本机证据未随仓库发布。
 
-2026-10-14，本机单用户、单城市多日旅行。[LTP-8](http://127.0.0.1:3000/issues/476d5756-2553-4099-ba71-a3dfee03cd18)，来源codex-ltp，执行会话 `eb378b32-ca40-45fb-baf9-5b4973fe31c7` 已COMPLETED v5，无活跃会话，USER请求已提交并回读PENDING。沿用原main工作区，HEAD仍为 `57bd8a46f5d4ea3c638ca23998f78bed19806f3e`，无新增Git提交。起点85项改动均备份，保留原业务库、原虚拟环境与既有成果。未升级框架、迁移业务库或修改Nexo。
+2026-10-14，本机单用户、单城市多日旅行。LTP-8（本机内部记录，链接未公开），来源codex-ltp，执行会话 `internal-record-065` 已COMPLETED v5，无活跃会话，USER请求已提交并回读PENDING。沿用原main工作区，HEAD仍为 `57bd8a46f5d4ea3c638ca23998f78bed19806f3e`，无新增Git提交。起点85项改动均备份，保留原业务库、原虚拟环境与既有成果。未升级框架、迁移业务库或修改Nexo。
 
 ## 用户确认的偏好边界
 
@@ -29,7 +29,7 @@
 
 ## 自动、环境与保留验证
 
-本机证据目录：`/Users/finn/.local/share/nexo-codex/handoffs/2026-10-14-ltp8/`。以下路径均相对此目录。
+本机证据目录：`${EVIDENCE_ROOT}/2026-10-14-ltp8/`。以下路径均相对此目录。
 
 起点baseline.patch/baseline-files/baseline-manifest.json与最终final.patch/final-files/final-manifest.json均保存；final.patch包含既有未提交成果，task-changes.patch专门对照本次起点。最终99项文件带SHA；凭据扫描无匹配，未复制.env或连接凭据文件，第三方clean-venv安装文件不纳入成果凭据扫描。
 
@@ -52,7 +52,7 @@
 
 先通过既有API为测试用户ltp8-current-trip保存source=explicit的历史样本（高档酒店/异国菜/海滨，与本次苏州经济型、历史园林选择相冲突）。样本为人工构造的测试输入，不是真实个人画像。随后真实发现30个景点并查询天气；规划仍复用LTP-2/7已选的六个真实景点及日分配，不能说本次重新手动选了30个景点或重做AI筛选。
 
-创建草稿 `1583b14fbd6d4b63bd7f1426971fc34c` 时，历史偏好SELECT计数2→2，规划没有读取它；本次9个真实模型请求均未含历史哨兵。五个骨架完成节点齐全。两日装配、手动重排、锁定、AI重排、叙述刷新后，在页面点击定稿保存为历史 **1**，并回读只读结果。
+创建草稿 `sample-draft-02` 时，历史偏好SELECT计数2→2，规划没有读取它；本次9个真实模型请求均未含历史哨兵。五个骨架完成节点齐全。两日装配、手动重排、锁定、AI重排、叙述刷新后，在页面点击定稿保存为历史 **1**，并回读只读结果。
 
 | 日期 | 当前选择与安排 |
 | --- | --- |
@@ -76,7 +76,7 @@
 
 这不是受控性能实验；与LTP-2/7骨架63.329秒相比，本次47.858秒受到日期、缓存、服务数据和负载影响，不归因于清理提速。阶段间含人工操作，不相加作连续全流程用时。Bing、Open-Meteo、Unsplash本次主链未调用，不新增可用性结论，沿用上轮Bing拒绝的限制。兼容完整规划入口由真实图/模拟外部回归覆盖，本次真实页面链使用发现/骨架/草稿路线。
 
-当前 [结果页面](http://127.0.0.1:5178/trip/1)，截图real-saved-overview.png、real-saved-weather.png。页面与后台进程不保证后续持续运行。
+当前 结果页面（本机内部记录，链接未公开），截图real-saved-overview.png、real-saved-weather.png。页面与后台进程不保证后续持续运行。
 
 ## 复验与后续
 
@@ -103,10 +103,10 @@ npm run build
 
 ## Nexo 与最终回执
 
-用户确认策略学习记录 `08d64d10-c6e1-48fe-a7e5-b8d6e9f5beaa`，不是另行伪造Nexo的CONFIRMED决策。首次客户端脚本误读start回执id导致KeyError，实际会话已成功启动，回读后继续，无重复启动；按NXUSE-008记 [台账](nexo-usage-log.md)。NXUSE-002连接入口持续，沿用用户授权文件访问原MCP，不修改Nexo。
+用户确认策略学习记录 `internal-record-003`，不是另行伪造Nexo的CONFIRMED决策。首次客户端脚本误读start回执id导致KeyError，实际会话已成功启动，回读后继续，无重复启动；按NXUSE-008记 [台账](nexo-usage-log.md)。NXUSE-002连接入口持续，沿用用户授权文件访问原MCP，不修改Nexo。
 
-2026-10-14 17:13关闭会话并生成交接 `cf06ee07-997b-4a4a-b196-5a3a5f1f27dd`。17:14最终USER请求 `2a1e6943-32d0-4fee-baf9-e4e18b194d42` 回读PENDING，Issue仍IN_PROGRESS v4，无活跃会话。五项标准均附来源证据，未保存用户反馈或代替用户验收。首次请求 `d2ddcc60-467e-4f75-97df-b94eb484e37a` 已被替代，仅精确化“7项直接依赖、闭包总减少59包”及“3条进度、会话1→4”的表述，范围、标准与结果不变。
+2026-10-14 17:13关闭会话并生成交接 `internal-record-057`。17:14最终USER请求 `internal-record-008` 回读PENDING，Issue仍IN_PROGRESS v4，无活跃会话。五项标准均附来源证据，未保存用户反馈或代替用户验收。首次请求 `internal-record-058` 已被替代，仅精确化“7项直接依赖、闭包总减少59包”及“3条进度、会话1→4”的表述，范围、标准与结果不变。
 
-执行事实3条，学习记录 `f0dc439b-bbce-40b4-87d0-0ab011693096` v2记录最终246项、依赖及真实链路；用户确认策略单独保存在前述08d64记录。项目v16下一步指向用户审查LTP-8，既有USER请求不自动通过。完整请求/回执在nexo目录。
+执行事实3条，学习记录 `internal-record-069` v2记录最终246项、依赖及真实链路；用户确认策略单独保存在前述08d64记录。项目v16下一步指向用户审查LTP-8，既有USER请求不自动通过。完整请求/回执在nexo目录。
 
-17:15只读核对Nexo待验收页，成果/五项证据/未审查判断正确；NXUSE-006待验收指引及NXUSE-007未提交差异入口疑问持续，已追加台账。截图nexo-user-acceptance.png与完整nexo-issue-snapshot.txt保留，使用复核学习索引 `7e73dd52-74ec-4deb-8e69-13f93daec8c5`。没有修改Nexo代码、配置或直接操作其数据库。
+17:15只读核对Nexo待验收页，成果/五项证据/未审查判断正确；NXUSE-006待验收指引及NXUSE-007未提交差异入口疑问持续，已追加台账。截图nexo-user-acceptance.png与完整nexo-issue-snapshot.txt保留，使用复核学习索引 `internal-record-039`。没有修改Nexo代码、配置或直接操作其数据库。

@@ -4,7 +4,7 @@
 
 2026-10-13，以真实 DeepSeek、高德 MCP 和 AIGoHotel MCP 完成苏州 2026-10-14～15 两日发现、选择、分配、逐日编辑、定稿及历史回读。链路与保存一致性已验证，旅行建议的质量仍有下列限制，产品价值判断保持 UNVERIFIED。代码在原 `main` 工作区，未创建 Git 提交。
 
-正式依据为 [Nexo LTP-5](http://127.0.0.1:3000/issues/0d654eaf-a361-439c-9223-870b6cbeeb2d) 和[已确认决策](http://127.0.0.1:3000/projects/72369225-f2dd-4fa0-ad69-9dc53532395f/decisions/c4105b35-fbc1-4409-beee-85db47af2729)。执行来源 `codex-ltp`，会话 `6c2ad94d-0df3-4133-8d09-a98015a8c889` 已 COMPLETED，无活跃会话。USER 验收请求 `3cdd9973-6499-4c07-8a01-95242fe1f733` 为 PENDING，四项证据已提交；Issue仍IN_PROGRESS，尚未用户通过。Nexo交接 `8660cfcf-766b-4ff4-bf72-19a173d84a95`，学习记录 `a25a604e-c7b6-4c03-aa24-b501066710ef`。
+正式依据为 Nexo LTP-5（本机内部记录，链接未公开） 和已确认决策（本机内部记录，链接未公开）。执行来源 `codex-ltp`，会话 `internal-record-034` 已 COMPLETED，无活跃会话。USER 验收请求 `internal-record-018` 为 PENDING，四项证据已提交；Issue仍IN_PROGRESS，尚未用户通过。Nexo交接 `internal-record-042`，学习记录 `internal-record-048`。
 
 ## 当前结果与运行前提
 
@@ -14,7 +14,7 @@
 
 输入为苏州两日、独自一人、公共交通、经济型酒店、本地特色，偏好历史文化和休闲；额外要求为园林、历史文化、舒适节奏、每天约三个景点、苏帮菜。冷发现返回 30 个带坐标候选，真实 AI 复验选择六个。原日程预览为山塘→留园→虎丘、平江路→苏博→拙政园。
 
-最终草稿 `9d769fd994cc454587066e2b8af628a8`，历史 ID `1`，可打开[本机结果](http://127.0.0.1:5173/trip/1)：
+最终草稿 `sample-draft-13`，历史 ID `1`，可打开本机结果（本机内部记录，链接未公开）：
 
 | 日期 | 最终景点顺序 | 开始时间 | 餐饮与锁定 |
 | --- | --- | --- | --- |
@@ -73,7 +73,7 @@ DeepSeek V4 的模式配置依据[官方说明](https://api-docs.deepseek.com/gu
 
 ## 真实服务、失败与复现
 
-本机证据目录：`/Users/finn/.local/share/nexo-codex/handoffs/2026-10-13-ltp5/`。包含隔离数据库、API输入/响应、耗时、出站调用元数据、截图、测试日志、基线/最终补丁和 SHA 清单；无连接令牌或 API 密钥。`live-observer.py` 仅记录并原样转发实际请求/响应，未替换业务数据、LLM或MCP。
+本机证据目录：`${EVIDENCE_ROOT}/2026-10-13-ltp5/`。包含隔离数据库、API输入/响应、耗时、出站调用元数据、截图、测试日志、基线/最终补丁和 SHA 清单；无连接令牌或 API 密钥。`live-observer.py` 仅记录并原样转发实际请求/响应，未替换业务数据、LLM或MCP。
 
 出站证据包括 DeepSeek 实际聊天请求、高德 text_search/detail/weather/around/transit/walking 和 ModelScope searchHotels。HTTP 200 的 MCP 响应可能包含工具错误，必须结合日志检查。Bing攻略搜索路径和 Unsplash 接口未在这条发现池路径调用，不能声称已验证它们。
 

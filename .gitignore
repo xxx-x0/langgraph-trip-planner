@@ -74,3 +74,6 @@ backend/app/services/amap_service.py
 
 # Generated from browser-extension/ by frontend predev/prebuild; keep local copies.
 /frontend/public/ticket-assistant-extension.zip
+
+# Local design prompts; keep files locally without publishing.
+/designpropmts/

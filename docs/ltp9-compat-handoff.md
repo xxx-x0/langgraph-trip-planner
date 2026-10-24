@@ -2,9 +2,9 @@
 
 > 历史快照：本页的版本、测试数、端口、未提交/无Git提交与验收状态对应页内日期，不代表当前状态。当前源码和回归口径见[维护基线](../README.md#verification-baseline)；本机证据未随仓库发布。
 
-2026-10-15，继续 [LTP-9](http://127.0.0.1:3000/issues/85b44ef6-521c-4a52-aa21-42957bd9bb88)。用户后续授权仅在隔离环境修复前轮发现的兼容问题，补故障、真实链路与回退验证，**当前运行依赖和应用源码不切换**。前轮研究、失败与验收快照见 [初次交接](ltp9-handoff.md)，本轮不把历史失败改写为已通过。
+2026-10-15，继续 LTP-9（本机内部记录，链接未公开）。用户后续授权仅在隔离环境修复前轮发现的兼容问题，补故障、真实链路与回退验证，**当前运行依赖和应用源码不切换**。前轮研究、失败与验收快照见 [初次交接](ltp9-handoff.md)，本轮不把历史失败改写为已通过。
 
-工作根目录为 `/Users/finn/.local/share/nexo-codex/handoffs/2026-10-15-ltp9-compat/`。以下证据路径相对此目录。239 个起点文件、两个原环境精确 freeze、业务 SQLite 均先备份；main / HEAD 仍为 `57bd8a46f5d4ea3c638ca23998f78bed19806f3e`，未创建 Git 提交。迁移实现及新增自动测试在 `source/backend/` 副本，仓库只同步交接、路线图、AGENTS 和 Nexo 台账。
+工作根目录为 `${EVIDENCE_ROOT}/2026-10-15-ltp9-compat/`。以下证据路径相对此目录。239 个起点文件、两个原环境精确 freeze、业务 SQLite 均先备份；main / HEAD 仍为 `57bd8a46f5d4ea3c638ca23998f78bed19806f3e`，未创建 Git 提交。迁移实现及新增自动测试在 `source/backend/` 副本，仓库只同步交接、路线图、AGENTS 和 Nexo 台账。
 
 ## 本轮修复
 
@@ -67,7 +67,7 @@
 
 `preservation-audit.json` 核对所有239起点文件、备份、非本轮文档字节、原HEAD和业务SQLite行/结构，dotvenv/plainvenv本次独立精确快照均保留；不再依赖前轮被覆盖的起点freeze。`task-changes.patch` 和 `final-files/` 为本轮文档交付，代码与测试以隔离补丁单独审查。凭据仅进程内读取，最终扫描结果 `credential-scan.json`。
 
-Nexo继续原LTP-9的新会话 `87390458-fc34-43b4-8bf4-65d659c02a25`。此前USER请求保留为历史，本轮重新提交，以最终回读记录为准；没有代用户验收。原生工具本轮可用，按 [使用台账](nexo-usage-log.md)记录复核；不捏造Nexo产品故障，也不将本地测试脚本问题归入Nexo。精确收尾/提交和最终回读见 `nexo/`。
+Nexo继续原LTP-9的新会话 `internal-record-043`。此前USER请求保留为历史，本轮重新提交，以最终回读记录为准；没有代用户验收。原生工具本轮可用，按 [使用台账](nexo-usage-log.md)记录复核；不捏造Nexo产品故障，也不将本地测试脚本问题归入Nexo。精确收尾/提交和最终回读见 `nexo/`。
 
 ## 最终真实与回退结果
 
@@ -81,7 +81,7 @@ Nexo继续原LTP-9的新会话 `87390458-fc34-43b4-8bf4-65d659c02a25`。此前US
 
 ## Nexo 收尾回读
 
-- 会话 `87390458-fc34-43b4-8bf4-65d659c02a25` 已COMPLETED v5；交接 `6221444e-ca1c-449a-9842-602dc7a5ad68`。
-- 五项USER请求 `324db674-6ecc-4557-93e7-2ef96afe238d` 已提交并回读PENDING，Issue v4、无活跃会话；未代用户接受。
-- 学习记录 `e512d57f-adca-4075-9065-5f6996ddfa08` v1，关联本轮修复和台账。
+- 会话 `internal-record-043` 已COMPLETED v5；交接 `internal-record-030`。
+- 五项USER请求 `internal-record-011` 已提交并回读PENDING，Issue v4、无活跃会话；未代用户接受。
+- 学习记录 `internal-record-061` v1，关联本轮修复和台账。
 - 精确输入/回执及最终读取为 `nexo/close-input.json`、`acceptance-input.json`、`issue-final.json`、`session-final.json`。本次仅验收隔离成果，不改变当前运行依赖。

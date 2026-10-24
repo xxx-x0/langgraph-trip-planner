@@ -8,8 +8,8 @@
 
 当前隔离预览：
 
-- [上海—苏州—杭州—南京](http://127.0.0.1:15181/multi-trip/mc_d87d077e4c01485e8444553cb8c5c5f2)
-- [北京—天津—济南—北京](http://127.0.0.1:15181/multi-trip/mc_5057e8efb35c4488ae4d5e6caf09b6a8)
+- 上海—苏州—杭州—南京（本机内部记录，链接未公开）
+- 北京—天津—济南—北京（本机内部记录，链接未公开）
 
 两条均为 2026-10-26 至 11-01、七天六晚、一位成人一间房。展开“查看已同步的每日活动与用餐”可核对实际休息；已保存版本只读，可复制为新版本编辑。预览使用独立 live.db，未写业务库。
 
@@ -27,7 +27,7 @@
 
 ## 真实数据与明确模拟的边界
 
-证据目录：`/Users/finn/.local/share/nexo-codex/handoffs/2026-10-19-rest-routes/`。四座城市分别真实调用发现、酒店、餐饮和地图路线，完成 16 个城市日期的安排。测试明确每个游玩日只选一个真实候选并设为60分钟，以核对联动；这不等于真人采纳或推荐质量验收。
+证据目录：`${EVIDENCE_ROOT}/2026-10-19-rest-routes/`。四座城市分别真实调用发现、酒店、餐饮和地图路线，完成 16 个城市日期的安排。测试明确每个游玩日只选一个真实候选并设为60分钟，以核对联动；这不等于真人采纳或推荐质量验收。
 
 2026-10-19 在12306网页实际查看六段二等座价格，经现有前端文字解析器确认导入；记录为 user_quote，不声称实时票价接口或已购票：
 
@@ -61,7 +61,7 @@
 - `unavailable_fault.py` / `hotel-unavailable-checks.json`：两条路线独立无房故障，各5项共10项。显式注入 unavailable 后酒店身份保留、费用排除、提示无房、预算不完整、原保存版本不变。不是供应商实际无房响应。
 - `rest-timeline.png` 为浏览器最终每日休息呈现；`ticket-ui-confirmed.txt` 为文字导入保存回读证据。120+10项属于集成与故障检查，不是额外的 pytest 数量。
 
-原核对快照分别为 `mc_04891b55944f41e090d84673d017a29f`、`mc_d18344b6c69946929c78bb0c929bcfe3`。最终预览是其新版本，仅更新最后的事实说明；旧版本不变。真实首次冷缓存规划耗时较长，天津重试仍超时，不声称性能或外部可用性通过。
+原核对快照分别为 `sample-trip-02`、`sample-trip-17`。最终预览是其新版本，仅更新最后的事实说明；旧版本不变。真实首次冷缓存规划耗时较长，天津重试仍超时，不声称性能或外部可用性通过。
 
 ## Nexo 与后续
 
@@ -74,12 +74,12 @@ P11 c3 的连续旅行休息已落实，c1/c2/c4沿用并回归已有比较和�
 本轮保留18021后端与15181前端供试用。若服务已退出，可分别在两个终端执行；不要同时重复启动，也不要省略 DATABASE_URL：
 
 ```bash
-cd /Users/finn/Developer/langgraph-trip-planner/backend
-DATABASE_URL=sqlite+aiosqlite:////Users/finn/.local/share/nexo-codex/handoffs/2026-10-19-rest-routes/live.db /Users/finn/.local/share/nexo-codex/handoffs/2026-10-15-ltp9-compat/env-baseline/bin/python -m uvicorn app.api.main:app --host 127.0.0.1 --port 18021
+cd ${PROJECT_ROOT}/backend
+DATABASE_URL=sqlite+aiosqlite:///${EVIDENCE_ROOT}/2026-10-19-rest-routes/live.db ${EVIDENCE_ROOT}/2026-10-15-ltp9-compat/env-baseline/bin/python -m uvicorn app.api.main:app --host 127.0.0.1 --port 18021
 ```
 
 ```bash
-cd /Users/finn/Developer/langgraph-trip-planner/frontend
+cd ${PROJECT_ROOT}/frontend
 VITE_BACKEND_URL=http://127.0.0.1:18021 npm run dev -- --host 127.0.0.1 --port 15181
 ```
 

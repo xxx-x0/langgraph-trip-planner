@@ -2,7 +2,7 @@
 
 > 历史快照：本页的版本、测试数、端口、未提交/无Git提交与验收状态对应页内日期，不代表当前状态。当前源码和回归口径见[维护基线](../README.md#verification-baseline)；本机证据未随仓库发布。
 
-2026-10-14，本机单用户、单城市多日旅行。[LTP-11](http://127.0.0.1:3000/issues/b8f7e4be-e68a-47ef-8c6b-bfd4df3b56ae)，来源codex-ltp；独立记录 [LTP-10](ltp10-handoff.md) 真实复验发现的两项用餐问题，保留此前待用户验收成果。执行会话 `be8642c7-e9e6-4140-8edc-55dbcd1dc8bb`，会话已COMPLETED v5，无活跃会话；五项USER请求已提交并回读PENDING，最终回执见文末。沿用main，HEAD仍为 `57bd8a46f5d4ea3c638ca23998f78bed19806f3e`，没有Git提交、框架升级、数据库迁移或Nexo产品修改。
+2026-10-14，本机单用户、单城市多日旅行。LTP-11（本机内部记录，链接未公开），来源codex-ltp；独立记录 [LTP-10](ltp10-handoff.md) 真实复验发现的两项用餐问题，保留此前待用户验收成果。执行会话 `internal-record-054`，会话已COMPLETED v5，无活跃会话；五项USER请求已提交并回读PENDING，最终回执见文末。沿用main，HEAD仍为 `57bd8a46f5d4ea3c638ca23998f78bed19806f3e`，没有Git提交、框架升级、数据库迁移或Nexo产品修改。
 
 ## 本次规则与实现
 
@@ -20,7 +20,7 @@ meal_adjustments仅加在现有JSON中，不改ORM。保存时同步行程说明
 
 ## 验证与保留
 
-证据目录：`/Users/finn/.local/share/nexo-codex/handoffs/2026-10-14-meal-recovery/`；下文证据文件相对此目录。
+证据目录：`${EVIDENCE_ROOT}/2026-10-14-meal-recovery/`；下文证据文件相对此目录。
 
 | 验证 | 结果 |
 | --- | --- |
@@ -37,7 +37,7 @@ meal_adjustments仅加在现有JSON中，不改ORM。保存时同步行程说明
 
 ## 真实两日复验
 
-新隔离库validation.db，用户ltp11-meal-recovery，草稿 `64f0ae3453b84021b0e5a2ccf6773deb`，定稿历史1。复用LTP-10保存的真实失败前素材（最初为LTP-8实际查询的苏州2026-10-15～16景点/酒店/餐饮/天气），reused-real-source.json保存出处、SHA和原始字段。没有把沿用素材算成本轮新发现、酒店可订或最新天气查询。
+新隔离库validation.db，用户ltp11-meal-recovery，草稿 `sample-draft-09`，定稿历史1。复用LTP-10保存的真实失败前素材（最初为LTP-8实际查询的苏州2026-10-15～16景点/酒店/餐饮/天气），reused-real-source.json保存出处、SHA和原始字段。没有把沿用素材算成本轮新发现、酒店可订或最新天气查询。
 
 本轮实际高德25次方向工具（17步行、8公交）、DeepSeek V4 Pro两次重排；完整脱敏出站观测在outbound.jsonl，原始模型建议在actual-ai-output.jsonl。HTTP200协议回执不等于工具业务成功，另核对所有保存路线非估算、候选坐标/价格/来源、实际时刻和最终历史。
 
@@ -69,9 +69,9 @@ Nexo使用问题按 [台账](nexo-usage-log.md)继续记录操作、预期/实�
 
 ## Nexo 最终记录
 
-- 会话 `be8642c7-e9e6-4140-8edc-55dbcd1dc8bb`：COMPLETED v5；交接 `a6becaed-99c8-4740-81f5-02809348a51a`。
-- USER请求 `33ac3995-37f1-43db-a665-9aaf11bf554b`：PENDING，五项证据已提交；未代用户验收。
-- 实现学习 `f93e29ea-281d-4841-8f75-f5ffd0c2da5b` v1；使用反馈索引 `1ad1d7fe-5ee2-464b-ae61-074388620199` v1，关联NXUSE-002/006/007。
+- 会话 `internal-record-054`：COMPLETED v5；交接 `internal-record-049`。
+- USER请求 `internal-record-012`：PENDING，五项证据已提交；未代用户验收。
+- 实现学习 `internal-record-071` v1；使用反馈索引 `internal-record-005` v1，关联NXUSE-002/006/007。
 - 最终回读nexo/issue-final.json（Issue v3、PENDING、sessions.active=null）、session-final.json（COMPLETED v5）；close/acceptance精确输入与回执保留。
 
 最终台账补充后nexo/issue-after-ui-readonly.json再次确认：USER PENDING、feedbackVersion=0、sessions.active=null；未代用户作逐项判断或验收。

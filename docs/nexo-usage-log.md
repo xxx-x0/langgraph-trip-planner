@@ -23,7 +23,7 @@
 - 最短复现：导入 EXPLORING 项目 → 建里程碑 → 准备 READY Issue → 调用开始会话，观察拒绝及指引。
 - 缓解和复验：在正常项目上下文页提交已确认规划，重新读取简报和版本，再启动成功。未改 Nexo 代码、配置或数据库。
 - 改进候选：在 READY 准备结果或简报中显示执行门槛与对应页面入口；保留生命周期规则。是否需要 MCP 提交规划能力另行评估。
-- 证据：[LTP-3 交接](ltp3-handoff.md#nexo-使用问题与处理)；Nexo 学习记录 `cc759bc1-1a2f-4b20-9652-11385d31b8fb`；本机 `2026-10-13-ltp3/` 的 MCP 回执。
+- 证据：[LTP-3 交接](ltp3-handoff.md#nexo-使用问题与处理)；Nexo 学习记录 `internal-record-056`；本机 `2026-10-13-ltp3/` 的 MCP 回执。
 
 ## NXUSE-002 Codex 连接工具与凭据入口未就绪
 
@@ -50,7 +50,7 @@
 
 - 首次发生：2026-10-13，LTP-6 启动前，Nexo 版本未知。
 - 分类、影响与状态：服务可达性 / 环境，P2；已缓解，根因未确认。
-- 操作：向 `http://127.0.0.1:3000/mcp` POST JSON-RPC `tools/call`，工具 `get_project_brief`，参数为 LTP projectId。
+- 操作：向 `${NEXO_BASE_URL}/mcp` POST JSON-RPC `tools/call`，工具 `get_project_brief`，参数为 LTP projectId。
 - 预期：返回简报，或返回可诊断的 MCP 业务错误。
 - 实际：TCP 连接拒绝 `URLError / errno 61`，发生在认证和工具执行之前。
 - 影响：不能读最新工作流或开始记录；先保存本地基线和独立推进，Nexo 写入等待恢复。
@@ -96,9 +96,9 @@
 - 再次观察：2026-10-14 15:51，LTP-2/7均已关闭会话并回读USER PENDING；只读打开LTP-7页面，页头仍为“开始下一次开发会话”，下一步仍为“Issue 正在推进；可以开始下一次开发会话。”，验收区已正确展示codex-ltp成果、5项证据和未审查用户判断。未开始新会话或执行验收。证据在 `2026-10-14-ltp2-ltp7/nexo-ltp7-issue-ax.txt`、`nexo-ltp7-header.png`、`nexo-ltp7-acceptance.png`，MCP回读在 `nexo/ltp2-issue-final.json` 与 `nexo/ltp7-issue-final.json`。现象持续，仍为体验建议/预期待确认。
 - LTP-8复验（2026-10-14 17:15）：会话COMPLETED v5、无活跃会话，USER请求PENDING，验收区正确显示本次246/49/58证据和未审查判断；页头与下一步仍引导开始新会话，同一现象持续。只读查看，未开始会话、保存反馈或验收。证据 `2026-10-14-ltp8/nexo-issue-snapshot.txt`、`nexo-issue-header.png`、`nexo-user-acceptance.png` 及 `nexo/issue-final.json`。
 
-- LTP-10复验（2026-10-14，17:58提交后）：会话COMPLETED v5、sessions.active=null、USER请求5d192537-ce06-4a0c-9a20-d5b16a27641e为PENDING。只读打开Issue，验收区正确展示codex-ltp五项证据、262/56与真实7/36记录，各用户判断均“尚未审查”；页头仍“开始下一次开发会话”，下一步仍“Issue 正在推进；可以开始下一次开发会话。”。影响和复现与本条相同，无数据丢失或权限错误；未开始会话、保存反馈或点击验收。证据 `2026-10-14-ltp10/nexo-issue-snapshot.txt`、`nexo-issue-header.png`、`nexo-user-acceptance.png`、`nexo/issue-final.json`。继续为体验建议/预期待确认。
+- LTP-10复验（2026-10-14，17:58提交后）：会话COMPLETED v5、sessions.active=null、USER请求internal-record-027为PENDING。只读打开Issue，验收区正确展示codex-ltp五项证据、262/56与真实7/36记录，各用户判断均“尚未审查”；页头仍“开始下一次开发会话”，下一步仍“Issue 正在推进；可以开始下一次开发会话。”。影响和复现与本条相同，无数据丢失或权限错误；未开始会话、保存反馈或点击验收。证据 `2026-10-14-ltp10/nexo-issue-snapshot.txt`、`nexo-issue-header.png`、`nexo-user-acceptance.png`、`nexo/issue-final.json`。继续为体验建议/预期待确认。
 
-- LTP-11复验（2026-10-14，20:21提交后）：会话COMPLETED v5、无活跃会话，USER请求33ac3995-37f1-43db-a665-9aaf11bf554b为PENDING。只读页面正确展示300/58、真实18/38和五项“尚未审查”用户判断；页头仍“开始下一次开发会话”，下一步仍“Issue 正在推进；可以开始下一次开发会话。”。预期/影响/复现与本条一致，仍为体验建议/预期待确认；未开始新会话、保存反馈或验收。证据 `2026-10-14-meal-recovery/nexo-issue-snapshot.txt`、nexo-issue-header.png、nexo-user-acceptance.png及nexo/issue-final.json。
+- LTP-11复验（2026-10-14，20:21提交后）：会话COMPLETED v5、无活跃会话，USER请求internal-record-012为PENDING。只读页面正确展示300/58、真实18/38和五项“尚未审查”用户判断；页头仍“开始下一次开发会话”，下一步仍“Issue 正在推进；可以开始下一次开发会话。”。预期/影响/复现与本条一致，仍为体验建议/预期待确认；未开始新会话、保存反馈或验收。证据 `2026-10-14-meal-recovery/nexo-issue-snapshot.txt`、nexo-issue-header.png、nexo-user-acceptance.png及nexo/issue-final.json。
 
 ## NXUSE-007 未提交成果与只读代码差异入口的适配疑问
 
@@ -137,10 +137,10 @@
 - 预期/依据：按幂等请求标识完成开始；真实契约要求UUID，代理应使用UUID。若工具描述能明确格式可减少此误用。
 - 实际：`MCP error -32602`，`Invalid UUID at requestId`。发生在参数校验，未创建会话、未改变业务数据。
 - 影响与复现：一次启动未完成；向开始工具传非UUID字符串即可观察该拒绝，不需改Nexo。当前未重复故意发送错误请求。
-- 修正/复验：改用 `ecdb2671-1fb0-47b0-b18a-cdd5b11d9135`，返回started，工作会话 `2b65c7e9-1a69-43d4-8390-ca1cfc6b962f` v1；后续进度写入成功，未重复启动。
+- 修正/复验：改用 `internal-record-067`，返回started，工作会话 `internal-record-009` v1；后续进度写入成功，未重复启动。
 - 脱敏证据：本轮原生工具回执、LTP-9交接及 `2026-10-15-ltp9/nexo/` 的会话回读。初次拒绝来自本次工具结果，未伪称有原始HTTP抓包。建议代理统一生成UUID，可考虑在工具参数说明声明格式；不自行修改Nexo。
 
-- LTP-9兼容修复复核（2026-10-15）：继续同一Issue的新会话 `87390458-fc34-43b4-8bf4-65d659c02a25`，按UUID发起、读取和进度均由原生codex-ltp成功完成；没有再次出现本条参数错误，未新增Nexo产品异常。原生发现问题NXUSE-002本次仍已缓解。原研究PENDING不是用户接受，本轮完成后另提交请求并保留旧快照。仅核对原生工作流，未复验旧UI建议NXUSE-006/007，不推断其已修复。证据见 `2026-10-15-ltp9-compat/nexo/` 和修复交接。
+- LTP-9兼容修复复核（2026-10-15）：继续同一Issue的新会话 `internal-record-043`，按UUID发起、读取和进度均由原生codex-ltp成功完成；没有再次出现本条参数错误，未新增Nexo产品异常。原生发现问题NXUSE-002本次仍已缓解。原研究PENDING不是用户接受，本轮完成后另提交请求并保留旧快照。仅核对原生工作流，未复验旧UI建议NXUSE-006/007，不推断其已修复。证据见 `2026-10-15-ltp9-compat/nexo/` 和修复交接。
 
 - 多城市阶段再次发生（2026-10-16，LTP-21/22/23）：代理对三次 `start_or_continue_work` 使用 `multi-start-<issueId>` 可读 requestId，被 -32602 / Invalid UUID 拒绝；校验阶段无会话写入。改用 UUID 后三个会话均成功建立并报告进度。此为代理重复参数错误，未发现新的 Nexo 产品故障；后续请求统一使用 UUID。
 
@@ -183,11 +183,11 @@
 
 用户授权将侧会话审查结果记录于此。审查范围为可见主会话调用、历史本机回执、当前工具元数据，以及本次两个只读调用；未查看 Nexo 服务端实现、完整 HTTP 抓包、隐藏重试、SQL 或性能遥测，部署版本未知。以下设计建议不是已证实的服务端缺陷，也不授权修改 Nexo。本次只修改台账，不创建或变更 Nexo Issue、会话、验收及配置。
 
-证据约定：历史证据根目录为 `/Users/finn/.local/share/nexo-codex/handoffs/`。本次原生工具回执和元数据位于 2026-10-18 本侧会话，未另存原始抓包。字符数按当时模型可见对象序列化统计，不是 token 数、线上传输字节或服务端负载。可用以下只读请求复核；当前状态以后可能变化，不保证重现相同大小：
+证据约定：历史证据根目录为 `${EVIDENCE_ROOT}/`。本次原生工具回执和元数据位于 2026-10-18 本侧会话，未另存原始抓包。字符数按当时模型可见对象序列化统计，不是 token 数、线上传输字节或服务端负载。可用以下只读请求复核；当前状态以后可能变化，不保证重现相同大小：
 
 ```json
-{"tool":"get_project_brief","arguments":{"projectId":"72369225-f2dd-4fa0-ad69-9dc53532395f","issueId":"95248b16-8fe3-4a5a-b998-0bbf3137bd3b"}}
-{"tool":"get_issue","arguments":{"projectId":"72369225-f2dd-4fa0-ad69-9dc53532395f","issueId":"95248b16-8fe3-4a5a-b998-0bbf3137bd3b"}}
+{"tool":"get_project_brief","arguments":{"projectId":"internal-record-036","issueId":"internal-record-046"}}
+{"tool":"get_issue","arguments":{"projectId":"internal-record-036","issueId":"internal-record-046"}}
 ```
 
 ### 既有条目复核与归因修正
@@ -290,14 +290,14 @@
 
 - 2026-10-19，LTP-26记录进度前，代理从工具会话本地缓存读取`bridgeSession.workSessionId`；用户中断后缓存已不存在，JavaScript先抛TypeError，尚未调用Nexo写接口。分类为代理编排错误，P3，已恢复，不是Nexo服务故障。
 - 预期：恢复工作后沿用已存在活跃会话，准确取得当前版本再写入。实际：一次本地编排失败；没有重复会话或已知数据变更。
-- 恢复：用`get_issue(view=status)`核对LTP-25/26活跃会话及版本，随后`report_progress`成功，回执`49a9bd0b-7144-4605-814b-25b0026632ac`。复现条件为丢失本地store后直接解引用，不需故意向服务发送错误写入。
+- 恢复：用`get_issue(view=status)`核对LTP-25/26活跃会话及版本，随后`report_progress`成功，回执`internal-record-024`。复现条件为丢失本地store后直接解引用，不需故意向服务发送错误写入。
 - 预防：本地缓存不是持久事实，中断后根据保存的实体ID和精简状态恢复；未改Nexo或连接配置。
 
 ## NXUSE-022 仓库交接已更新而Nexo事实尚未收尾
 
 - 2026-10-20接手LTP-26/27，原生codex-ltp，部署版本未知。分类：代理交接遗漏，P3；本轮同步处理，不是已证实的Nexo服务端故障。
-- 操作：只读`get_project_brief(projectId=72369225-f2dd-4fa0-ad69-9dc53532395f)`及两项`get_issue`，对照`docs/ltp27-handoff.md`和既有`2026-10-20-ltp27/live-verification.json`。预期：最新交接/审查说明反映已实现的工程与已留存真实实测，保留旧失败事实。
-- 实际：项目v46 nextAction、LTP-26旧PENDING审查仍称27尚未实现；LTP-27已有ACTIVE会话`e791da9f-a967-4945-8967-ffa2014bce49` v2，但仓库已有修复与194项原始实测证据。ACTIVE仅代表记录未结束，不能据此判断外部进程仍在运行；旧审查未随新实现自动改变本身不视为产品错误。
-- 影响：接手者可能重复实施或把过时失败说明当作当前状态。本次读取没有写入或损坏；后续按用户继续授权建立26会话、继续27会话，进度回执`d738e635-c980-48d6-8f25-b2a549aeedc9`与`5dc5ed99-d65b-4588-81a1-5d5bf3bab584`成功。
+- 操作：只读`get_project_brief(projectId=internal-record-036)`及两项`get_issue`，对照`docs/ltp27-handoff.md`和既有`2026-10-20-ltp27/live-verification.json`。预期：最新交接/审查说明反映已实现的工程与已留存真实实测，保留旧失败事实。
+- 实际：项目v46 nextAction、LTP-26旧PENDING审查仍称27尚未实现；LTP-27已有ACTIVE会话`internal-record-063` v2，但仓库已有修复与194项原始实测证据。ACTIVE仅代表记录未结束，不能据此判断外部进程仍在运行；旧审查未随新实现自动改变本身不视为产品错误。
+- 影响：接手者可能重复实施或把过时失败说明当作当前状态。本次读取没有写入或损坏；后续按用户继续授权建立26会话、继续27会话，进度回执`internal-record-059`与`internal-record-028`成功。
 - 处理：按实际工程与分层验证关闭会话、更新审查及nextAction；0.2.1未重新实装的部分保留NOT_VERIFIED，USER验收不代办。原失败留在历史，不覆盖为成功。证据与最终Nexo回执位于`2026-10-20-ltp26-ltp27-followup/`，见[交接](ltp26-ltp27-followup.md)。未修改Nexo代码或配置。
-- 同日续验：初始工程会话关闭后用户确认已重载0.2.1并授权继续实测，正常新建26/27会话`e58463a9-2f80-4b2a-9b94-283dd0d10a5f`、`9f08f312-f6af-401f-9df6-1c2488250b3b`，两类真实Chrome链路及239项字段核对通过。最终更新各标准与限制，不继续沿用未实装结论，也不把工程PASSED当作USER接受。
+- 同日续验：初始工程会话关闭后用户确认已重载0.2.1并授权继续实测，正常新建26/27会话`internal-record-062`、`internal-record-047`，两类真实Chrome链路及239项字段核对通过。最终更新各标准与限制，不继续沿用未实装结论，也不把工程PASSED当作USER接受。

@@ -44,24 +44,24 @@ DOM样本先在旧实现复现失败：首屏80条时滚动等待次数为0。�
 
 当前代码下两类均采用首选→预览无冲突→确认草稿revision2→只读保存revision3→刷新回读。预览阶段GET仍revision1、plan/snapshots未写入。原7景点、13正餐、2酒店/6晚、固定休息及每日事实保持，其他两段交通不变，五类原缓冲完整沿用。原G1862/CA8367冲突早班及跨日候选实际出现在排除说明。网站列表中的首选和另两推荐的站点、时刻与参考价均只读核对；不采集账户/订单字段。
 
-239项为当前UI状态、服务端保存/回读和每日字段逐项比较，不是239次独立旅程。已知预算仍2388元（城际172、酒店1299、市内917），完整性为false、上限判断为null；新参考价不计同行总额。旧原版只读成果保持，新增[0.2.1高铁成果](http://127.0.0.1:15173/multi-trip/mc_d4e06425f63f49d7b0e7d3ad1f4f3fa6)与[0.2.1飞机成果](http://127.0.0.1:15173/multi-trip/mc_03740453a0684aa6bb0b05ddbd4a983a)保留在Chrome。
+239项为当前UI状态、服务端保存/回读和每日字段逐项比较，不是239次独立旅程。已知预算仍2388元（城际172、酒店1299、市内917），完整性为false、上限判断为null；新参考价不计同行总额。旧原版只读成果保持，新增0.2.1高铁成果（本机内部记录，链接未公开）与0.2.1飞机成果（本机内部记录，链接未公开）保留在Chrome。
 
 新证据为同目录`*-021-*`、`live-021-verification.json`、`server-021.log/json`。满80条后的航班继续加载、虚拟索引复用、断线/无票/全部冲突/改查询故障仍按对应模拟回归说明，本次真实航线只有74条；不宣称这些站点边界都获得新的现场验证。3/10分钟提示不表示实际接驳可靠，市内数据仍是旧真实快照，未重新导航/核价，未购票或代用户判断质量。
 
 ## 证据与复验
 
-本轮目录：`/Users/finn/.local/share/nexo-codex/handoffs/2026-10-20-ltp26-ltp27-followup/`，包括最终回归日志、构建日志、离线回放JSON、新版真实Chrome证据、包核对与受保护文件哈希。源文件另存快照及清单；它们是代理自报证据，不是独立验收。
+本轮目录：`${EVIDENCE_ROOT}/2026-10-20-ltp26-ltp27-followup/`，包括最终回归日志、构建日志、离线回放JSON、新版真实Chrome证据、包核对与受保护文件哈希。源文件另存快照及清单；它们是代理自报证据，不是独立验收。
 
 离线回放脚本接受旧证据目录；以下从backend执行，不访问业务库或外部服务：
 
 ```bash
 PYTHONPATH=. DATABASE_URL=sqlite+aiosqlite:////tmp/ltp27-replay-unused.db \
   .venv/bin/python tests/manual/ltp27_ticket_replay.py \
-  --source /Users/finn/.local/share/nexo-codex/handoffs/2026-10-20-ltp27 \
+  --source ${EVIDENCE_ROOT}/2026-10-20-ltp27 \
   --output /tmp/ltp27-ticket-replay.json
 ```
 
-扩展安装包为`frontend/public/ticket-assistant-extension.zip`，安装方式见[扩展说明](../browser-extension/README.md)。原只读[高铁成果](http://127.0.0.1:15173/multi-trip/mc_35fbc7347bcb4cdf96d2872191d5b8f4)与[飞机成果](http://127.0.0.1:15173/multi-trip/mc_1af952f016aa422ca0e6a60a7db1991b)继续保留；它们不是本轮新生成或新核价。
+扩展安装包为`frontend/public/ticket-assistant-extension.zip`，安装方式见[扩展说明](../browser-extension/README.md)。原只读高铁成果（本机内部记录，链接未公开）与飞机成果（本机内部记录，链接未公开）继续保留；它们不是本轮新生成或新核价。
 
 ## Nexo交接
 

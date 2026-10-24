@@ -733,7 +733,7 @@ frontend/src/
 ## 附录：设计参考
 
 **包豪斯设计原则来源：**
-- Bauhaus Design System (designpropmts/Bauhaus.xml)
+- Bauhaus Design System（本机设计提示词，未随仓库分发）
 - 1920s Bauhaus Posters
 - Constructivist Modernism
 
