@@ -261,7 +261,7 @@ async def patch_dining_pool(draft_id, day_index, pool, *, expected_day, expected
         await session.commit()
 
 
-async def replace_journey(draft_id, request, expected_request, expected_days):
+async def replace_journey(draft_id, request, expected_request, expected_days, *, details=None):
     async with async_session() as session:
         await session.execute(text('BEGIN IMMEDIATE'))
         record = await session.get(TripDraft, draft_id)
@@ -269,5 +269,7 @@ async def replace_journey(draft_id, request, expected_request, expected_days):
             raise DraftChangedDuringFinalize('草稿已变化，本次交通修改未保存，请重新预览')
         data=json.loads(record.request_json)
         data['journey']=request.journey.model_dump(mode='json') if request.journey else None
+        if details is not None:
+            record.days_detail_json=json.dumps([d.model_dump(mode='json') if d else None for d in details],ensure_ascii=False)
         record.request_json=json.dumps(data,ensure_ascii=False)
         await session.commit()

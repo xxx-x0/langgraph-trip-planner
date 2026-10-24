@@ -300,6 +300,10 @@ export async function refreshDiningOptions(draftId: string, dayIndex: number) {
 export async function previewJourney(request: TripFormData) {
   return (await apiClient.post('/api/trip/draft/journey-preview',request)).data
 }
-export async function changeJourney(draftId:string, journey:import('@/types').Journey|null, preview_token?:string) {
-  return (await apiClient.post(`/api/trip/draft/${draftId}/journey`,{journey,preview_token})).data
+export async function changeJourney(draftId:string, journey:import('@/types').Journey|null, preview_token?:string, synchronize=false) {
+  return (await apiClient.post(`/api/trip/draft/${draftId}/journey`,{journey,preview_token,synchronize})).data
+}
+
+export async function compareJourneys(draftId:string,candidates:unknown[]) {
+ return (await apiClient.post(`/api/trip/draft/${draftId}/journey-comparison`,{candidates})).data
 }

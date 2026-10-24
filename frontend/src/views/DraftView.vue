@@ -16,14 +16,19 @@
     </a-alert>
     <main v-if="draft && draft.status !== 'finalized' && !loadError" class="draft-content">
       <JourneySummary :journey="draft.request.journey" :city="draft.city" :days="draft.days" />
-      <details class="journey-change">
+      <details class="journey-change comparison-disclosure"><summary>比较手动填写的往返方案</summary>
+        <JourneyComparison :draft-id="draftId" :request="draft.request" :days-detail="draft.days_detail" :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @choose="chooseTravel" />
+      </details>
+      <details ref="travelEditor" class="journey-change" :open="travelEditorOpen" @toggle="travelEditorOpen=($event.target as HTMLDetailsElement).open">
         <summary>编辑往返交通，先查看对行程的影响</summary>
         <JourneyEditor v-model="journeyEdit" :destination-city="draft.city" :start-date="draft.request.start_date" :end-date="draft.request.end_date" :passengers="draft.request.companions?.count || 1" />
+        <label><input type="checkbox" v-model="synchronizeTravel" @change="journeyPreview=null" />同步可容纳的每日时间安排</label>
         <a-button :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @click="previewTravel">查看变更影响</a-button>
         <p v-if="journeyError" role="alert">{{ journeyError }}</p>
         <div v-if="journeyPreview" class="travel-preview">
+          <p v-if="journeyPreview.budget">整趟已知费用：{{journeyPreview.budget.total}} 元；{{journeyPreview.budget.is_within_budget === false ? '已超预算' : '仍有费用待核对'}}</p>
           <p>{{ journeyPreview.notice }}</p><p>往返大交通已知小计：{{ journeyPreview.intercity_total }} 元</p>
-          <div v-for="day in journeyPreview.impacts" :key="day.date"><p>{{ day.date }} · {{ day.window.unavailable ? '暂无可用时间' : timeLabel(day.window.start_minutes)+'—'+timeLabel(day.window.end_minutes) }}</p><p v-for="problem in day.conflicts" :key="problem" role="alert">{{ problem }}</p></div>
+          <div v-for="day in journeyPreview.impacts" :key="day.date"><p>{{ day.date }} · {{ day.window.unavailable ? '暂无可用时间' : timeLabel(day.window.start_minutes)+'—'+timeLabel(day.window.end_minutes) }}</p><p v-if="day.changes?.length">{{day.changes.join('；')}}</p><p v-for="problem in day.conflicts" :key="problem" role="alert">{{ problem }}</p></div>
           <a-button :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @click="saveTravel">确认以上影响并保存交通</a-button>
         </div>
         <a-button v-if="journeyDirty || journeyPreview" :disabled="journeyBusy" @click="cancelTravel">取消本次交通变更</a-button>
@@ -65,6 +70,7 @@ import {
   getDraft, assembleDay, recomputeDay, aiRearrangeDay, changeJourney,
   rewriteNarrative, refreshDiningOptions,
 } from '@/services/api'
+import JourneyComparison from '@/components/JourneyComparison.vue'
 import JourneyEditor from '@/components/JourneyEditor.vue'
 import JourneySummary from '@/components/JourneySummary.vue'
 import type {Journey} from '@/types'
@@ -87,6 +93,13 @@ const journeyEdit=ref<Journey|null>(null)
 const journeyPreview=ref<any>(null)
 const journeyBusy=ref(false)
 const journeyError=ref('')
+const synchronizeTravel=ref(true)
+const travelEditor=ref<HTMLDetailsElement|null>(null)
+const travelEditorOpen=ref(false)
+async function chooseTravel(value:Journey){
+ journeyEdit.value=JSON.parse(JSON.stringify(value));synchronizeTravel.value=true;await nextTick();await previewTravel();await nextTick();
+ if(travelEditor.value){travelEditor.value.open=true;travelEditor.value.scrollIntoView?.({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'})}
+}
 const journeyDirty=computed(()=>JSON.stringify(journeyEdit.value)!==JSON.stringify(draft.value?.request?.journey ?? null))
 watch(()=>draft.value?.request?.journey,v=>{journeyEdit.value=v?JSON.parse(JSON.stringify(v)):null;journeyPreview.value=null},{immediate:true})
 watch(journeyEdit,()=>{journeyPreview.value=null},{deep:true})
@@ -95,12 +108,12 @@ function cancelTravel(){journeyEdit.value=draft.value?.request?.journey?JSON.par
 async function previewTravel(){
  if(journeyBusy.value || Object.keys(dayBusy).length)return
  journeyBusy.value=true;journeyError.value='';journeyPreview.value=null
- try{journeyPreview.value=await changeJourney(draftId.value,journeyEdit.value)}catch(e:any){journeyError.value=typeof e?.response?.data?.detail==='string'?e.response.data.detail:'交通输入无效，请检查日期、人数、时区与价格来源'}finally{journeyBusy.value=false}
+ try{journeyPreview.value=await changeJourney(draftId.value,journeyEdit.value,undefined,synchronizeTravel.value)}catch(e:any){journeyError.value=typeof e?.response?.data?.detail==='string'?e.response.data.detail:'交通输入无效，请检查日期、人数、时区与价格来源'}finally{journeyBusy.value=false}
 }
 async function saveTravel(){
  if(!journeyPreview.value || journeyBusy.value || Object.keys(dayBusy).length)return
  journeyBusy.value=true;journeyError.value=''
- try{await changeJourney(draftId.value,journeyEdit.value,journeyPreview.value.preview_token);draft.value=await getDraft(draftId.value);journeyPreview.value=null;message.success('交通已保存，请核对当天安排')}catch(e:any){journeyError.value=e?.response?.data?.detail || '交通修改未保存，请重新预览';journeyPreview.value=null}finally{journeyBusy.value=false}
+ try{await changeJourney(draftId.value,journeyEdit.value,journeyPreview.value.preview_token,synchronizeTravel.value);draft.value=await getDraft(draftId.value);journeyPreview.value=null;message.success('交通已保存，请核对当天安排')}catch(e:any){journeyError.value=e?.response?.data?.detail || '交通修改未保存，请重新预览';journeyPreview.value=null}finally{journeyBusy.value=false}
 }
 
 async function withDayBusy<T>(

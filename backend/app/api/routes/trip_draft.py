@@ -665,6 +665,7 @@ from pydantic import ValidationError
 class JourneyChange(BaseModel):
     journey: Journey | None = None
     preview_token: str | None = None
+    synchronize: bool = False
 
 @router.post('/{draft_id}/journey', summary='预览并确认抵离交通变更')
 async def change_journey(draft_id: str, change: JourneyChange):
@@ -674,7 +675,7 @@ async def change_journey(draft_id: str, change: JourneyChange):
     raw['journey']=change.journey.model_dump(mode='json') if change.journey else None
     try: request=TripRequest.model_validate(raw)
     except ValidationError as error: raise HTTPException(422,detail=str(error)) from error
-    token=hashlib.sha256((record.request_json+record.days_detail_json+json.dumps(raw,sort_keys=True)).encode()).hexdigest()
+    token=hashlib.sha256((record.request_json+record.days_detail_json+json.dumps(raw,sort_keys=True)+str(change.synchronize)).encode()).hexdigest()
     payload=_load_payload(record)
     impacts=[]
     for ctx,detail in zip(payload.days,payload.days_detail):
@@ -685,13 +686,19 @@ async def change_journey(draft_id: str, change: JourneyChange):
             problems=conflicts(detail)
         impacts.append({'date':ctx.date,'window':window,'conflicts':problems,
                         'activities':[a.name for a in (detail.attractions if detail else ctx.attractions)]})
+    synchronized_details = None
+    budget = None
+    if change.synchronize:
+        from ...services.journey_comparison import synchronize_days
+        synchronized_details, impacts, budget = synchronize_days(payload,request)
     if change.preview_token:
         if change.preview_token!=token: raise HTTPException(409,detail='预览后输入或草稿发生变化，请重新预览')
-        try: await trip_draft_service.replace_journey(draft_id,request,record.request_json,record.days_detail_json)
+        try: await trip_draft_service.replace_journey(draft_id,request,record.request_json,record.days_detail_json, details=synchronized_details)
         except trip_draft_service.DraftChangedDuringFinalize as error: raise HTTPException(409,detail=str(error)) from error
     return {'saved':bool(change.preview_token),'preview_token':token,'impacts':impacts,
+            'budget':budget.model_dump(mode='json') if budget else None,
             'intercity_total':round(sum(x['window'].get('intercity_cost',0) for x in impacts),2),
-            'notice':'修改已订班次只更新本地计划，不会改签。景点和餐厅保持原安排；冲突须调整后才能定稿。住宿日期改变时旧报价作废，需重新查询或创建新规划。'}
+            'notice':('可容纳的安排将同步更新时间，沿用已保存路线时长。放不下的活动保留原时间并标出冲突，解决前不能定稿。' if change.synchronize else '')+'修改已订班次只更新本地计划，不会改签。景点和餐厅保持原安排；冲突须调整后才能定稿。住宿日期改变时旧报价作废，需重新查询或创建新规划。'}
 
 
 @router.post('/journey-preview', summary='核对交通输入与目的地可用时间')
@@ -700,3 +707,15 @@ async def preview_journey(request: TripRequest):
     return {'days':[{'date':(date.fromisoformat(request.start_date)+timedelta(days=i)).isoformat(),
                      'window':travel_window(request,(date.fromisoformat(request.start_date)+timedelta(days=i)).isoformat())}
                     for i in range(request.travel_days)]}
+
+
+from ...services.journey_comparison import JourneyComparison, compare_candidates
+
+@router.post('/{draft_id}/journey-comparison', summary='比较用户录入的交通备选，不改已选方案')
+async def compare_journey(draft_id: str, comparison: JourneyComparison):
+    record=await trip_draft_service.get_draft(draft_id)
+    _ensure_editable(record)
+    try:
+        return {'options':compare_candidates(_load_payload(record),comparison.candidates)}
+    except ValidationError as error:
+        raise HTTPException(422,detail=str(error)) from error

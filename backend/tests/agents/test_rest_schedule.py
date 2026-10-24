@@ -5,6 +5,7 @@ from app.models.rest import RestPeriod
 from app.agents.langgraph_agent.assemble.schedule import schedule_day
 from app.agents.langgraph_agent.assemble.narrative import refresh_day_description
 from app.services.journey_service import conflicts
+from app.services.journey_comparison import synchronize_days
 
 def rest(start='14:00',end='17:00'):
     return RestPeriod(id='r',date='2026-10-22',start_time=start,end_time=end)
@@ -55,3 +56,11 @@ def test_short_gaps_are_not_called_an_afternoon_to_fill():
         if item['kind']=='free_time' and item['duration']<=60:
             assert item['start_time']+'至'+item['end_time']+'尚未安排' not in text
     assert '补充下午活动' not in text
+
+
+def test_failure_retains_original_without_claiming_rest():
+    d=day();d.rest_periods=[];schedule_day(d);original=d.timeline_schedule.copy()
+    req=TripRequest(city='苏州',start_date=d.date,end_date=d.date,travel_days=1,transportation='公共交通',accommodation='经济型酒店',rest_periods=[rest('11:00','16:00')])
+    details,impacts,_=synchronize_days(SimpleNamespace(days=[DraftDayContext(day_index=0,date=d.date)],days_detail=[d]),req)
+    assert impacts[0]['conflicts'] and details[0].timeline_schedule==original
+    assert '还没放进' in details[0].description and d.rest_periods==[]
