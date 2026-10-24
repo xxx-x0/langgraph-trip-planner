@@ -120,6 +120,8 @@ async def create_draft(
 
 
 async def get_draft(draft_id: str) -> Optional[TripDraft]:
+    if draft_id.startswith("mc_"):
+        return None  # Multi-city aggregates have their own API and schema.
     async with async_session() as session:
         return await session.get(TripDraft, draft_id)
 
@@ -171,6 +173,8 @@ async def mark_finalized(draft_id: str, *, trip_id: int) -> None:
 
 
 async def delete_draft(draft_id: str) -> bool:
+    if draft_id.startswith("mc_"):
+        return False
     async with async_session() as session:
         record = await session.get(TripDraft, draft_id)
         if record is None:
@@ -186,7 +190,7 @@ async def delete_expired(*, days: int = 30) -> int:
         stmt = (
             delete(TripDraft)
             .where(TripDraft.updated_at < cutoff)
-            .where(TripDraft.status != "finalized")
+            .where(TripDraft.status.notin_(["finalized", "multi_city", "multi_saved"]))
         )
         result = await session.execute(stmt)
         await session.commit()

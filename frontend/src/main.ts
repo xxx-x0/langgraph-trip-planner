@@ -25,6 +25,7 @@ gsap.registerPlugin(Flip, SplitText)
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    { path: "/multi-trip/:id?", name: "MultiTrip", component: () => import("@/views/MultiTripView.vue") },
     {
       path: '/',
       name: 'Home',

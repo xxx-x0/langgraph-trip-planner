@@ -14,7 +14,8 @@
                 <span class="nav-icon">✨</span>
                 <span class="nav-label">规划行程</span>
               </router-link>
-              <router-link to="/my-trips" class="nav-item" active-class="nav-active">
+              <router-link to="/multi-trip" class="nav-item"><span class="nav-label">多日旅行</span></router-link>
+                <router-link to="/my-trips" class="nav-item" active-class="nav-active">
                 <span class="nav-icon">🗺️</span>
                 <span class="nav-label">我的行程</span>
               </router-link>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mergeDayAssignmentsWithSelected } from './dayAssignmentMerge'
+import { mergeDayAssignmentsWithSelected, hasUnsupportedEmptyDay } from './dayAssignmentMerge'
 
 describe('mergeDayAssignmentsWithSelected', () => {
   it('preserves cached attraction fields when preview returns slim day assignments', () => {
@@ -45,4 +45,11 @@ describe('mergeDayAssignmentsWithSelected', () => {
       open_hours: '3月1日-10月31日 07:30-17:30',
     })
   })
+})
+
+it('allows multi-city rest and travel days without forcing sightseeing', () => {
+  const days = [[{ name: '西湖' }], [], [{ name: '雷峰塔' }], []]
+  expect(hasUnsupportedEmptyDay(days, true)).toBe(false)
+  expect(hasUnsupportedEmptyDay(days, false)).toBe(true)
+  expect(hasUnsupportedEmptyDay(days, false, [false, true, false, true])).toBe(false)
 })

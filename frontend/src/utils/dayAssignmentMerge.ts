@@ -14,3 +14,8 @@ export function mergeDayAssignmentsWithSelected<T extends AttractionLike, U exte
     })
   )
 }
+
+// Empty city days can intentionally be rest days; an in-transit day never needs a POI.
+export function hasUnsupportedEmptyDay(days: unknown[][], multiCity: boolean, unavailable: boolean[] = []): boolean {
+  return days.some((day, index) => day.length === 0 && !multiCity && !unavailable[index])
+}

@@ -15,11 +15,12 @@
       <template #action><a-button @click="loadDraft">重新加载</a-button></template>
     </a-alert>
     <main v-if="draft && draft.status !== 'finalized' && !loadError" class="draft-content">
+      <section v-if="route.query?.multi" class="journey-change"><router-link :to="{path:`/multi-trip/${route.query?.multi}`,query:multiReturnQuery}">← 返回整趟旅行</router-link><p>这里编辑这座城市的工作副本；确认同步后，整趟预算和说明才一起更新。跨城班次请回整趟页面修改。</p><a-button :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @click="syncMulti">将当前安排同步到整趟旅行</a-button><p role="status">{{multiMessage}}</p></section>
       <JourneySummary :journey="draft.request.journey" :city="draft.city" :days="draft.days" />
-      <details class="journey-change comparison-disclosure"><summary>比较手动填写的往返方案</summary>
+      <details v-if="!route.query?.multi" class="journey-change comparison-disclosure"><summary>比较手动填写的往返方案</summary>
         <JourneyComparison :draft-id="draftId" :request="draft.request" :days-detail="draft.days_detail" :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @choose="chooseTravel" />
       </details>
-      <details ref="travelEditor" class="journey-change" :open="travelEditorOpen" @toggle="travelEditorOpen=($event.target as HTMLDetailsElement).open">
+      <details v-if="!route.query?.multi" ref="travelEditor" class="journey-change" :open="travelEditorOpen" @toggle="travelEditorOpen=($event.target as HTMLDetailsElement).open">
         <summary>编辑往返交通，先查看对行程的影响</summary>
         <JourneyEditor v-model="journeyEdit" :destination-city="draft.city" :start-date="draft.request.start_date" :end-date="draft.request.end_date" :passengers="draft.request.companions?.count || 1" />
         <label><input type="checkbox" v-model="synchronizeTravel" @change="journeyPreview=null" />同步可容纳的每日时间安排</label>
@@ -37,9 +38,10 @@
         <DayCard
           v-for="(ctx, idx) in draft.days"
           :key="idx"
+          :id="`draft-day-${idx}`"
           :context="ctx"
           :detail="draft.days_detail[idx] || null"
-          :is-default-expanded="idx === 0"
+          :is-default-expanded="route.query.date ? ctx.date === route.query.date : idx === 0"
           :busy="dayBusy[idx] || ''"
           :save-error="dayErrors[idx] || ''"
           @assemble="onAssemble(idx, $event)"
@@ -50,7 +52,11 @@
         />
       </div>
 
-      <div class="finalize-bar">
+      <div v-if="route.query?.multi" class="finalize-bar multi-sync-bar">
+        <div><p>{{ draft.city }} · {{ assembledDays }} / {{ draft.days.length }} 天已安排</p><small>每日修改已保存在本城；同步后才会更新整趟旅行。</small><p v-if="multiMessage" role="status">{{multiMessage}}</p></div>
+        <a-button type="primary" size="large" :loading="journeyBusy" :disabled="Object.keys(dayBusy).length > 0" @click="syncMulti">同步并返回整趟旅行</a-button>
+      </div>
+      <div v-else class="finalize-bar">
         <a-button type="primary" size="large" @click="onFinalize"
                   :disabled="!!loadError || journeyBusy || journeyDirty || !!journeyPreview || Object.keys(dayBusy).length > 0">
           定稿并保存
@@ -70,6 +76,7 @@ import {
   getDraft, assembleDay, recomputeDay, aiRearrangeDay, changeJourney,
   rewriteNarrative, refreshDiningOptions,
 } from '@/services/api'
+import {multiApi} from '@/services/api'
 import JourneyComparison from '@/components/JourneyComparison.vue'
 import JourneyEditor from '@/components/JourneyEditor.vue'
 import JourneySummary from '@/components/JourneySummary.vue'
@@ -81,7 +88,14 @@ const route = useRoute()
 const router = useRouter()
 const draftId = computed(() => route.params.id as string)
 
+const multiMessage=ref('')
+const multiReturnQuery=computed(()=>({city:String(route.query.stop||''),...(route.query.date && route.query.returnSection!=='transport'?{date:String(route.query.date)}:{}),...(route.query.returnSection==='transport'?{section:'transport',edge:String(route.query.edge||'0')}:{})}))
+async function syncMulti(){
+ journeyBusy.value=true;multiMessage.value=''
+ try{const saved=await multiApi(`/${route.query?.multi}/cities/${route.query.stop}/import`,'post',{revision:Number(route.query.revision),basis:String(route.query.basis||''),draft_id:draftId.value});multiMessage.value='已同步，整趟预算与安排一起更新。';await router.push({path:`/multi-trip/${saved.id}`,query:multiReturnQuery.value})}catch(e:any){multiMessage.value=typeof e?.response?.data?.detail==='string'?e.response.data.detail:'同步失败，整趟旅行保持原样；城市工作副本仍已保存。'}finally{journeyBusy.value=false}
+}
 const draft = ref<any>(null)
+const assembledDays=computed(()=>draft.value?.days_detail?.filter((day:any)=>day?.is_assembled).length||0)
 const loading = ref(true)
 const loadError = ref('')
 const tripLoader = useTripLoader()
@@ -242,7 +256,7 @@ async function onFinalize() {
   })
 }
 
-onMounted(loadDraft)
+onMounted(async()=>{await loadDraft();if(route.query.date){await nextTick();const idx=draft.value?.days.findIndex((d:any)=>d.date===route.query.date);if(idx>=0)document.getElementById(`draft-day-${idx}`)?.scrollIntoView?.({block:'start'})}})
 </script>
 
 <style scoped>

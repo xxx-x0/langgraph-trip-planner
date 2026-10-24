@@ -165,3 +165,7 @@ if __name__ == "__main__":
         port=settings.port,
         reload=True
     )
+
+
+from .routes.multicity import router as multicity_router
+app.include_router(multicity_router, prefix="/api")

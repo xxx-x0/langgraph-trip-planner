@@ -2,12 +2,12 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Antd from 'ant-design-vue'
 import DraftView from './DraftView.vue'
-import { getDraft, recomputeDay, aiRearrangeDay, refreshDiningOptions, changeJourney } from '@/services/api'
+import { getDraft, recomputeDay, aiRearrangeDay, refreshDiningOptions, changeJourney, multiApi } from '@/services/api'
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn(), query: {} as Record<string,string> }))
 
 vi.mock('@/services/api', () => ({
-  changeJourney:vi.fn(), getDraft: vi.fn(), recomputeDay: vi.fn(), aiRearrangeDay: vi.fn(),
+  multiApi:vi.fn(), changeJourney:vi.fn(), getDraft: vi.fn(), recomputeDay: vi.fn(), aiRearrangeDay: vi.fn(),
   assembleDay: vi.fn(), rewriteNarrative: vi.fn(), refreshDiningOptions: vi.fn(),
 }))
 vi.mock('vue-router', () => ({
@@ -327,3 +327,27 @@ it('invalidates a synchronization preview when the user changes the synchronizat
  expect(vi.mocked(changeJourney).mock.calls).toHaveLength(2)
  w.unmount()
 })
+
+
+it('focuses the transport date and returns to the same segment after sync',async()=>{
+    navigation.query={multi:'mc_test',stop:'hangzhou',revision:'3',basis:'city-basis',date:'2026-10-21',returnSection:'transport',edge:'1'}
+    const data=draft();data.days.push({...data.days[0]!,day_index:1,date:'2026-10-21'});data.days_detail.push({...data.days_detail[0]!})
+    vi.mocked(getDraft).mockResolvedValue(data);vi.mocked(multiApi).mockResolvedValue({id:'mc_test'})
+    const wrapper=await openDraft()
+    const cards=wrapper.findAllComponents({name:'DayCard'})
+    expect(cards[0]!.props('isDefaultExpanded')).toBe(false);expect(cards[1]!.props('isDefaultExpanded')).toBe(true)
+    await wrapper.findAll('button').find(b=>b.text().includes('同步并返回整趟旅行'))!.trigger('click');await flushPromises()
+    expect(navigation.push).toHaveBeenCalledWith({path:'/multi-trip/mc_test',query:{city:'hangzhou',section:'transport',edge:'1'}})
+    wrapper.unmount()
+  })
+
+it('syncs from the bottom action and returns to the city just edited',async()=>{
+    navigation.query={multi:'mc_test',stop:'hangzhou',revision:'3',basis:'city-basis'}
+    vi.mocked(multiApi).mockResolvedValue({id:'mc_test'})
+    const wrapper=await openDraft()
+    const sync=wrapper.findAll('button').find(b=>b.text().includes('同步并返回整趟旅行'))!
+    await sync.trigger('click');await flushPromises()
+    expect(multiApi).toHaveBeenCalledWith('/mc_test/cities/hangzhou/import','post',{revision:3,basis:'city-basis',draft_id:'draft-test'})
+    expect(navigation.push).toHaveBeenCalledWith({path:'/multi-trip/mc_test',query:{city:'hangzhou'}})
+    wrapper.unmount()
+  })

@@ -265,7 +265,7 @@
               <span class="mini-card-name">{{ attr.name }}</span>
               <span v-if="attr.category" class="mini-card-tag">{{ attr.category }}</span>
             </div>
-            <div v-if="day.length === 0" class="day-empty">拖拽景点到此处</div>
+            <div v-if="day.length === 0" class="day-empty">{{multiRoute.query?.multi?"这天先留给休息或移动；餐饮和住宿仍需核对，也可拖入景点。":"拖拽景点到此处"}}</div>
           </div>
         </div>
       </div>
@@ -286,7 +286,7 @@
 <script setup lang="ts">
 import JourneySummary from '@/components/JourneySummary.vue'
 import { ref, computed, onMounted, reactive, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
 import SelectableAttractionCard from '@/components/SelectableAttractionCard.vue'
@@ -295,7 +295,7 @@ import { useTripLoader } from '@/composables/useTripLoader'
 import { useDiscoverySearch } from '@/composables/useDiscoverySearch'
 import { labelForNode, progressForNode } from '@/components/loader/constructionSteps'
 import { sortAttractionsByRating } from '@/utils/discoverySort'
-import { mergeDayAssignmentsWithSelected } from '@/utils/dayAssignmentMerge'
+import { mergeDayAssignmentsWithSelected, hasUnsupportedEmptyDay } from '@/utils/dayAssignmentMerge'
 import {
   applyAiSelectionRecommendations,
   isCurrentAiSelectionRequest,
@@ -309,6 +309,7 @@ import type { DraftStreamEvent } from '@/services/api'
 import type { DiscoveredAttraction, TripFormData, DiscoveryStreamEvent, DayDurationInfo } from '@/types'
 
 const router = useRouter()
+const multiRoute = useRoute()
 const tripLoader = useTripLoader()
 
 const formData = ref<TripFormData | null>(null)
@@ -406,7 +407,7 @@ function clearAssignmentPreview() {
 }
 
 function goBack() {
-  router.push('/')
+  router.push(multiRoute.query?.multi ? {path:'/multi-trip/'+String(multiRoute.query.multi),query:{city:String(multiRoute.query.stop||'')}} : '/')
 }
 
 function toggleAttraction(attr: DiscoveredAttraction) {
@@ -694,7 +695,7 @@ function handleDrop(_event: DragEvent, toDay: number) {
 async function confirmAndPlan() {
   if (!formData.value) return
 
-  const hasEmpty = dayAssignments.value.some((d,i) => d.length === 0 && !travelDays.value[i]?.window.unavailable)
+  const hasEmpty = hasUnsupportedEmptyDay(dayAssignments.value, !!multiRoute.query?.multi, travelDays.value.map((d:any)=>!!d.window.unavailable))
   if (hasEmpty) {
     message.warning('每天至少需要安排一个景点')
     return
@@ -769,7 +770,7 @@ async function confirmAndPlan() {
         } else if (event.type === 'complete' && event.draft_id) {
           // 立即切路由；loader 保持显示，由 DraftView 在第一天装配后 markReady 触发 Flip
           window.clearTimeout(watchdog)
-          router.push(`/draft/${event.draft_id}`)
+          router.push({path:`/draft/${event.draft_id}`,query:multiRoute.query?.multi?{multi:multiRoute.query.multi,stop:multiRoute.query.stop,basis:multiRoute.query.basis,revision:multiRoute.query.revision}:{}})
         } else if (event.type === 'error') {
           window.clearTimeout(watchdog)
           tripLoader.dismiss()

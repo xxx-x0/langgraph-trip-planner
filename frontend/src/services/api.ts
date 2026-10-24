@@ -307,3 +307,9 @@ export async function changeJourney(draftId:string, journey:import('@/types').Jo
 export async function compareJourneys(draftId:string,candidates:unknown[]) {
  return (await apiClient.post(`/api/trip/draft/${draftId}/journey-comparison`,{candidates})).data
 }
+
+
+// Whole-trip versions use their own schema; single-city requests remain unchanged.
+export async function multiApi(path:string, method:'get'|'post'|'put'='get', data?:unknown):Promise<any>{
+  const response=await apiClient.request({url:'/api/multi-trips'+path,method,data});return response.data
+}
