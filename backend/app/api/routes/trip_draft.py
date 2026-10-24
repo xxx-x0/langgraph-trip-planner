@@ -2,7 +2,6 @@
 import asyncio
 import json
 import hashlib
-import re
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
@@ -14,30 +13,30 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from ...agents.langgraph_agent.graph import get_trip_planner_agent
 from ...agents.langgraph_agent.assemble.timeline import rule_assemble_day_timeline
 from ...agents.langgraph_agent.assemble.route import compute_day_route
-from ...agents.langgraph_agent.assemble.budget import compute_day_budget, parse_ticket_price as _parse_ticket_price
 from ...agents.langgraph_agent.assemble.schedule import schedule_day
+from ...agents.langgraph_agent.assemble.budget import compute_day_budget, parse_ticket_price as _parse_ticket_price
 from ...agents.langgraph_agent.assemble.narrative import write_day_narrative_llm, refresh_day_description
 from ...agents.langgraph_agent.exceptions import _invoke_llm_with_retry
 from ...agents.langgraph_agent.finalize.pipeline import finalize_draft
 from ...services import trip_draft_service
-from ...agents.langgraph_agent.assemble.meals import saved_meals as _saved_meals, repair_deleted_anchors, normalize_ai_meals, meal_plan_violations
-from ...services.external_calls import ExternalServiceError, FailureKind, operation_deadline
 from ...services.llm_service import get_llm
-from ...models.schemas import PlanFromSelectionsRequest
-
+from ...services.external_calls import operation_deadline, ExternalServiceError, FailureKind
+from ...agents.langgraph_agent.assemble.meals import (
+    saved_meals as _saved_meals, repair_deleted_anchors, normalize_ai_meals, meal_plan_violations,
+)
 from ...services.journey_service import apply_context, travel_window, conflicts
 from ...services.recommendations import intent_for, explain_dining
+from ...models.schemas import PlanFromSelectionsRequest
 
 router = APIRouter(prefix="/trip/draft", tags=["trip_draft"])
 
 
-
 async def _save_day_detail(draft_id, day_index, detail, *, expected_day, expected_request, weather=None):
     detail.trip_intent = intent_for(TripRequest.model_validate_json(expected_request))
-    apply_context(detail, TripRequest.model_validate_json(expected_request))
+    apply_context(detail,TripRequest.model_validate_json(expected_request))
     problems = conflicts(detail)
     if problems:
-        raise HTTPException(409, detail="与交通或休息安排冲突，本次修改未保存：" + "；".join(problems))
+        raise HTTPException(409, detail="与交通或休息安排冲突，本次修改未保存：" + "；".join(problems) + "。请删减活动、调整用餐或修改交通。")
     refresh_day_description(detail, weather)
     try:
         await trip_draft_service.patch_day_detail(draft_id, day_index, detail, expected_day=expected_day, expected_request=expected_request)
@@ -171,16 +170,17 @@ def _load_payload(record) -> TripDraftPayload:
             detail.trip_intent = intent_for(request)
             detail.overnight_stay = idx < request.travel_days - 1
             detail.companion_count = request.companions.count if request.companions else 1
-            apply_context(detail, request)
+            apply_context(detail,request)
             suggestion = detail.model_copy(deep=True)
             schedule_day(suggestion)
             detail.schedule_suggestion = suggestion.schedule_suggestion
+            # Legacy/read-only projection: never keep star-derived hotel charges.
             detail.day_budget = compute_day_budget(detail)
             from ...services.hotel_quotes import hotel_cost_for_date
             for entry in detail.timeline_schedule:
-                if entry.get("kind") == "hotel":
+                if entry.get('kind') == 'hotel':
                     amount, missing = hotel_cost_for_date(detail.hotel, detail.date) if detail.hotel and detail.overnight_stay else (0, [])
-                    entry["cost"] = (amount if amount or not missing else None) if detail.overnight_stay else None
+                    entry['cost'] = (amount if amount or not missing else None) if detail.overnight_stay else None
             refresh_day_description(detail, next((ctx.weather for ctx in days if ctx.date == detail.date), None))
             days_detail.append(detail)
 
@@ -371,7 +371,8 @@ async def assemble_day(
         return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=cached)
 
     request = TripRequest.model_validate_json(record.request_json)
-    current = DayDetail.model_validate(existing_days[day_index]) if existing_days[day_index] else None
+    current = (DayDetail.model_validate(existing_days[day_index])
+               if existing_days[day_index] else None)
     override_dict = _merge_day_edit(ctx, current, overrides)
     detail = rule_assemble_day_timeline(ctx, overrides=override_dict or None)
     detail.route_segments = await compute_day_route(
@@ -384,10 +385,10 @@ async def assemble_day(
         free_text_input=request.free_text_input or "",
         city=request.city,
     )
-    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], weather=ctx.weather, expected_request=record.request_json)
     for category in type(ctx.dining_pool).model_fields:
-        explain_dining(getattr(ctx.dining_pool, category), detail.attractions, ctx.trip_intent,
-                       detail.day_start_time, detail.timeline_schedule, detail.hotel, detail.meals)
+        explain_dining(getattr(ctx.dining_pool,category),detail.attractions,ctx.trip_intent,
+                       detail.day_start_time,detail.timeline_schedule,detail.hotel,detail.meals)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail, dining_pool=ctx.dining_pool)
 
 
@@ -439,12 +440,10 @@ async def recompute_day(draft_id: str, day_index: int, edit: DayEditRequest):
             if entry and windows and not any(a <= entry['start_minutes'] and entry['end_minutes'] <= b for a,b in windows):
                 raise HTTPException(409, detail=f'{meal.name}不适合当前用餐时间，请换一家或调整时间；本次修改未保存')
     detail.day_budget = compute_day_budget(detail)
-    # 保留当前 description（recompute 不写 LLM）
-    detail.description = current.description if current else ""
-    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], weather=ctx.weather, expected_request=record.request_json)
     for category in type(ctx.dining_pool).model_fields:
-        explain_dining(getattr(ctx.dining_pool, category), detail.attractions, ctx.trip_intent,
-                       detail.day_start_time, detail.timeline_schedule, detail.hotel, detail.meals)
+        explain_dining(getattr(ctx.dining_pool,category),detail.attractions,ctx.trip_intent,
+                       detail.day_start_time,detail.timeline_schedule,detail.hotel,detail.meals)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail, dining_pool=ctx.dining_pool)
 
 
@@ -459,15 +458,16 @@ async def rewrite_narrative(draft_id: str, day_index: int):
     if existing_days[day_index] is None:
         raise HTTPException(409, detail="该天尚未 assemble，无法重写文案")
     detail = DayDetail.model_validate(existing_days[day_index])
+    detail.trip_intent = ctx.trip_intent
     detail.description = await write_day_narrative_llm(
         detail, weather=ctx.weather,
         free_text_input=request.free_text_input or "",
         city=request.city,
     )
-    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], weather=ctx.weather, expected_request=record.request_json)
     for category in type(ctx.dining_pool).model_fields:
-        explain_dining(getattr(ctx.dining_pool, category), detail.attractions, ctx.trip_intent,
-                       detail.day_start_time, detail.timeline_schedule, detail.hotel, detail.meals)
+        explain_dining(getattr(ctx.dining_pool,category),detail.attractions,ctx.trip_intent,
+                       detail.day_start_time,detail.timeline_schedule,detail.hotel,detail.meals)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail, dining_pool=ctx.dining_pool)
 
 
@@ -588,11 +588,10 @@ async def _ai_rearrange_day(draft_id: str, day_index: int, req: AIRearrangeReque
         if meal_plan_violations(detail, base_detail):
             raise HTTPException(422, detail='无法保留已有正餐时段，本次重排未保存；请先核对开始时间、景点时长和用餐安排')
     detail.day_budget = compute_day_budget(detail)
-    detail.description = current.description if current else ""
-    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], expected_request=record.request_json, weather=ctx.weather)
+    await _save_day_detail(draft_id, day_index, detail, expected_day=existing_days[day_index], weather=ctx.weather, expected_request=record.request_json)
     for category in type(ctx.dining_pool).model_fields:
-        explain_dining(getattr(ctx.dining_pool, category), detail.attractions, ctx.trip_intent,
-                       detail.day_start_time, detail.timeline_schedule, detail.hotel, detail.meals)
+        explain_dining(getattr(ctx.dining_pool,category),detail.attractions,ctx.trip_intent,
+                       detail.day_start_time,detail.timeline_schedule,detail.hotel,detail.meals)
     return DayDetailResponse(draft_id=draft_id, day_index=day_index, day_detail=detail, dining_pool=ctx.dining_pool)
 
 
@@ -674,7 +673,7 @@ async def change_journey(draft_id: str, change: JourneyChange):
     _ensure_editable(record)
     from ...services.ticket_schedule import draft_basis
     if change.ticket_basis and change.ticket_basis != draft_basis(record):
-        raise HTTPException(409, detail="筛选后安排已改变，请重新查票")
+        raise HTTPException(409, detail='筛选后安排已改变，请重新查票')
     raw=json.loads(record.request_json)
     raw['journey']=change.journey.model_dump(mode='json') if change.journey else None
     try: request=TripRequest.model_validate(raw)

@@ -19,6 +19,14 @@ export interface Attraction {
   tel?: string
 }
 
+export interface Recommendation {
+  source?: string
+  queried_at?: string | null
+  reasons?: string[]
+  cautions?: string[]
+  matches?: { slot: string; before?: string; after?: string; distance_km?: number | null; extra_walk_minutes?: number | null; style: string; route_basis: string; hours_fit?: boolean | null }[]
+}
+
 export interface Meal {
   open_hours?: string
   recommendation?: Recommendation
@@ -39,7 +47,6 @@ export interface Meal {
 
 export interface Hotel {
   recommendation?: Recommendation
-  quote?: HotelQuote | null
   name: string
   address: string
   location?: Location
@@ -60,6 +67,35 @@ export interface Hotel {
   detail_url?: string
   distance_in_meters?: number
   hotel_id?: number | string
+  quote?: HotelQuote | null
+}
+
+export interface HotelOccupancy {
+  room_count: number
+  adults_per_room: number
+  children_ages: number[]
+}
+
+export interface HotelQuote {
+  source: string
+  cost_kind: 'query_quote' | 'user_estimate' | 'system_estimate' | 'paid' | 'unknown'
+  status: string
+  amount?: number | null
+  currency?: string | null
+  unit: 'average_per_room_night' | 'total_stay' | 'unknown'
+  check_in: string
+  check_out: string
+  nights: number
+  occupancy: HotelOccupancy
+  occupancy_confirmed: boolean
+  queried_at: string
+  unsupported_conditions: string[]
+  room_name?: string | null
+  bed_type?: string | null
+  meal_plan?: string | null
+  cancellation_policy?: string | null
+  taxes_included?: boolean | null
+  availability: string
 }
 
 export interface CompanionInfo {
@@ -68,8 +104,6 @@ export interface CompanionInfo {
 }
 
 export interface Budget {
-  is_complete?: boolean
-  unknown_cost_items?: string[]
   total_attractions: number
   total_hotels: number
   total_meals: number
@@ -78,6 +112,8 @@ export interface Budget {
   total: number
   budget_limit?: number
   is_within_budget?: boolean | null
+  is_complete?: boolean
+  unknown_cost_items?: string[]
 }
 
 export interface RouteSegment {
@@ -90,15 +126,11 @@ export interface RouteSegment {
 }
 
 export interface DayPlan {
-  travel_window?: Record<string, any>
   rest_periods?: Array<{id:string;date:string;start_time:string;end_time:string;label:string}>
-  schedule_suggestion?: {day_start_time: string; saved_minutes: number; message: string}
-  overnight_stay?: boolean
-  description_source?: string | null
+  travel_window?: Record<string, any>
   pending_confirmations?: string[]
-  timeline_schedule?: Array<{ kind: "attraction" | "meal" | "hotel" | "travel" | "wait" | "free_time" | "rest"; ref_name: string; start_time: string; end_time: string; start_minutes: number; end_minutes: number; duration: number; cost?: number | null; detail?: string; mode?: string; distance?: string }>
-  meal_warnings?: string[]
-  meal_adjustments?: string[]
+  schedule_suggestion?: {day_start_time: string; saved_minutes: number; message: string}
+  description_source?: string | null
   date: string
   day_index: number
   description: string
@@ -110,7 +142,12 @@ export interface DayPlan {
   route_segments: RouteSegment[]
   timeline_order?: TimelineOrderItem[]
   day_start_time?: string
+  timeline_schedule?: Array<{ kind: 'attraction' | 'meal' | 'hotel' | 'travel' | 'wait' | 'free_time' | 'rest'; ref_name: string; start_time: string; end_time: string; start_minutes: number; end_minutes: number; duration: number; cost?: number | null; detail?: string; mode?: string; distance?: string }>
+  meal_warnings?: string[]
+  meal_adjustments?: string[]
+  overnight_stay?: boolean
   transport_mode?: string
+  locked_attraction_names?: string[]
 }
 
 export interface TimelineOrderItem {
@@ -147,11 +184,8 @@ export interface TripPlan {
 }
 
 export interface TripFormData {
-  journey?: Journey | null
   rest_periods?: Array<{id:string;date:string;start_time:string;end_time:string;label:string}>
-  meal_budget_per_person?: number
-  dietary_requirements?: string
-  dining_style?: "on_route" | "dedicated"
+  journey?: Journey | null
   hotel_occupancy?: HotelOccupancy
   city: string
   start_date: string
@@ -160,6 +194,9 @@ export interface TripFormData {
   transportation: string
   accommodation: string
   preferences: string[]
+  meal_budget_per_person?: number
+  dietary_requirements?: string
+  dining_style?: 'on_route' | 'dedicated'
   food_preference: string
   free_text_input: string
   default_day_start_time?: string
@@ -262,45 +299,6 @@ export interface DayDurationInfo {
 export interface PreviewDayAssignmentResponse {
   day_assignments: DiscoveredAttraction[][]
   day_durations: DayDurationInfo[]
-}
-
-
-export interface HotelOccupancy {
-  room_count: number
-  adults_per_room: number
-  children_ages: number[]
-}
-
-
-export interface HotelQuote {
-  source: string
-  cost_kind: 'query_quote' | 'user_estimate' | 'system_estimate' | 'paid' | 'unknown'
-  status: string
-  amount?: number | null
-  currency?: string | null
-  unit: 'average_per_room_night' | 'total_stay' | 'unknown'
-  check_in: string
-  check_out: string
-  nights: number
-  occupancy: HotelOccupancy
-  occupancy_confirmed: boolean
-  queried_at: string
-  unsupported_conditions: string[]
-  room_name?: string | null
-  bed_type?: string | null
-  meal_plan?: string | null
-  cancellation_policy?: string | null
-  taxes_included?: boolean | null
-  availability: string
-}
-
-
-export interface Recommendation {
-  source?: string
-  queried_at?: string | null
-  reasons?: string[]
-  cautions?: string[]
-  matches?: { slot: string; before?: string; after?: string; distance_km?: number | null; extra_walk_minutes?: number | null; style: string; route_basis: string; hours_fit?: boolean | null }[]
 }
 
 export interface JourneyExtras {taxes:number|null;baggage:number|null;transfers:number|null;overnight:number|null}

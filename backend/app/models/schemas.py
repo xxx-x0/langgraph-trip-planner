@@ -31,7 +31,6 @@ class HotelOccupancy(BaseModel):
         return ages
 
 
-
 class TripRequest(BaseModel):
     """旅行规划请求"""
     journey: Optional[Journey] = None
@@ -183,8 +182,8 @@ class DiningCandidate(BaseModel):
     tel: Optional[str] = Field(default=None, description="联系电话")
     poi_id: Optional[str] = Field(default=None, description="POI ID")
     source: str = Field(default="nearby", description="来源: nearby/popular/user_custom")
-    recommendation: Dict[str, Any] = Field(default_factory=dict)
 
+    recommendation: Dict[str, Any] = Field(default_factory=dict)
 
 
 class DiningPoolDay(BaseModel):
@@ -218,8 +217,8 @@ class Meal(BaseModel):
     tel: Optional[str] = Field(default=None, description="联系电话")
     schedule_mode: Literal["auto", "manual"] = Field(default="manual", description="默认推荐可随景点排序调整，明确选择保留插入位置")
     preferred_slot: Optional[Literal["breakfast", "lunch", "dinner"]] = Field(default=None)
-    recommendation: Dict[str, Any] = Field(default_factory=dict)
 
+    recommendation: Dict[str, Any] = Field(default_factory=dict)
 
 
 class HotelQuote(BaseModel):
@@ -247,7 +246,6 @@ class HotelQuote(BaseModel):
     provider_price_field: Optional[str] = None
 
 
-
 class Hotel(BaseModel):
     """酒店信息"""
     name: str = Field(..., description="酒店名称")
@@ -271,8 +269,8 @@ class Hotel(BaseModel):
     detail_url: Optional[str] = Field(default=None, description="酒店详情页链接")
     distance_in_meters: Optional[int] = Field(default=None, description="距中心点距离(米)")
     hotel_id: Optional[Union[int, str]] = Field(default=None, description="AIGoHotel 酒店标识")
-    recommendation: Dict[str, Any] = Field(default_factory=dict)
 
+    recommendation: Dict[str, Any] = Field(default_factory=dict)
 
 
 class RouteSegment(BaseModel):
@@ -288,11 +286,11 @@ class RouteSegment(BaseModel):
 
 class DayPlan(BaseModel):
     """单日行程"""
-    description_source: Optional[str] = None
-    pending_confirmations: List[str] = Field(default_factory=list)
+    locked_attraction_names: List[str] = Field(default_factory=list)
     date: str = Field(..., description="日期 YYYY-MM-DD")
     day_index: int = Field(..., description="第几天(从0开始)")
     description: str = Field(..., description="当日行程描述")
+    description_source: Optional[str] = None
     transportation: str = Field(..., description="交通方式")
     accommodation: str = Field(..., description="住宿")
     hotel: Optional[Hotel] = Field(default=None, description="推荐酒店")
@@ -307,13 +305,13 @@ class DayPlan(BaseModel):
         default=None,
         description="单日行程开始时间 HH:mm",
     )
-    locked_attraction_names: List[str] = Field(default_factory=list)
     timeline_schedule: List[Dict[str, Any]] = Field(default_factory=list, description="按路线计算的活动开始/结束时间")
     meal_warnings: List[str] = Field(default_factory=list, description="缺餐或用餐时段需要确认")
     meal_adjustments: List[str] = Field(default_factory=list, description="本次编辑的用餐保留与调整说明")
     overnight_stay: bool = Field(default=True)
-    trip_intent: Dict[str, Any] = Field(default_factory=dict)
 
+    trip_intent: Dict[str, Any] = Field(default_factory=dict)
+    pending_confirmations: List[str] = Field(default_factory=list)
     schedule_suggestion: Dict[str, Any] = Field(default_factory=dict)
     travel_window: Dict[str, Any] = Field(default_factory=dict)
     rest_periods: List[RestPeriod] = Field(default_factory=list)
@@ -374,7 +372,7 @@ class MacroPlan(BaseModel):
 
 class TripPlan(BaseModel):
     """旅行计划"""
-    narrative_source: Optional[str] = None
+    journey: Optional[Journey] = None
     city: str = Field(..., description="目的地城市")
     start_date: str = Field(..., description="开始日期")
     end_date: str = Field(..., description="结束日期")
@@ -383,10 +381,10 @@ class TripPlan(BaseModel):
     overall_suggestions: str = Field(..., description="总体建议")
     budget: Optional[Budget] = Field(default=None, description="预算信息")
     companions: Optional[CompanionInfo] = Field(default=None, description="出行同伴信息")
+    narrative_source: Optional[str] = None
     trip_tagline: str = Field(default="", description="行程标语")
     weather_summary: str = Field(default="", description="天气一句话摘要")
 
-    journey: Optional[Journey] = None
 
 class TripPlanResponse(BaseModel):
     """旅行计划响应"""
@@ -524,8 +522,8 @@ class DraftDayContext(BaseModel):
     day_start_time: Optional[str] = Field(default=None)
     overnight_stay: bool = Field(default=True)
     companion_count: int = Field(default=1, ge=1)
-    trip_intent: Dict[str, Any] = Field(default_factory=dict)
 
+    trip_intent: Dict[str, Any] = Field(default_factory=dict)
     schedule_suggestion: Dict[str, Any] = Field(default_factory=dict)
     travel_window: Dict[str, Any] = Field(default_factory=dict)
     rest_periods: List[RestPeriod] = Field(default_factory=list)
@@ -533,11 +531,10 @@ class DraftDayContext(BaseModel):
 
 class DayDetail(BaseModel):
     """详细阶段产物（每日装配后的完整时间轴）"""
-    description_source: Optional[str] = None
-    pending_confirmations: List[str] = Field(default_factory=list)
     day_index: int
     date: str
     description: str = Field(default="", description="按当前保存安排生成的说明")
+    description_source: Optional[str] = None
     attractions: List[Attraction] = Field(default_factory=list)
     hotel: Optional[Hotel] = Field(default=None)
     meals: List[Meal] = Field(default_factory=list)
@@ -548,7 +545,6 @@ class DayDetail(BaseModel):
         description="[{kind:'attraction|meal|hotel', ref_name:'...'}]"
     )
     day_budget: Optional[Budget] = Field(default=None, description="当日预算")
-    is_assembled: bool = Field(default=False)
     locked_attraction_names: List[str] = Field(
         default_factory=list,
         description="用户锁定在当天当前位置的景点名；AI 重排不可移动这些景点",
@@ -557,13 +553,15 @@ class DayDetail(BaseModel):
         default_factory=list,
         description="用户从当天删除的景点名；后续重算和 AI 重排需排除",
     )
+    is_assembled: bool = Field(default=False)
     timeline_schedule: List[Dict[str, Any]] = Field(default_factory=list)
     meal_warnings: List[str] = Field(default_factory=list)
     meal_adjustments: List[str] = Field(default_factory=list, description="本次编辑的用餐保留与调整说明")
     overnight_stay: bool = Field(default=True)
     companion_count: int = Field(default=1, ge=1)
-    trip_intent: Dict[str, Any] = Field(default_factory=dict)
 
+    trip_intent: Dict[str, Any] = Field(default_factory=dict)
+    pending_confirmations: List[str] = Field(default_factory=list)
     schedule_suggestion: Dict[str, Any] = Field(default_factory=dict)
     travel_window: Dict[str, Any] = Field(default_factory=dict)
     rest_periods: List[RestPeriod] = Field(default_factory=list)
@@ -573,6 +571,7 @@ class TripDraftPayload(BaseModel):
     """草稿完整载荷（GET /draft/{id} 返回）"""
     draft_id: str
     status: str = Field(..., description="skeleton/assembling/finalized/expired")
+    finalized_trip_id: Optional[int] = None
     request: TripRequest
     city: str
     macro_plan: MacroPlan
@@ -581,7 +580,6 @@ class TripDraftPayload(BaseModel):
     weather_info: List[WeatherInfo] = Field(default_factory=list)
     created_at: str
     updated_at: str
-    finalized_trip_id: Optional[int] = None
 
 
 class DayEditRequest(BaseModel):
@@ -589,6 +587,14 @@ class DayEditRequest(BaseModel):
     attractions_order: Optional[List[str]] = Field(
         default=None,
         description="按用户拖拽后的景点名顺序；不传则保留当前 day_detail.attractions 顺序"
+    )
+    locked_attraction_names: Optional[List[str]] = Field(
+        default=None,
+        description="当前锁定的景点名完整状态；不传则保留当前 day_detail.locked_attraction_names",
+    )
+    removed_attraction_names: Optional[List[str]] = Field(
+        default=None,
+        description="当前从当天删除的景点名完整状态；不传则保留当前 day_detail.removed_attraction_names",
     )
     meals: Optional[List[Dict[str, Any]]] = Field(
         default=None,
@@ -598,14 +604,6 @@ class DayEditRequest(BaseModel):
     day_start_time: Optional[str] = Field(
         default=None,
         description="单日行程开始时间 HH:mm；不传则沿用现有或全程默认值",
-    )
-    locked_attraction_names: Optional[List[str]] = Field(
-        default=None,
-        description="当前锁定的景点名完整状态；不传则保留当前 day_detail.locked_attraction_names",
-    )
-    removed_attraction_names: Optional[List[str]] = Field(
-        default=None,
-        description="当前从当天删除的景点名完整状态；不传则保留当前 day_detail.removed_attraction_names",
     )
 
 

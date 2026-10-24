@@ -684,6 +684,7 @@ def _parse_aigohotel_hotels(raw: Any) -> List[Dict[str, Any]]:
         parsed.append(item)
     return parsed
 
+
 def _cluster_centroid(cluster: List[Dict[str, Any]]) -> tuple[float, float] | None:
     """计算聚类质心 (lon, lat)，无坐标返回 None。"""
     coords = [(c.get("longitude"), c.get("latitude")) for c in cluster if c.get("longitude") and c.get("latitude")]
@@ -823,6 +824,7 @@ async def _aigohotel_search_for_day(
     _enrich_hotels_with_distance(hotels, centroid)
     return hotels
 
+
 async def _aigohotel_city_fallback(
     search_tool: Any,
     city: str,
@@ -850,6 +852,7 @@ async def _aigohotel_city_fallback(
         print(f"  ⚠️ AIGoHotel 城市级兜底失败 [{city}]: {str(e)[:120]}")
         return []
     return _parse_aigohotel_hotels(raw)
+
 
 
 async def search_hotels_by_day_node(state: TripPlannerState) -> Dict[str, Any]:

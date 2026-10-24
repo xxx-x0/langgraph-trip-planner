@@ -1,8 +1,7 @@
-"""定稿流水线：草稿 → TripPlan → 全局综合 + 偏好提取 → trip_history"""
-import asyncio
+"""草稿定稿；兼容历史观察仅参与保存，不作为下一次规划依据。"""
 import json
+import asyncio
 from weakref import WeakValueDictionary
-import re
 from typing import Tuple, Optional
 
 from ....models.schemas import (
@@ -17,13 +16,13 @@ from ..assemble.budget import compute_day_budget, combine_budgets, parse_ticket_
 from ..assemble.schedule import schedule_day
 from ..assemble.narrative import refresh_day_description, refresh_trip_descriptions
 
-
 _finalize_locks = WeakValueDictionary()
 
 
 async def _run_global_synthesizer(trip_plan: TripPlan, free_text: str) -> Tuple[str, str, str]:
     refresh_trip_descriptions(trip_plan)
     return trip_plan.trip_tagline, trip_plan.overall_suggestions, trip_plan.weather_summary
+
 
 def _make_pseudo_request(plan: TripPlan, free_text: str):
     return TripRequest(
@@ -51,10 +50,11 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         day_index=detail.day_index,
         description=detail.description,
         trip_intent=detail.trip_intent,
-        description_source=detail.description_source,
+        locked_attraction_names=detail.locked_attraction_names,
         pending_confirmations=detail.pending_confirmations,
         schedule_suggestion=detail.schedule_suggestion,
         travel_window=detail.travel_window, rest_periods=detail.rest_periods,
+        description_source=detail.description_source,
         transportation=transportation,
         accommodation=accommodation,
         hotel=detail.hotel,
@@ -62,7 +62,6 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         meals=detail.meals,
         route_segments=detail.route_segments,
         timeline_order=detail.timeline_order,
-        locked_attraction_names=detail.locked_attraction_names,
         day_start_time=detail.day_start_time,
         timeline_schedule=detail.timeline_schedule,
         meal_warnings=detail.meal_warnings,
@@ -132,6 +131,15 @@ def _build_day_context(
     )
 
 
+async def finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int]:
+    lock = _finalize_locks.get(draft_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _finalize_locks[draft_id] = lock
+    async with lock:
+        return await _finalize_draft(draft_id, user_id=user_id)
+
+
 async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int]:
     record = await trip_draft_service.get_draft(draft_id)
     if record is None:
@@ -157,8 +165,6 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
                 detail.route_segments = await compute_day_route(
                     detail, request.city, request.transportation
                 )
-            if detail.day_budget is None:
-                detail.day_budget = compute_day_budget(detail)
         else:
             ctx = _build_day_context(
                 idx, macro_plan, clusters_data, hotels_by_day, dining_pool,
@@ -166,17 +172,16 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
             )
             from ....services.recommendations import intent_for
             ctx.trip_intent = intent_for(request)
-            apply_context(ctx, request)
+            apply_context(ctx,request)
             detail = rule_assemble_day_timeline(ctx, overrides=None)
             detail.route_segments = await compute_day_route(
                 detail, request.city, request.transportation
             )
-            detail.day_budget = compute_day_budget(detail)
 
         from ....services.recommendations import intent_for
         detail.trip_intent = intent_for(request)
         detail.overnight_stay = idx < request.travel_days - 1
-        apply_context(detail, request)
+        apply_context(detail,request)
         detail.companion_count = request.companions.count if request.companions else 1
         raw_by_name = {c['name']: c for c in (clusters_data[idx] if idx < len(clusters_data) else [])}
         for attraction in detail.attractions:
@@ -187,7 +192,9 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
         problems = conflicts(detail)
         if problems: raise ValueError("与交通或休息安排冲突，请先调整第"+str(idx+1)+"天："+"；".join(problems))
         detail.day_budget = compute_day_budget(detail)
-        refresh_day_description(detail, next((WeatherInfo.model_validate(w) for w in weather_info if isinstance(w, dict) and w.get("date") == detail.date), None))
+        refresh_day_description(detail, next((WeatherInfo.model_validate(w) for w in weather_info
+                                            if isinstance(w, dict) and w.get("date") == detail.date), None))
+
         day_plans.append(_day_detail_to_day_plan(
             detail, request.transportation, request.accommodation
         ))
@@ -216,15 +223,5 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
 
     extracted = await _run_extract_preferences(trip_plan, user_id)
     return await trip_draft_service.persist_finalized_trip(
-        draft_id, trip_plan, request, record.days_detail_json, extracted,
-        expected_request=record.request_json,
+        draft_id, trip_plan, request, record.days_detail_json, extracted, expected_request=record.request_json
     )
-
-
-async def finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int]:
-    lock = _finalize_locks.get(draft_id)
-    if lock is None:
-        lock = asyncio.Lock()
-        _finalize_locks[draft_id] = lock
-    async with lock:
-        return await _finalize_draft(draft_id, user_id=user_id)

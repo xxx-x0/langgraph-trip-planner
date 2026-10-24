@@ -1415,7 +1415,7 @@ async def reduce_assemble_node(state: TripPlannerState) -> Dict[str, Any]:
         if day.hotel:
             day.hotel.quote = Hotel(**match).quote if match else None
         from ....services.journey_service import apply_context
-        apply_context(day, request)
+        apply_context(day,request)
         detail = DayDetail.model_validate(day.model_dump())
         detail.companion_count = request.companions.count if request.companions else 1
         budgets.append(compute_day_budget(detail))
@@ -1431,12 +1431,20 @@ async def reduce_assemble_node(state: TripPlannerState) -> Dict[str, Any]:
         weather_info=weather_list,
         overall_suggestions="",
         budget=budget,
-        companions=request.companions,
         journey=request.journey,
+        companions=request.companions,
     )
 
     print(f"✅ 归约合并完成: {len(day_plans)}天, 已知费用预估{budget.total}元")
     return {"trip_plan": trip_plan}
+
+
+# Compatibility imports for callers of the former module-local helpers.
+from ..assemble.narrative import (
+    refresh_trip_descriptions,
+    _generate_weather_summary_fallback,
+)
+
 
 async def global_synthesizer_node(state: TripPlannerState) -> Dict[str, Any]:
     plan = state.get("trip_plan")
@@ -1447,20 +1455,3 @@ async def global_synthesizer_node(state: TripPlannerState) -> Dict[str, Any]:
         for day in plan.days: day.trip_intent = intent_for(state["request"])
     refresh_trip_descriptions(plan)
     return {"trip_plan": plan, "global_narrative": plan.overall_suggestions}
-
-def _generate_weather_summary_fallback(trip_plan) -> str:
-    from collections import Counter
-    if not trip_plan.weather_info:
-        return ""
-    weathers = [w.day_weather for w in trip_plan.weather_info if w.day_weather]
-    if not weathers:
-        return ""
-    counter = Counter(weathers)
-    most_common = counter.most_common(1)[0][0]
-    if len(counter) == 1:
-        return f"{most_common}为主"
-    second = counter.most_common(2)[1][0] if len(counter) > 1 else ""
-    return f"{most_common}间{second}为主" if second else f"{most_common}为主"
-
-
-from ..assemble.narrative import refresh_trip_descriptions

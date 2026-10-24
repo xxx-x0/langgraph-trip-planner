@@ -204,7 +204,7 @@ async def test_assemble_day_out_of_range(client):
 @pytest.mark.asyncio
 async def test_assemble_rejects_finalized_draft(client):
     draft_id = await _seed_draft()
-    await trip_draft_service.mark_finalized(draft_id, trip_id=1)
+    await trip_draft_service.mark_finalized(draft_id, trip_id=999999)
     resp = await client.post(f"/api/trip/draft/{draft_id}/day/0/assemble", json={})
     assert resp.status_code == 409
 
@@ -284,6 +284,29 @@ async def test_recompute_accepts_day_start_override(client):
 
 
 @pytest.mark.asyncio
+async def test_recompute_rejects_deleting_a_locked_attraction(client):
+    draft_id = await _seed_draft()
+
+    with patch(
+        "app.api.routes.trip_draft.compute_day_route",
+        new=AsyncMock(return_value=[]),
+    ):
+        resp = await client.post(
+            f"/api/trip/draft/{draft_id}/day/0/recompute",
+            json={
+                "attractions_order": [],
+                "locked_attraction_names": ["A"],
+                "removed_attraction_names": ["A"],
+                "meals": [],
+            },
+        )
+
+    assert resp.status_code == 409
+    record = await trip_draft_service.get_draft(draft_id)
+    assert json.loads(record.days_detail_json)[0] is None
+
+
+@pytest.mark.asyncio
 async def test_narrative_endpoint_rewrites_description_only(client):
     from app.models.schemas import DayDetail, Attraction
     draft_id = await _seed_draft()
@@ -339,6 +362,46 @@ async def test_ai_rearrange_replaces_day_detail(client):
 
 
 @pytest.mark.asyncio
+async def test_ai_rearrange_keeps_selected_restaurant_service_data(client):
+    pool = DiningPoolDay(main=[{
+        "name": "真实餐厅", "category": "main", "source": "nearby",
+        "location": {"longitude": 116.41, "latitude": 39.91},
+        "avg_cost": 68, "open_hours": "11:00-23:00", "poi_id": "poi-1",
+    }]).model_dump(mode="json")
+    draft_id = await _seed_draft(dining_pool=[pool, pool])
+    response = type("R", (), {"content": json.dumps({
+        "attractions_order": ["A"],
+        "meals": [{"name": "真实餐厅", "category": "main", "insert_after": "A",
+                   "location": {"longitude": 1, "latitude": 1}, "estimated_cost": 999}],
+    })})
+    with patch("app.api.routes.trip_draft._invoke_llm_with_retry", new=AsyncMock(return_value=response)), \
+         patch("app.api.routes.trip_draft.get_llm", return_value=object()), \
+         patch("app.api.routes.trip_draft.compute_day_route", new=AsyncMock(return_value=[])) as route:
+        result = await client.post(f"/api/trip/draft/{draft_id}/day/0/ai-rearrange", json={})
+    assert result.status_code == 200
+    detail = result.json()["day_detail"]
+    meal = detail["meals"][0]
+    assert meal["location"] == pool["main"][0]["location"]
+    assert meal["estimated_cost"] == 68
+    assert meal["open_hours"] == "11:00-23:00"
+    assert meal["source"] == "nearby"
+    assert route.call_args.args[0].meals[0].location.longitude == 116.41
+    assert detail["timeline_order"][1]["ref_name"] == "真实餐厅"
+
+
+def test_preserve_locked_positions_for_ai_rearrange():
+    from app.api.routes.trip_draft import _preserve_locked_positions
+
+    order = _preserve_locked_positions(
+        base_order=["A", "B", "C"],
+        proposed_order=["C", "B", "A"],
+        locked_names=["A"],
+    )
+
+    assert order == ["A", "C", "B"]
+
+
+@pytest.mark.asyncio
 async def test_finalize_sse_returns_trip_id(client):
     draft_id = await _seed_draft()
 
@@ -384,66 +447,3 @@ async def test_finalize_missing_history_reports_recoverable_error(client):
         for line in body.splitlines() if line.startswith("data: ")
     ]
     assert any(e["type"] == "error" for e in events)
-
-
-@pytest.mark.asyncio
-async def test_recompute_rejects_deleting_a_locked_attraction(client):
-    draft_id = await _seed_draft()
-
-    with patch(
-        "app.api.routes.trip_draft.compute_day_route",
-        new=AsyncMock(return_value=[]),
-    ):
-        resp = await client.post(
-            f"/api/trip/draft/{draft_id}/day/0/recompute",
-            json={
-                "attractions_order": [],
-                "locked_attraction_names": ["A"],
-                "removed_attraction_names": ["A"],
-                "meals": [],
-            },
-        )
-
-    assert resp.status_code == 409
-    record = await trip_draft_service.get_draft(draft_id)
-    assert json.loads(record.days_detail_json)[0] is None
-
-
-def test_preserve_locked_positions_for_ai_rearrange():
-    from app.api.routes.trip_draft import _preserve_locked_positions
-
-    order = _preserve_locked_positions(
-        base_order=["A", "B", "C"],
-        proposed_order=["C", "B", "A"],
-        locked_names=["A"],
-    )
-
-    assert order == ["A", "C", "B"]
-
-
-@pytest.mark.asyncio
-async def test_ai_rearrange_keeps_selected_restaurant_service_data(client):
-    pool = DiningPoolDay(main=[{
-        "name": "真实餐厅", "category": "main", "source": "nearby",
-        "location": {"longitude": 116.41, "latitude": 39.91},
-        "avg_cost": 68, "open_hours": "11:00-23:00", "poi_id": "poi-1",
-    }]).model_dump(mode="json")
-    draft_id = await _seed_draft(dining_pool=[pool, pool])
-    response = type("R", (), {"content": json.dumps({
-        "attractions_order": ["A"],
-        "meals": [{"name": "真实餐厅", "category": "main", "insert_after": "A",
-                   "location": {"longitude": 1, "latitude": 1}, "estimated_cost": 999}],
-    })})
-    with patch("app.api.routes.trip_draft._invoke_llm_with_retry", new=AsyncMock(return_value=response)), \
-         patch("app.api.routes.trip_draft.get_llm", return_value=object()), \
-         patch("app.api.routes.trip_draft.compute_day_route", new=AsyncMock(return_value=[])) as route:
-        result = await client.post(f"/api/trip/draft/{draft_id}/day/0/ai-rearrange", json={})
-    assert result.status_code == 200
-    detail = result.json()["day_detail"]
-    meal = detail["meals"][0]
-    assert meal["location"] == pool["main"][0]["location"]
-    assert meal["estimated_cost"] == 68
-    assert meal["open_hours"] == "11:00-23:00"
-    assert meal["source"] == "nearby"
-    assert route.call_args.args[0].meals[0].location.longitude == 116.41
-    assert detail["timeline_order"][1]["ref_name"] == "真实餐厅"

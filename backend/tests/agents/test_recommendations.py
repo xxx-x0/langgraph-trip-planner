@@ -2,8 +2,8 @@
 from datetime import datetime, timezone, timedelta
 from app.models.schemas import Attraction, DiningCandidate, TripRequest, CompanionInfo, DayDetail
 from app.services.recommendations import explain_dining, dining_for_slot, meal_anchors, intent_for
-from app.agents.langgraph_agent.assemble.narrative import refresh_day_description
 from app.agents.langgraph_agent.nodes.search import _rank_day_hotels
+from app.agents.langgraph_agent.assemble.narrative import refresh_day_description
 
 
 def attrs():
@@ -53,8 +53,26 @@ def test_stale_and_closed_candidates_are_traceable_and_sorted_last():
     assert any('24小时' in n for n in closed.recommendation['cautions'])
 
 
+def test_hotel_location_precedes_stars():
+    hotels=[{'name':'远处五星','star_rating':5,'_centroid_distance_km':40},{'name':'近处三星','star_rating':3,'_centroid_distance_km':1},{'name':'未知位置','star_rating':5}]
+    assert [h['name'] for h in _rank_day_hotels(hotels)]==['近处三星','远处五星','未知位置']
 
 
+def test_same_itinerary_expresses_only_explicit_current_intent():
+    d=DayDetail(day_index=0,date='2026-10-20',attractions=attrs(),overnight_stay=False)
+    base=refresh_day_description(d)
+    d.trip_intent={'free_text_input':'想慢游'};slow=refresh_day_description(d)
+    d.trip_intent={'companion_type':'elderly'};elderly=refresh_day_description(d)
+    assert '慢慢逛' in slow and '长辈同行' in elderly
+    assert '长辈同行' not in base and '慢慢逛' not in base
+    assert '锁定' not in elderly and '重算' not in elderly
+    from app.models.schemas import Meal
+    d.meals=[Meal(name='本次选的餐厅',type='lunch')]
+    d.trip_intent={'dining_style':'dedicated'}
+    foodie=refresh_day_description(d)
+    assert '美食作为重点' in foodie and '本次选的餐厅' in foodie
+    assert d.meals[0].name=='本次选的餐厅'
+    assert [a.name for a in d.attractions]==['园林','博物馆','湖边']
 
 
 def test_manual_restaurant_and_gap_survive_ai_replacement():
@@ -90,6 +108,9 @@ def test_explicit_closure_is_a_violation_even_without_clock_windows():
     assert any('停止营业' in x for x in meal_plan_violations(day,day))
 
 
+import pytest
+from pydantic import ValidationError
+
 def test_dietary_request_remains_unconfirmed_and_does_not_change_saved_choices():
     d=DayDetail(day_index=0,date='2026-10-20',attractions=attrs(),overnight_stay=False,
                 trip_intent={'dietary_requirements':'花生过敏'})
@@ -99,18 +120,11 @@ def test_dietary_request_remains_unconfirmed_and_does_not_change_saved_choices()
     assert [a.model_dump() for a in d.attractions]==before
 
 
-import pytest
-from pydantic import ValidationError
 @pytest.mark.parametrize('overrides',[{'meal_budget_per_person':0},{'meal_budget_per_person':10001},{'dietary_requirements':'x'*301},{'dining_style':'unknown'}])
 def test_invalid_dining_request_is_rejected(overrides):
     with pytest.raises(ValidationError):
         TripRequest(city='苏州',start_date='2026-10-20',end_date='2026-10-20',travel_days=1,
                     transportation='步行',accommodation='酒店',**overrides)
-
-
-def test_hotel_location_precedes_stars():
-    hotels=[{'name':'远处五星','star_rating':5,'_centroid_distance_km':40},{'name':'近处三星','star_rating':3,'_centroid_distance_km':1},{'name':'未知位置','star_rating':5}]
-    assert [h['name'] for h in _rank_day_hotels(hotels)]==['近处三星','远处五星','未知位置']
 
 
 @pytest.mark.parametrize('quote',[
@@ -145,20 +159,3 @@ def test_hotel_explanation_without_location_does_not_claim_nearby():
     result=explain_hotel({'name':'H'},request)
     assert any('缺少可核对的位置' in text for text in result['recommendation']['cautions'])
     assert not any('直线约' in text for text in result['recommendation']['reasons'])
-
-
-def test_same_itinerary_expresses_only_explicit_current_intent():
-    d=DayDetail(day_index=0,date='2026-10-20',attractions=attrs(),overnight_stay=False)
-    base=refresh_day_description(d)
-    d.trip_intent={'free_text_input':'想慢游'};slow=refresh_day_description(d)
-    d.trip_intent={'companion_type':'elderly'};elderly=refresh_day_description(d)
-    assert '慢慢逛' in slow and '长辈同行' in elderly
-    assert '长辈同行' not in base and '慢慢逛' not in base
-    assert '锁定' not in elderly and '重算' not in elderly
-    from app.models.schemas import Meal
-    d.meals=[Meal(name='本次选的餐厅',type='lunch')]
-    d.trip_intent={'dining_style':'dedicated'}
-    foodie=refresh_day_description(d)
-    assert '美食作为重点' in foodie and '本次选的餐厅' in foodie
-    assert d.meals[0].name=='本次选的餐厅'
-    assert [a.name for a in d.attractions]==['园林','博物馆','湖边']

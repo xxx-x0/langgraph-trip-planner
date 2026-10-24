@@ -102,41 +102,6 @@ def test_unknown_attraction_in_order_is_ignored():
     assert [a.name for a in detail.attractions] == ["A", "B"]
 
 
-def test_hotel_appears_at_start_and_end_of_timeline():
-    hotel = Hotel(name="H1", address="酒店地址",
-                  location=Location(longitude=116.4, latitude=39.9))
-    ctx = _ctx([_attr("A")], hotel=hotel)
-    detail = rule_assemble_day_timeline(ctx, overrides=None)
-    timeline = detail.timeline_order
-    assert timeline[0]["kind"] == "hotel"
-    assert timeline[-1]["kind"] == "hotel"
-
-
-from unittest.mock import patch, AsyncMock
-
-from app.agents.langgraph_agent.assemble.narrative import write_day_narrative_llm
-from app.models.schemas import DayDetail, WeatherInfo
-
-
-@pytest.mark.asyncio
-async def test_narrative_projects_saved_facts_without_model():
-    detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
-    with patch("app.services.llm_service.get_llm", side_effect=AssertionError("no model")):
-        text = await write_day_narrative_llm(detail, free_text_input="晴天，已预约成功")
-    assert "A" in text and "已预约成功" not in text
-    assert detail.description_source == "itinerary_facts_v1"
-    assert "当日天气尚未获取" in "；".join(detail.pending_confirmations)
-
-
-@pytest.mark.asyncio
-async def test_narrative_refresh_is_deterministic_and_keeps_arrangement():
-    detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
-    before = detail.model_dump(exclude={"description", "description_source", "pending_confirmations"})
-    first = await write_day_narrative_llm(detail)
-    assert await write_day_narrative_llm(detail) == first
-    assert detail.model_dump(exclude={"description", "description_source", "pending_confirmations"}) == before
-
-
 def test_removed_attractions_are_filtered_before_ordering():
     ctx = _ctx([_attr("A"), _attr("B"), _attr("C")])
     detail = rule_assemble_day_timeline(
@@ -164,6 +129,22 @@ def test_locked_attractions_only_keep_present_names():
     assert detail.locked_attraction_names == ["A"]
 
 
+def test_hotel_appears_at_start_and_end_of_timeline():
+    hotel = Hotel(name="H1", address="酒店地址",
+                  location=Location(longitude=116.4, latitude=39.9))
+    ctx = _ctx([_attr("A")], hotel=hotel)
+    detail = rule_assemble_day_timeline(ctx, overrides=None)
+    timeline = detail.timeline_order
+    assert timeline[0]["kind"] == "hotel"
+    assert timeline[-1]["kind"] == "hotel"
+
+
+from unittest.mock import patch, AsyncMock
+
+from app.agents.langgraph_agent.assemble.narrative import write_day_narrative_llm
+from app.models.schemas import DayDetail, WeatherInfo
+
+
 @pytest.mark.asyncio
 async def test_narrative_projects_current_facts_without_a_model():
     detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
@@ -174,7 +155,6 @@ async def test_narrative_projects_current_facts_without_a_model():
     assert detail.description_source == "itinerary_facts_v1"
 
 
-
 @pytest.mark.asyncio
 async def test_narrative_remains_available_if_model_configuration_is_broken():
     detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
@@ -182,3 +162,22 @@ async def test_narrative_remains_available_if_model_configuration_is_broken():
         text = await write_day_narrative_llm(detail, None, None, "北京")
     assert "今天先把时间留给A" in text
     assert text == detail.description
+
+
+@pytest.mark.asyncio
+async def test_narrative_projects_saved_facts_without_model():
+    detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
+    with patch("app.services.llm_service.get_llm", side_effect=AssertionError("no model")):
+        text = await write_day_narrative_llm(detail, free_text_input="晴天，已预约成功")
+    assert "A" in text and "已预约成功" not in text
+    assert detail.description_source == "itinerary_facts_v1"
+    assert "当日天气尚未获取" in "；".join(detail.pending_confirmations)
+
+
+@pytest.mark.asyncio
+async def test_narrative_refresh_is_deterministic_and_keeps_arrangement():
+    detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
+    before = detail.model_dump(exclude={"description", "description_source", "pending_confirmations"})
+    first = await write_day_narrative_llm(detail)
+    assert await write_day_narrative_llm(detail) == first
+    assert detail.model_dump(exclude={"description", "description_source", "pending_confirmations"}) == before
