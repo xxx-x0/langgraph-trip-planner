@@ -65,5 +65,12 @@ backend/app/services/amap_service.py
 # brainstorming mockups (browser companion)
 .superpowers/
 
+# 本机浏览器采集、走查证据及设计输出（保留本地，不纳入源码提交）
+/.playwright-cli/
+/output/
+
+# 个人简历材料（保留本地，与项目源码分开）
+/docs/cv/
+
 # Generated from browser-extension/ by frontend predev/prebuild; keep local copies.
 /frontend/public/ticket-assistant-extension.zip
