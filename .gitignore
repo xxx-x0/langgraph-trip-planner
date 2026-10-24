@@ -64,3 +64,6 @@ backend/app/services/amap_service.py
 
 # brainstorming mockups (browser companion)
 .superpowers/
+
+# Generated from browser-extension/ by frontend predev/prebuild; keep local copies.
+/frontend/public/ticket-assistant-extension.zip

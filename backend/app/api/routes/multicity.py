@@ -18,6 +18,7 @@ class Change(BaseModel):
     revision: int = Field(ge=1)
     preview_token: str | None = None
     acknowledge_booked: bool = False
+    ticket_basis: str | None = None
     adjust_days: bool = False
     adjustment_id: str | None = None
     acknowledge_adjustments: bool = False
@@ -56,6 +57,7 @@ async def get(trip_id:str): return svc.response(await svc.load(trip_id))
 @router.post('/{trip_id}/preview')
 async def preview(trip_id:str,body:Change):
     d=await svc.load(trip_id)
+    if body.ticket_basis and body.ticket_basis != svc.token(d): raise HTTPException(409,'筛选后安排已改变，请重新查票')
     if d['revision']!=body.revision or d['status']=='saved': raise HTTPException(409,'版本已变化或已保存，请重新加载或创建新版本')
     old=MultiTrip.model_validate(d['plan']);changes,booked=svc.change_report(old,body.plan)
     if body.adjust_days:

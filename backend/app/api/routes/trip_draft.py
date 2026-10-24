@@ -666,11 +666,15 @@ class JourneyChange(BaseModel):
     journey: Journey | None = None
     preview_token: str | None = None
     synchronize: bool = False
+    ticket_basis: str | None = None
 
 @router.post('/{draft_id}/journey', summary='预览并确认抵离交通变更')
 async def change_journey(draft_id: str, change: JourneyChange):
     record=await trip_draft_service.get_draft(draft_id)
     _ensure_editable(record)
+    from ...services.ticket_schedule import draft_basis
+    if change.ticket_basis and change.ticket_basis != draft_basis(record):
+        raise HTTPException(409, detail="筛选后安排已改变，请重新查票")
     raw=json.loads(record.request_json)
     raw['journey']=change.journey.model_dump(mode='json') if change.journey else None
     try: request=TripRequest.model_validate(raw)
@@ -719,3 +723,15 @@ async def compare_journey(draft_id: str, comparison: JourneyComparison):
         return {'options':compare_candidates(_load_payload(record),comparison.candidates)}
     except ValidationError as error:
         raise HTTPException(422,detail=str(error)) from error
+
+
+@router.get('/transport-sources/status', summary='交通数据来源与官方查询入口')
+async def transport_source_status():
+    from ...services.transport_sources import source_links
+    return source_links()
+
+
+@router.post('/transport-sources/check-flight', summary='只读核验航班接口连接状态')
+async def check_transport_source():
+    from ...services.transport_sources import check_flight_source
+    return await check_flight_source()

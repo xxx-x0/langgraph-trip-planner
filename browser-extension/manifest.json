@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "旅行规划查票助手（本机）",
+  "version": "0.2.2",
+  "description": "将本次12306或携程直达列表带回本机旅行规划，供AI筛选和采用。",
+  "permissions": ["storage"],
+  "background": {"service_worker": "background.js"},
+  "content_scripts": [
+    {"matches": ["http://localhost/*", "http://127.0.0.1/*"], "js": ["app-bridge.js"]},
+    {"matches": ["https://kyfw.12306.cn/otn/leftTicket/init*", "https://flights.ctrip.com/online/list/*"], "js": ["reader.js", "ticket-page.js"]}
+  ]
+}

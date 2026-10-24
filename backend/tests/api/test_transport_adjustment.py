@@ -34,7 +34,7 @@ async def client(monkeypatch):
 @pytest.mark.asyncio
 async def test_preview_adjusts_both_days_and_atomic_confirmation(client):
     old,snapshots,plan=sample();d=await multicity.create(old,snapshots=snapshots);url='/api/multi-trips/'+d['id'];before=copy.deepcopy(d)
-    r=await client.post(url+'/preview',json=dict(plan=plan.model_dump(mode='json'),revision=1,adjust_days=True));assert r.status_code==200,r.text
+    r=await client.post(url+'/preview',json=dict(plan=plan.model_dump(mode='json'),revision=1,adjust_days=True,ticket_basis=multicity.token(d)));assert r.status_code==200,r.text
     p=r.json();assert await multicity.load(d['id'])==before and not p['summary']['conflicts']
     assert any('取消无法容纳的休息' in x for x in p['adjustments']) and any('杭州景点' in x for x in p['adjustments'])
     body=dict(plan=p['proposed_plan'],revision=1,adjustment_id=p['adjustment_id'],preview_token=p['preview_token'])

@@ -8,6 +8,7 @@ from app.api.routes.trip_draft import _load_payload
 from app.services import trip_draft_service
 from app.services.journey_comparison import JourneyCandidate, compare_candidates
 from app.models.journey import JourneyLeg
+from app.services.external_calls import ExternalServiceError, FailureKind
 
 
 def candidate(name='高铁示例',price=100,start='2026-10-15',end='2026-10-16'):
@@ -84,6 +85,14 @@ async def test_late_arrival_keeps_meals_marks_conflicts(case):
     assert any('抵离交通冲突' in x for x in new['pending_confirmations'])
 
 
+@pytest.mark.asyncio
+async def test_probe_auth_failure_keeps_choices_and_no_quotes(case):
+    client,draft,_=case;before=await trip_draft_service.get_draft(draft)
+    with patch('app.services.transport_sources.MCPGateway.tools',new=AsyncMock(side_effect=ExternalServiceError('rollinggo_flight','tools/list',FailureKind.AUTH))):
+        response=await client.post('/api/trip/draft/transport-sources/check-flight')
+    assert response.status_code==200,response.text
+    assert response.json()['status']=='unavailable' and response.json()['offers']==[]
+    assert (await trip_draft_service.get_draft(draft)).request_json==before.request_json
 
 
 def test_itemized_costs_override_aggregate_unknown_not_free():

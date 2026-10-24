@@ -8,7 +8,10 @@
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "package:extension": "python3 ../scripts/package_ticket_extension.py",
+    "predev": "npm run package:extension",
+    "prebuild": "npm run package:extension"
   },
   "dependencies": {
     "@amap/amap-jsapi-loader": "^1.0.1",

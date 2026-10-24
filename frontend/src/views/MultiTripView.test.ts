@@ -12,6 +12,7 @@ const button=(w:any,text:string)=>w.findAll('button').find((b:any)=>b.text().inc
 const field=(w:any,text:string)=>w.findAll('label').find((b:any)=>b.text().startsWith(text))!.find('input,select')
 beforeEach(()=>{mock.route.query={};mock.route.params={id:'mc_test'};mock.api.mockReset();mock.push.mockReset();mock.api.mockResolvedValue(structuredClone(doc));sessionStorage.clear()})
 describe('whole-trip planning',()=>{
+ it('sends a browser-adopted leg straight to whole-trip preview without saving',async()=>{const w=mountView();await flushPromises();mock.api.mockResolvedValue({preview_token:'browser-p',changes:[],booked:[],summary,budget_delta:0});const leg={service_number:'G100',departure_station:'上海虹桥',arrival_station:'苏州',departure_time:'2026-10-20T10:00',arrival_time:'2026-10-20T11:00'};w.findComponent({name:'TicketAssistant'}).vm.$emit('adopt',{leg,direction:'outbound'});await flushPromises();const call=mock.api.mock.calls.find(c=>c[0]==='/mc_test/preview')!;expect(call[2].plan.transfers).toEqual([{from_stop:'origin',to_stop:'s',leg}]);expect(mock.api.mock.calls.some(c=>c[1]==='put')).toBe(false);w.unmount()})
  it('shows saved ticket facts in the read-only whole-trip version',async()=>{mock.api.mockResolvedValue({...doc,status:'saved',plan:{...plan,transfers:[{from_stop:'origin',to_stop:'s',leg:{service_number:'G100',booking_status:'booked',departure_station:'上海虹桥',arrival_station:'苏州',departure_time:'2026-10-20T10:00',arrival_time:'2026-10-20T11:00',passengers:1,ticket_total:35,currency:'CNY',price_note:'测试报价'}}]},summary:{...summary,transfers:[{from_stop:'origin',to_stop:'s',from_city:'上海',to_city:'苏州',minutes:150}]}});const w=mountView();await flushPromises();expect(w.text()).toContain('G100');expect(w.text()).toContain('上海虹桥 2026-10-20 10:00');expect(w.text()).toContain('测试报价');w.unmount()})
 
  it('fills rest suggestions without saving and requires a new preview',async()=>{const w=mountView();await flushPromises();const proposed=structuredClone(plan) as any;proposed.stops[0].rest_periods=[{id:'rest1',date:'2026-10-22',start_time:'14:00',end_time:'17:00',label:'下午休息'}];mock.api.mockResolvedValue({plan:proposed,notes:[]});await button(w,'帮我留出休息').trigger('click');await flushPromises();expect(field(w,'休息日期').element.value).toBe('2026-10-22');expect(w.text()).toContain('尚未保存');expect(button(w,'选择景点并安排').attributes('disabled')).toBeDefined();expect(mock.api.mock.calls.filter(c=>c[1]==='put')).toHaveLength(0);await button(w,'移除这段休息').trigger('click');expect(w.text()).not.toContain('休息开始');w.unmount()})
@@ -75,6 +76,20 @@ describe('whole-trip planning',()=>{
    expect(w.get('.transport-panel').isVisible()).toBe(true)
    w.unmount()
  })
+
+ it('shows the adopted ticket before confirmation and cancels without a write',async()=>{
+  const w=mountView();await flushPromises()
+  const leg={service_number:'G1388',departure_station:'杭州东',arrival_station:'上海虹桥',departure_time:'2026-10-20T21:49',arrival_time:'2026-10-20T22:48',currency:'CNY',ticket_total:null,price_note:'列表价未确认为总价'}
+  mock.api.mockResolvedValue({preview_token:'p',changes:[],booked:[],summary,budget_delta:0})
+  w.findComponent({name:'TicketAssistant'}).vm.$emit('adopt',{leg});await flushPromises()
+  expect(w.get('.ticket-confirmation').text()).toContain('G1388')
+  expect(w.get('.ticket-confirmation').text()).toContain('待确认')
+  await button(w,'撤销本次未保存修改').trigger('click');await flushPromises()
+  expect(w.find('.preview').exists()).toBe(false)
+  expect(w.find('.save-dock').exists()).toBe(false)
+  expect(mock.api.mock.calls.some(c=>c[1]==='put')).toBe(false)
+  w.unmount()
+ })
  it('opens the relevant city date and returns to the selected transport segment',async()=>{
   mock.route.query={section:'transport',edge:'0'}
   mock.api.mockResolvedValue({...doc,summary:{...summary,cities:[{...summary.cities[0],source_draft:'city',days:[{date:'2026-10-20',timeline_schedule:[{kind:'attraction',start_time:'10:00',end_time:'12:00'}]}]}]}})
@@ -94,6 +109,21 @@ describe('whole-trip planning',()=>{
   await button(w,'预览本段修改').trigger('click');await flushPromises()
   expect(mock.api.mock.calls.find(c=>c[0]==='/mc_test/preview')?.[2].plan.transfers[0].leg.transfer_before_minutes).toBe(90)
   expect(w.findAll('.options article')).toHaveLength(0)
+  w.unmount()
+ })
+
+ it('requires explicit review before committing transport and both city adjustments',async()=>{
+  const w=mountView();await flushPromises()
+  const leg={service_number:'G1',departure_station:'苏州',arrival_station:'杭州',departure_time:'2026-10-20T15:00',arrival_time:'2026-10-20T16:00'}
+  const proposed={...plan,transfers:[{from_stop:'origin',to_stop:'s',leg}]}
+  mock.api.mockResolvedValue({preview_token:'checked',adjustment_id:'server-only',proposed_plan:proposed,adjustments:['取消苏州晚餐'],changes:[],booked:[],summary,budget_delta:-20})
+  w.findComponent({name:'TicketAssistant'}).vm.$emit('adjust',{leg,ticketBasis:'saved-basis'});await flushPromises()
+  expect(mock.api.mock.calls.find(c=>c[0]==='/mc_test/preview')![2]).toMatchObject({adjust_days:true,ticket_basis:'saved-basis'})
+  expect(button(w,'确认影响并保存').attributes('disabled')).toBeDefined()
+  await w.get('.adjustment-review input').setValue(true)
+  mock.api.mockResolvedValue({...doc,plan:proposed,revision:2})
+  await button(w,'确认影响并保存').trigger('click');await flushPromises()
+  expect(mock.api.mock.calls.find(c=>c[1]==='put')![2]).toMatchObject({adjustment_id:'server-only',acknowledge_adjustments:true,preview_token:'checked'})
   w.unmount()
  })
  it('protects manual inputs from being lost when switching traffic segments',async()=>{

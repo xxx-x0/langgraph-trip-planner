@@ -287,13 +287,13 @@ it('requires preview confirmation for transport, invalidates preview on edits, a
  expect(w.findAll('button').find(b=>b.text().includes('定稿并保存'))!.attributes('disabled')).toBeDefined()
  vi.mocked(changeJourney).mockResolvedValue({preview_token:'preview',notice:'原安排保留',intercity_total:0,impacts:[]})
  await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
- expect(vi.mocked(changeJourney).mock.calls[0]).toEqual(['draft-test',{origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'},undefined,true])
+ expect(vi.mocked(changeJourney).mock.calls[0]).toEqual(['draft-test',{origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'},undefined,true,undefined])
  const edited={origin_city:'南京',return_city:'南京',destination_timezone:'Asia/Shanghai'}
  w.findAllComponents(JourneyEditor).at(-1)!.vm.$emit('update:modelValue',edited);await flushPromises()
  expect(w.findAll('button').some(b=>b.text()==='确认以上影响并保存交通')).toBe(false)
  await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
  await w.findAll('button').find(b=>b.text()==='确认以上影响并保存交通')!.trigger('click');await flushPromises()
- expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',edited,'preview',true])
+ expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',edited,'preview',true,undefined])
  w.unmount()
 })
 
@@ -304,12 +304,12 @@ it('chooses an alternative into a synchronization preview and waits for explicit
  const journey={origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'}
  vi.mocked(changeJourney).mockResolvedValue({preview_token:'selected',notice:'保留全部活动',intercity_total:240,budget:{total:500},impacts:[{date:'2026-10-20',window:{start_minutes:600,end_minutes:1320},changes:['市内出发从08:00调整到10:00'],conflicts:[]}]})
  w.findComponent(JourneyComparison).vm.$emit('choose',journey);await flushPromises()
- expect(vi.mocked(changeJourney).mock.calls).toEqual([['draft-test',journey,undefined,true]])
+ expect(vi.mocked(changeJourney).mock.calls).toEqual([['draft-test',journey,undefined,true,undefined]])
  expect(w.get('.travel-preview').text()).toContain('市内出发从08:00调整到10:00')
  expect(w.findAll('details.journey-change').some(d=>(d.element as HTMLDetailsElement).open && d.text().includes('编辑往返交通'))).toBe(true)
  expect(getDraft).toHaveBeenCalledTimes(1)
  await w.findAll('button').find(b=>b.text()==='确认以上影响并保存交通')!.trigger('click');await flushPromises()
- expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',journey,'selected',true])
+ expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',journey,'selected',true,undefined])
  w.unmount()
 })
 
@@ -321,7 +321,7 @@ it('invalidates a synchronization preview when the user changes the synchronizat
  await w.get('details.journey-change input[type="checkbox"]').setValue(false);await flushPromises()
  expect(w.find('.travel-preview').exists()).toBe(false)
  await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
- expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',null,undefined,false])
+ expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',null,undefined,false,undefined])
  await w.findAll('button').find(b=>b.text()==='取消本次交通变更')!.trigger('click');await flushPromises()
  expect(w.find('.travel-preview').exists()).toBe(false)
  expect(vi.mocked(changeJourney).mock.calls).toHaveLength(2)
@@ -351,3 +351,17 @@ it('syncs from the bottom action and returns to the city just edited',async()=>{
     expect(navigation.push).toHaveBeenCalledWith({path:'/multi-trip/mc_test',query:{city:'hangzhou'}})
     wrapper.unmount()
   })
+
+it('carries the recommendation basis into both preview and confirmation and clears it on cancellation',async()=>{
+ const w=await openDraft();const {default:JourneyComparison}=await import('@/components/JourneyComparison.vue')
+ const journey={origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'}
+ vi.mocked(changeJourney).mockResolvedValue({preview_token:'verified',notice:'核对',intercity_total:0,impacts:[]})
+ w.findComponent(JourneyComparison).vm.$emit('choose',journey,'saved-basis');await flushPromises()
+ expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',journey,undefined,true,'saved-basis'])
+ await w.findAll('button').find(b=>b.text()==='确认以上影响并保存交通')!.trigger('click');await flushPromises()
+ expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',journey,'verified',true,'saved-basis'])
+ w.findComponent(JourneyComparison).vm.$emit('choose',journey,'another-basis');await flushPromises()
+ await w.findAll('button').find(b=>b.text()==='取消本次交通变更')!.trigger('click');await flushPromises()
+ await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
+ expect(vi.mocked(changeJourney).mock.calls.at(-1)![4]).toBeUndefined();w.unmount()
+})

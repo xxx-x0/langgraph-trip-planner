@@ -300,8 +300,8 @@ export async function refreshDiningOptions(draftId: string, dayIndex: number) {
 export async function previewJourney(request: TripFormData) {
   return (await apiClient.post('/api/trip/draft/journey-preview',request)).data
 }
-export async function changeJourney(draftId:string, journey:import('@/types').Journey|null, preview_token?:string, synchronize=false) {
-  return (await apiClient.post(`/api/trip/draft/${draftId}/journey`,{journey,preview_token,synchronize})).data
+export async function changeJourney(draftId:string, journey:import('@/types').Journey|null, preview_token?:string, synchronize=false,ticket_basis?:string) {
+  return (await apiClient.post(`/api/trip/draft/${draftId}/journey`,{journey,preview_token,synchronize,ticket_basis})).data
 }
 
 export async function compareJourneys(draftId:string,candidates:unknown[]) {
@@ -312,4 +312,11 @@ export async function compareJourneys(draftId:string,candidates:unknown[]) {
 // Whole-trip versions use their own schema; single-city requests remain unchanged.
 export async function multiApi(path:string, method:'get'|'post'|'put'='get', data?:unknown):Promise<any>{
   const response=await apiClient.request({url:'/api/multi-trips'+path,method,data});return response.data
+}
+
+export async function recommendTickets(body:unknown,signal?:AbortSignal) {
+ return (await apiClient.post('/api/tickets/recommend',body,{signal,timeout:45000})).data
+}
+export async function checkFlightSource(signal?:AbortSignal) {
+ return (await apiClient.post('/api/trip/draft/transport-sources/check-flight',{}, {signal,timeout:25000})).data
 }

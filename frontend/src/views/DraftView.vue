@@ -17,7 +17,7 @@
     <main v-if="draft && draft.status !== 'finalized' && !loadError" class="draft-content">
       <section v-if="route.query?.multi" class="journey-change"><router-link :to="{path:`/multi-trip/${route.query?.multi}`,query:multiReturnQuery}">← 返回整趟旅行</router-link><p>这里编辑这座城市的工作副本；确认同步后，整趟预算和说明才一起更新。跨城班次请回整趟页面修改。</p><a-button :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @click="syncMulti">将当前安排同步到整趟旅行</a-button><p role="status">{{multiMessage}}</p></section>
       <JourneySummary :journey="draft.request.journey" :city="draft.city" :days="draft.days" />
-      <details v-if="!route.query?.multi" class="journey-change comparison-disclosure"><summary>比较手动填写的往返方案</summary>
+      <details v-if="!route.query?.multi" class="journey-change comparison-disclosure"><summary>查票与比较往返方案</summary>
         <JourneyComparison :draft-id="draftId" :request="draft.request" :days-detail="draft.days_detail" :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @choose="chooseTravel" />
       </details>
       <details v-if="!route.query?.multi" ref="travelEditor" class="journey-change" :open="travelEditorOpen" @toggle="travelEditorOpen=($event.target as HTMLDetailsElement).open">
@@ -108,26 +108,28 @@ const journeyPreview=ref<any>(null)
 const journeyBusy=ref(false)
 const journeyError=ref('')
 const synchronizeTravel=ref(true)
+const journeyTicketBasis=ref<string|undefined>()
 const travelEditor=ref<HTMLDetailsElement|null>(null)
 const travelEditorOpen=ref(false)
-async function chooseTravel(value:Journey){
+async function chooseTravel(value:Journey,ticketBasis?:string){
+ journeyTicketBasis.value=ticketBasis;
  journeyEdit.value=JSON.parse(JSON.stringify(value));synchronizeTravel.value=true;await nextTick();await previewTravel();await nextTick();
  if(travelEditor.value){travelEditor.value.open=true;travelEditor.value.scrollIntoView?.({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'})}
 }
 const journeyDirty=computed(()=>JSON.stringify(journeyEdit.value)!==JSON.stringify(draft.value?.request?.journey ?? null))
-watch(()=>draft.value?.request?.journey,v=>{journeyEdit.value=v?JSON.parse(JSON.stringify(v)):null;journeyPreview.value=null},{immediate:true})
+watch(()=>draft.value?.request?.journey,v=>{journeyEdit.value=v?JSON.parse(JSON.stringify(v)):null;journeyPreview.value=null;journeyTicketBasis.value=undefined},{immediate:true})
 watch(journeyEdit,()=>{journeyPreview.value=null},{deep:true})
 function timeLabel(n:number){return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`}
-function cancelTravel(){journeyEdit.value=draft.value?.request?.journey?JSON.parse(JSON.stringify(draft.value.request.journey)):null;journeyPreview.value=null;journeyError.value=''}
+function cancelTravel(){journeyEdit.value=draft.value?.request?.journey?JSON.parse(JSON.stringify(draft.value.request.journey)):null;journeyPreview.value=null;journeyError.value='';journeyTicketBasis.value=undefined}
 async function previewTravel(){
  if(journeyBusy.value || Object.keys(dayBusy).length)return
  journeyBusy.value=true;journeyError.value='';journeyPreview.value=null
- try{journeyPreview.value=await changeJourney(draftId.value,journeyEdit.value,undefined,synchronizeTravel.value)}catch(e:any){journeyError.value=typeof e?.response?.data?.detail==='string'?e.response.data.detail:'交通输入无效，请检查日期、人数、时区与价格来源'}finally{journeyBusy.value=false}
+ try{journeyPreview.value=await changeJourney(draftId.value,journeyEdit.value,undefined,synchronizeTravel.value,journeyTicketBasis.value)}catch(e:any){journeyError.value=typeof e?.response?.data?.detail==='string'?e.response.data.detail:'交通输入无效，请检查日期、人数、时区与价格来源'}finally{journeyBusy.value=false}
 }
 async function saveTravel(){
  if(!journeyPreview.value || journeyBusy.value || Object.keys(dayBusy).length)return
  journeyBusy.value=true;journeyError.value=''
- try{await changeJourney(draftId.value,journeyEdit.value,journeyPreview.value.preview_token,synchronizeTravel.value);draft.value=await getDraft(draftId.value);journeyPreview.value=null;message.success('交通已保存，请核对当天安排')}catch(e:any){journeyError.value=e?.response?.data?.detail || '交通修改未保存，请重新预览';journeyPreview.value=null}finally{journeyBusy.value=false}
+ try{await changeJourney(draftId.value,journeyEdit.value,journeyPreview.value.preview_token,synchronizeTravel.value,journeyTicketBasis.value);draft.value=await getDraft(draftId.value);journeyPreview.value=null;message.success('交通已保存，请核对当天安排')}catch(e:any){journeyError.value=e?.response?.data?.detail || '交通修改未保存，请重新预览';journeyPreview.value=null}finally{journeyBusy.value=false}
 }
 
 async function withDayBusy<T>(

@@ -1,7 +1,8 @@
 <template>
   <section class="comparison">
     <h2>先选怎么去，再看怎么玩</h2>
-    <p>手动添加往返备选，比较已填交通费用、门到门时间及对现有安排的影响；接驳时间仍是估计，采用后需预览确认。</p>
+    <p>浏览器助手带回机票或高铁候选，AI帮你筛选，采用后直接预览行程变化。也可手动补充备选，比较全程费用和时间；接驳时间仍是估计。</p>
+    <TicketAssistant :request="request" :disabled="disabled || busy" :comparison-full="candidates.length>=6" :schedule-context="{kind:'draft',draft_id:draftId,request,days_detail:daysDetail||[]}" @add="importCandidate" @adopt="adoptTicket" />
     <p v-if="candidates.length >= 6">已有6个备选，请移除一个后再导入。</p>
     <details :open="editorOpen" @toggle="editorOpen=($event.target as HTMLDetailsElement).open">
       <summary>添加或修改一个备选（最多6个）</summary>
@@ -48,11 +49,12 @@
 <script setup lang="ts">
 import {extraCostLabel} from '@/utils/journeyCosts'
 import {ref,watch} from 'vue'
+import TicketAssistant from './TicketAssistant.vue'
 import JourneyEditor from './JourneyEditor.vue'
-import type {Journey,TripFormData} from '@/types'
+import type {Journey,JourneyLeg,TripFormData} from '@/types'
 import {compareJourneys} from '@/services/api'
 const props=defineProps<{draftId:string;request:TripFormData;daysDetail?:unknown[];disabled?:boolean}>()
-const emit=defineEmits<{(e:'choose',value:Journey):void}>()
+const emit=defineEmits<{(e:'choose',value:Journey,ticketBasis?:string):void}>()
 const clone=<T,>(v:T):T=>JSON.parse(JSON.stringify(v))
 const name=ref(''),start=ref(props.request.start_date),end=ref(props.request.end_date),editing=ref<Journey|null>(clone(props.request.journey || null))
 const key='journey-candidates:'+props.draftId
@@ -80,6 +82,9 @@ async function compare(){
   if(generation===revision && number===requestNumber)error.value=typeof e?.response?.data?.detail==='string'?e.response.data.detail:'比较未完成，请检查日期、人数、时区和价格来源；已选交通未改变。'
  }finally{if(number===requestNumber)busy.value=false}
 }
+function importCandidate(candidate:any){if(props.disabled||busy.value||candidates.value.length>=6)return;candidates.value.push(clone(candidate));error.value=''}
+function adoptTicket(value:{leg:JourneyLeg;direction:'outbound'|'inbound';ticketBasis?:string}){if(props.disabled||busy.value)return;const journey:Journey=clone(props.request.journey||{origin_city:requestOrigin(value),return_city:requestOrigin(value),destination_timezone:'Asia/Shanghai',outbound:null,inbound:null});journey[value.direction]=clone(value.leg);emit('choose',journey,value.ticketBasis)}
+function requestOrigin(value:{leg:JourneyLeg;direction:'outbound'|'inbound'}){return value.direction==='outbound'?value.leg.departure_station:value.leg.arrival_station}
 </script>
 <style scoped>
 .comparison{padding:24px;border:2px solid #24362e;background:var(--white,#fff);color:#24362e;margin:20px 0}.comparison h2{font-size:22px;margin-top:0}.comparison p{line-height:1.7;font-size:14px;overflow-wrap:anywhere}.source-actions,.candidate-list li{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:12px 0}.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:16px 0}label{display:flex;flex-direction:column;gap:6px}input{padding:8px;border:1px solid #708579;min-width:0;background:white;color:#24362e}button{cursor:pointer;border:1px solid #24362e;padding:9px 14px;background:#e6efe8;color:#183528;border-radius:4px}button:disabled{cursor:not-allowed;opacity:.55}summary{cursor:pointer;padding:10px 0}.options{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:20px}article{border:1px solid #9eb4a5;border-radius:8px;padding:18px;min-width:0}.badges{color:#17613c;font-weight:700}.candidate-list{padding-left:0;list-style:none}a{color:#145d3d;text-decoration:underline}@media(max-width:480px){.comparison{padding:14px}article{padding:12px}}
