@@ -172,34 +172,6 @@ async def mark_finalized(draft_id: str, *, trip_id: int) -> None:
         await session.commit()
 
 
-async def delete_draft(draft_id: str) -> bool:
-    if draft_id.startswith("mc_"):
-        return False
-    async with async_session() as session:
-        record = await session.get(TripDraft, draft_id)
-        if record is None:
-            return False
-        await session.delete(record)
-        await session.commit()
-        return True
-
-
-async def delete_expired(*, days: int = 30) -> int:
-    cutoff = datetime.utcnow() - timedelta(days=days)
-    async with async_session() as session:
-        stmt = (
-            delete(TripDraft)
-            .where(TripDraft.updated_at < cutoff)
-            .where(TripDraft.status.notin_(["finalized", "multi_city", "multi_saved"]))
-        )
-        result = await session.execute(stmt)
-        await session.commit()
-        deleted = result.rowcount or 0
-        if deleted > 0:
-            logger.info(f"TTL 清理: 删除了 {deleted} 个过期草稿")
-        return deleted
-
-
 class DraftChangedDuringFinalize(ValueError):
     pass
 
@@ -245,6 +217,34 @@ async def persist_finalized_trip(draft_id: str, plan: TripPlan, request: TripReq
         await apply_extracted_preferences(session, record.user_id, extracted, request.city)
         await session.commit()
         return plan, trip.id
+
+
+async def delete_draft(draft_id: str) -> bool:
+    if draft_id.startswith("mc_"):
+        return False
+    async with async_session() as session:
+        record = await session.get(TripDraft, draft_id)
+        if record is None:
+            return False
+        await session.delete(record)
+        await session.commit()
+        return True
+
+
+async def delete_expired(*, days: int = 30) -> int:
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    async with async_session() as session:
+        stmt = (
+            delete(TripDraft)
+            .where(TripDraft.updated_at < cutoff)
+            .where(TripDraft.status.notin_(["finalized", "multi_city", "multi_saved"]))
+        )
+        result = await session.execute(stmt)
+        await session.commit()
+        deleted = result.rowcount or 0
+        if deleted > 0:
+            logger.info(f"TTL 清理: 删除了 {deleted} 个过期草稿")
+        return deleted
 
 
 async def patch_dining_pool(draft_id, day_index, pool, *, expected_day, expected_pool, expected_request=None):

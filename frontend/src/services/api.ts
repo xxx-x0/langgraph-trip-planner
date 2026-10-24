@@ -177,9 +177,9 @@ export async function deleteDraft(draftId: string) {
 }
 
 export interface DayEditBody {
+  attractions_order?: string[]
   locked_attraction_names?: string[]
   removed_attraction_names?: string[]
-  attractions_order?: string[]
   meals?: Array<Record<string, any>>
   day_start_time?: string
 }
@@ -291,7 +291,6 @@ export async function aiSelectAttractions(req: AISelectRequest): Promise<AISelec
 
 export default apiClient
 
-
 export async function refreshDiningOptions(draftId: string, dayIndex: number) {
   const resp = await apiClient.post(`/api/trip/draft/${draftId}/day/${dayIndex}/dining-options`, {}, { timeout: 85000 })
   return resp.data
@@ -307,16 +306,14 @@ export async function changeJourney(draftId:string, journey:import('@/types').Jo
 export async function compareJourneys(draftId:string,candidates:unknown[]) {
  return (await apiClient.post(`/api/trip/draft/${draftId}/journey-comparison`,{candidates})).data
 }
-
-
-// Whole-trip versions use their own schema; single-city requests remain unchanged.
-export async function multiApi(path:string, method:'get'|'post'|'put'='get', data?:unknown):Promise<any>{
-  const response=await apiClient.request({url:'/api/multi-trips'+path,method,data});return response.data
-}
-
 export async function recommendTickets(body:unknown,signal?:AbortSignal) {
  return (await apiClient.post('/api/tickets/recommend',body,{signal,timeout:45000})).data
 }
 export async function checkFlightSource(signal?:AbortSignal) {
  return (await apiClient.post('/api/trip/draft/transport-sources/check-flight',{}, {signal,timeout:25000})).data
+}
+
+// Whole-trip versions use their own schema; single-city requests remain unchanged.
+export async function multiApi(path:string, method:'get'|'post'|'put'='get', data?:unknown):Promise<any>{
+  const response=await apiClient.request({url:'/api/multi-trips'+path,method,data});return response.data
 }

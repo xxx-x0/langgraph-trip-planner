@@ -44,6 +44,12 @@ def test_closing_and_arrival_windows():
     d=day();d.attractions[1].open_hours='08:00-16:00';d.travel_window={'start_minutes':600,'end_minutes':1050};schedule_day(d)
     assert any('开放时间' in x for x in conflicts(d)) and any('晚饭' in x for x in conflicts(d))
 
+def test_failure_retains_original_without_claiming_rest():
+    d=day();d.rest_periods=[];schedule_day(d);original=d.timeline_schedule.copy()
+    req=TripRequest(city='苏州',start_date=d.date,end_date=d.date,travel_days=1,transportation='公共交通',accommodation='经济型酒店',rest_periods=[rest('11:00','16:00')])
+    details,impacts,_=synchronize_days(SimpleNamespace(days=[DraftDayContext(day_index=0,date=d.date)],days_detail=[d]),req)
+    assert impacts[0]['conflicts'] and details[0].timeline_schedule==original
+    assert '还没放进' in details[0].description and d.rest_periods==[]
 
 def test_remove_rest_has_no_ghost_blocks():
     d=day();schedule_day(d);d.rest_periods=[];schedule_day(d)
@@ -56,11 +62,3 @@ def test_short_gaps_are_not_called_an_afternoon_to_fill():
         if item['kind']=='free_time' and item['duration']<=60:
             assert item['start_time']+'至'+item['end_time']+'尚未安排' not in text
     assert '补充下午活动' not in text
-
-
-def test_failure_retains_original_without_claiming_rest():
-    d=day();d.rest_periods=[];schedule_day(d);original=d.timeline_schedule.copy()
-    req=TripRequest(city='苏州',start_date=d.date,end_date=d.date,travel_days=1,transportation='公共交通',accommodation='经济型酒店',rest_periods=[rest('11:00','16:00')])
-    details,impacts,_=synchronize_days(SimpleNamespace(days=[DraftDayContext(day_index=0,date=d.date)],days_detail=[d]),req)
-    assert impacts[0]['conflicts'] and details[0].timeline_schedule==original
-    assert '还没放进' in details[0].description and d.rest_periods==[]

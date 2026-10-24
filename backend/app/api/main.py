@@ -166,9 +166,8 @@ if __name__ == "__main__":
         reload=True
     )
 
-
+# Whole-trip snapshots reuse the existing JSON store, independently of single-city graphs.
 from .routes.multicity import router as multicity_router
 app.include_router(multicity_router, prefix="/api")
-
 from .routes.ticket_assistant import router as ticket_assistant_router
 app.include_router(ticket_assistant_router, prefix="/api")

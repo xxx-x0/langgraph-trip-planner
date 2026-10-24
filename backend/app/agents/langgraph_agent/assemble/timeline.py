@@ -112,6 +112,28 @@ def _apply_attraction_order(
     return ordered
 
 
+def _unique_names(names: Optional[List[str]]) -> List[str]:
+    if not names:
+        return []
+    out: List[str] = []
+    seen: set[str] = set()
+    for name in names:
+        if name and name not in seen:
+            out.append(name)
+            seen.add(name)
+    return out
+
+
+def _apply_removed_attractions(
+    attractions: List[Attraction], removed_names: Optional[List[str]]
+) -> List[Attraction]:
+    removed = set(_unique_names(removed_names))
+    if not removed:
+        return list(attractions)
+    return [a for a in attractions if a.name not in removed]
+
+
+
 def _default_meals(ctx: DraftDayContext, attractions: List[Attraction]):
     if not attractions or not ctx.dining_pool.main:
         return []
@@ -136,6 +158,7 @@ def _default_meals(ctx: DraftDayContext, attractions: List[Attraction]):
         result.append((meal, anchor))
         used.add(meal.name)
     return result
+
 
 def _build_timeline_order(
     attractions: List[Attraction],
@@ -232,24 +255,3 @@ def rule_assemble_day_timeline(
         companion_count=ctx.companion_count,
         meal_adjustments=overrides.get("meal_adjustments") or [],
     )
-
-
-def _unique_names(names: Optional[List[str]]) -> List[str]:
-    if not names:
-        return []
-    out: List[str] = []
-    seen: set[str] = set()
-    for name in names:
-        if name and name not in seen:
-            out.append(name)
-            seen.add(name)
-    return out
-
-
-def _apply_removed_attractions(
-    attractions: List[Attraction], removed_names: Optional[List[str]]
-) -> List[Attraction]:
-    removed = set(_unique_names(removed_names))
-    if not removed:
-        return list(attractions)
-    return [a for a in attractions if a.name not in removed]
