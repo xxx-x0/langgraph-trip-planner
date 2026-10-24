@@ -103,3 +103,17 @@ async def test_estimated_map_response_cannot_replace_a_saved_route():
         timeline_order=[{'kind':'attraction','ref_name':n} for n in ['A','B']])
     with patch('app.agents.langgraph_agent.assemble.route.compute_route_segments',new=AsyncMock(return_value=[{'is_estimated':True}])):
         with pytest.raises(ExternalServiceError):await compute_day_route(detail,'苏州','公共交通')
+
+
+@pytest.mark.asyncio
+async def test_description_refresh_needs_no_model_even_when_provider_is_unavailable():
+    await init_db();draft=await create('narrative-no-model-'+uuid.uuid4().hex)
+    detail=DayDetail(day_index=0,date='2026-10-20',description='last saved description',is_assembled=True)
+    await trip_draft_service.patch_day_detail(draft,0,detail)
+    with patch('app.services.llm_service.get_llm', side_effect=AssertionError('no LLM needed')):
+        async with AsyncClient(transport=ASGITransport(app=app),base_url='http://test') as client:
+            response=await client.post(f'/api/trip/draft/{draft}/day/0/narrative',json={})
+    assert response.status_code==200
+    saved=json.loads((await trip_draft_service.get_draft(draft)).days_detail_json)[0]
+    assert saved['description_source']=='itinerary_facts_v1'
+    assert 'last saved description' not in saved['description']

@@ -21,7 +21,7 @@ async def case():
         macro_plan=MacroPlan(city=req.city,total_days=1,days=[DaySkeleton(day_index=0,date=req.start_date,attraction_names=list('ABC'))]),
         clusters_data=[[{'name':n,'visit_minutes':60,'longitude':120+i*.01,'latitude':31} for i,n in enumerate('ABC')]],
         hotels_by_day=[[]],dining_pool=[{'main':[{'name':n,'category':'main','avg_cost':cost,'open_hours':hours,'source':'nearby','location':{'longitude':120.001,'latitude':31}} for n,cost,hours in [('Lunch',20,'07:00-23:00'),('Dinner',30,'07:00-23:00'),('Closed',40,'07:00-10:00')]],'cafe':[{'name':'Coffee','category':'cafe','avg_cost':10,'open_hours':'08:00-20:00'}]}],weather_info=[])
-    with patch.object(trip_draft,'write_day_narrative_llm',new=AsyncMock(return_value="隔离测试说明")), patch('app.agents.langgraph_agent.finalize.pipeline._run_global_synthesizer',new=AsyncMock(return_value=("","",""))), patch('app.agents.langgraph_agent.finalize.pipeline._run_extract_preferences',new=AsyncMock(return_value=None)), patch.object(trip_draft,'compute_day_route',new=AsyncMock(return_value=[])):
+    with patch.object(trip_draft,'compute_day_route',new=AsyncMock(return_value=[])):
         async with AsyncClient(transport=ASGITransport(app=app),base_url='http://test') as client:
             url=f'/api/trip/draft/{draft}/day/0'
             response=await client.post(url+'/recompute',json={'locked_attraction_names':['B'],'meals':[
@@ -47,6 +47,7 @@ async def test_deletion_with_frontend_full_meal_snapshot_preserves_slots_and_rea
     assert day['timeline_order'][0]['ref_name']=='Lunch'
     assert day['locked_attraction_names']==['B'] and day['removed_attraction_names']==['A']
     assert '首个景点之前' in '\n'.join(day['meal_adjustments'])
+    assert '首个景点之前' in '\n'.join(day['pending_confirmations'])
     assert not any('午餐未安排' in x for x in day['meal_warnings'])
     assert (await client.get(f'/api/trip/draft/{draft}')).json()['days_detail'][0]==day
 

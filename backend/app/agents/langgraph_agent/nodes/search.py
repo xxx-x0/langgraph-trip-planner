@@ -425,8 +425,6 @@ async def search_hotel_node(state: TripPlannerState) -> Dict[str, Any]:
                     "placeType": "城市",
                     "originQuery": origin_query,
                     "size": 5,
-                    "withHotelAmenities": True,
-                    "withRoomAmenities": True,
                 }
                 if star_ratings:
                     aigohotel_args["filterOptions"] = {"starRatings": star_ratings}
@@ -457,8 +455,6 @@ async def search_hotel_node(state: TripPlannerState) -> Dict[str, Any]:
                         "placeType": "景点",
                         "originQuery": f"搜索{attr_name}附近的酒店",
                         "size": 3,
-                        "withHotelAmenities": True,
-                        "withRoomAmenities": True,
                     }
                     if star_ratings:
                         nearby_args["starRatings"] = star_ratings

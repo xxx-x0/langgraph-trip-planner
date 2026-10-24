@@ -145,3 +145,20 @@ def test_hotel_explanation_without_location_does_not_claim_nearby():
     result=explain_hotel({'name':'H'},request)
     assert any('缺少可核对的位置' in text for text in result['recommendation']['cautions'])
     assert not any('直线约' in text for text in result['recommendation']['reasons'])
+
+
+def test_same_itinerary_expresses_only_explicit_current_intent():
+    d=DayDetail(day_index=0,date='2026-10-20',attractions=attrs(),overnight_stay=False)
+    base=refresh_day_description(d)
+    d.trip_intent={'free_text_input':'想慢游'};slow=refresh_day_description(d)
+    d.trip_intent={'companion_type':'elderly'};elderly=refresh_day_description(d)
+    assert '慢慢逛' in slow and '长辈同行' in elderly
+    assert '长辈同行' not in base and '慢慢逛' not in base
+    assert '锁定' not in elderly and '重算' not in elderly
+    from app.models.schemas import Meal
+    d.meals=[Meal(name='本次选的餐厅',type='lunch')]
+    d.trip_intent={'dining_style':'dedicated'}
+    foodie=refresh_day_description(d)
+    assert '美食作为重点' in foodie and '本次选的餐厅' in foodie
+    assert d.meals[0].name=='本次选的餐厅'
+    assert [a.name for a in d.attractions]==['园林','博物馆','湖边']

@@ -90,3 +90,14 @@ async def test_failed_transit_candidate_falls_back_to_readable_estimate(monkeypa
     assert segments[0]["duration"]
     assert segments[0]["detail"].startswith("约")
     assert "transits" not in segments[0]["detail"]
+
+
+@pytest.mark.asyncio
+async def test_medium_distance_uses_requested_transit_before_cycling(monkeypatch):
+    transit = _FakeTool({"transits": [{"distance":"3500","duration":"1800","segments":[]}]})
+    cycling = _FakeTool({"paths":[{"distance":"3000","duration":"900"}]})
+    service = _FakeAmapService({"maps_direction_transit_integrated":transit,"maps_direction_bicycling":cycling})
+    monkeypatch.setattr("app.agents.langgraph_agent.utils.route.get_langchain_amap_service", lambda: service)
+    result = await compute_route_segments(_waypoints(0.03), "公共交通", "重庆")
+    assert result[0]["mode"] == "公交"
+    assert transit.calls and not cycling.calls

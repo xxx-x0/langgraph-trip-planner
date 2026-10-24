@@ -1,5 +1,6 @@
 """Descriptions are projections of saved itinerary facts, never free-form claims."""
 from collections import Counter
+import re
 from typing import Optional
 
 from ....models.schemas import DayDetail, DayPlan, WeatherInfo, TripPlan
@@ -18,6 +19,18 @@ def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherI
                      f"今天从{names[0]}开始，接着去{names[1]}，后面还有{len(names)-2}处安排。")
     else:
         lines.append('今天还没有安排景点，可以先把用餐和休息时间定下来。')
+    kind = intent.get('companion_type')
+    text = intent.get('free_text_input') or ''
+    affirmative = re.sub(r'(?:不要|不想|不需要|无需|不打算)\s*(?:慢游|慢慢(?:逛)?|轻松|不赶(?:时间)?)', '', text)
+    slow = any(word in affirmative for word in ('慢游', '慢慢', '不赶', '轻松'))
+    if kind == 'elderly':
+        lines.append('这次有长辈同行，建议把休息留在两处活动之间；走累了就缩短后面的停留，不必把每一站走完。')
+    elif intent.get('children'):
+        lines.append('这次带孩子出门，建议先保证吃饭和休息，再决定后面的景点是否继续；儿童餐和设施还需要向店家确认。')
+    elif slow:
+        lines.append('你希望慢慢逛，可以把更多时间留给最想看的地方；后面的安排随当天体力调整。')
+    elif intent.get('companion_count') == 1:
+        lines.append('这次一个人出行，可以按自己的兴致决定停留多久；临时多逛一会儿，记得给下一段路留出时间。')
     expected = Counter([('attraction',a.name) for a in day.attractions]+[('meal',m.name) for m in day.meals])
     order = [(i.get('kind'),i.get('ref_name')) for i in day.timeline_order if i.get('kind') in {'attraction','meal'}]
     entries = [(i.get('kind'),i.get('ref_name')) for i in day.timeline_schedule if i.get('kind') in {'attraction','meal'}]

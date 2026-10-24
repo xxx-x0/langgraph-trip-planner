@@ -98,3 +98,35 @@ def test_default_meals_reanchor_on_reorder_without_moving_locks():
     assert 690 <= slots[0]['start_minutes'] <= 870
     assert slots[1]['start_minutes'] >= 1050
     assert not any('午餐未安排' in w or '晚餐未安排' in w for w in detail.meal_warnings)
+
+
+@pytest.mark.parametrize('raw,expected', [('1小时20分钟', 80), ('2小时', 120), ('5分钟', 5), ('未知', 20)])
+def test_route_time_units_do_not_move_meals_an_hour_early(raw, expected):
+    assert route_minutes(raw) == expected
+
+
+
+def test_explicit_late_meal_keeps_anchor_and_is_labeled_dinner_with_missing_lunch():
+    ctx = DraftDayContext(day_index=0, date='2026-10-14', day_start_time='10:00',
+                          attractions=[attraction('A', 240), attraction('B', 180)])
+    detail = rule_assemble_day_timeline(ctx, {'meals': [{'name': '自选餐厅', 'category': 'main',
+                'type': 'lunch', 'insert_after': 'B', 'open_hours': '11:00-23:00'}]})
+    schedule_day(detail)
+    assert [s['ref_name'] for s in detail.timeline_order] == ['A', 'B', '自选餐厅']
+    assert detail.meals[0].type == 'dinner'
+    assert any('午餐未安排' in w for w in detail.meal_warnings)
+
+
+
+def test_opening_hours_wait_and_closed_restaurant_are_explicit():
+    ctx = DraftDayContext(day_index=0, date='2026-10-14', day_start_time='08:00', attractions=[attraction('A', 30)])
+    detail = rule_assemble_day_timeline(ctx, {'meals': [{'name':'早到餐厅','category':'main','type':'lunch',
+              'insert_after':'A','open_hours':'12:00-16:00'}]})
+    schedule_day(detail)
+    meal = next(s for s in detail.timeline_schedule if s['kind']=='meal')
+    assert meal['start_time']=='12:00'
+    assert any(s['kind']=='free_time' for s in detail.timeline_schedule)
+    assert detail.timeline_schedule[-2]['kind'] == 'travel'  # leave shortly before the meal
+    detail.day_start_time='18:00'
+    schedule_day(detail)
+    assert any('不在营业时段' in w for w in detail.meal_warnings)

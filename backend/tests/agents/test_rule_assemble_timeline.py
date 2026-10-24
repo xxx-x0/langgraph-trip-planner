@@ -162,3 +162,23 @@ def test_locked_attractions_only_keep_present_names():
         },
     )
     assert detail.locked_attraction_names == ["A"]
+
+
+@pytest.mark.asyncio
+async def test_narrative_projects_current_facts_without_a_model():
+    detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
+    with patch("app.services.llm_service.get_llm", side_effect=AssertionError("no model")):
+        text = await write_day_narrative_llm(detail, weather=None, free_text_input=None, city="北京")
+    assert "今天先把时间留给A" in text
+    assert "当日天气尚未获取" in "\n".join(detail.pending_confirmations)
+    assert detail.description_source == "itinerary_facts_v1"
+
+
+
+@pytest.mark.asyncio
+async def test_narrative_remains_available_if_model_configuration_is_broken():
+    detail = DayDetail(day_index=0, date="2026-06-01", attractions=[_attr("A")])
+    with patch("app.services.llm_service.get_llm", side_effect=RuntimeError("LLM down")):
+        text = await write_day_narrative_llm(detail, None, None, "北京")
+    assert "今天先把时间留给A" in text
+    assert text == detail.description

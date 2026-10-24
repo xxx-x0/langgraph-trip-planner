@@ -1414,6 +1414,8 @@ async def reduce_assemble_node(state: TripPlannerState) -> Dict[str, Any]:
         match = next((h for h in trusted if day.hotel and h.get("hotel_id") == day.hotel.hotel_id and h.get("name") == day.hotel.name), None)
         if day.hotel:
             day.hotel.quote = Hotel(**match).quote if match else None
+        from ....services.journey_service import apply_context
+        apply_context(day, request)
         detail = DayDetail.model_validate(day.model_dump())
         detail.companion_count = request.companions.count if request.companions else 1
         budgets.append(compute_day_budget(detail))
@@ -1430,6 +1432,7 @@ async def reduce_assemble_node(state: TripPlannerState) -> Dict[str, Any]:
         overall_suggestions="",
         budget=budget,
         companions=request.companions,
+        journey=request.journey,
     )
 
     print(f"✅ 归约合并完成: {len(day_plans)}天, 已知费用预估{budget.total}元")

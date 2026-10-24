@@ -342,7 +342,7 @@ def _merge_day_edit(
         sources = {c.name:c.model_dump(mode='json') for cat in type(ctx.dining_pool).model_fields for c in getattr(ctx.dining_pool,cat)}
         sources.update({m.name:m.model_dump(mode='json') for m in current.meals} if current else {})
         meals = [{**sources[m['name']], **{k:v for k,v in m.items() if k in {'insert_after','schedule_mode','preferred_slot','type'}}}
-                 if m.get('name') in sources else m for m in meals]
+                 if m.get('name') in sources else {**m,'source':None if m.get('source') is None else 'user_custom','recommendation':{}} for m in meals]
     if meals is not None:
         meals, adjustments = repair_deleted_anchors(meals, current, proposed)
     overrides = _build_edit_overrides(

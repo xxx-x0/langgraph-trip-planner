@@ -179,18 +179,18 @@ def _candidate_tools(
     if dist_km <= 1.5:
         ordered = [
             "maps_direction_walking",
-            "maps_direction_bicycling",
             preferred,
             "maps_direction_driving",
             "maps_direction_transit_integrated",
+            "maps_direction_bicycling",
         ]
     elif dist_km <= 5:
         ordered = [
-            "maps_direction_bicycling",
             preferred,
             "maps_direction_driving",
             "maps_direction_transit_integrated",
             "maps_direction_walking",
+            "maps_direction_bicycling",
         ]
     else:
         ordered = [
