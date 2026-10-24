@@ -180,6 +180,7 @@ const formatDistance = (meters: number): string => {
 
 <style>
 .hotel-card {
+  color: var(--color-text-primary);
   background: var(--white);
   border-radius: 0;
   overflow: hidden;
@@ -214,7 +215,7 @@ const formatDistance = (meters: number): string => {
   width: 100%;
   height: 160px;
   overflow: hidden;
-  background: #f5f5f5;
+  background: var(--color-bg-secondary);
 }
 
 .hotel-image {
@@ -267,8 +268,8 @@ const formatDistance = (meters: number): string => {
 .hotel-type {
   display: inline-block;
   font-size: var(--font-size-xs);
-  color: #667eea;
-  background: #f0f3ff;
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
   padding: 1px var(--space-2);
   border-radius: 9999px;
 }
@@ -276,8 +277,8 @@ const formatDistance = (meters: number): string => {
 .hotel-star-badge {
   display: inline-block;
   font-size: var(--font-size-xs);
-  color: #faad14;
-  background: #fffbe6;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
   padding: 1px var(--space-2);
   border-radius: 9999px;
 }
@@ -292,12 +293,12 @@ const formatDistance = (meters: number): string => {
 .rating-score {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
-  color: #667eea;
+  color: var(--color-primary);
 }
 
 .rating-stars {
   font-size: var(--font-size-xs);
-  color: #faad14;
+  color: var(--color-warning);
   letter-spacing: 1px;
 }
 
@@ -310,7 +311,7 @@ const formatDistance = (meters: number): string => {
   align-items: center;
   gap: var(--space-1);
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   margin-bottom: var(--space-2);
 }
 
@@ -333,8 +334,15 @@ const formatDistance = (meters: number): string => {
 }
 
 .info-text.price {
-  color: #faad14;
+  color: var(--color-warning);
   font-weight: var(--font-weight-medium);
+}
+
+.hotel-price-section p, .hotel-price-section li {
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  margin: 6px 0;
+  overflow-wrap: anywhere;
 }
 
 .hotel-price-section {
@@ -350,47 +358,47 @@ const formatDistance = (meters: number): string => {
 
 .price-currency {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 .price-value {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
-  color: #faad14;
+  color: var(--color-warning);
 }
 
 .price-unit {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 .price-original {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   text-decoration: line-through;
 }
 
 .price-save {
   font-size: var(--font-size-xs);
-  color: #52c41a;
-  background: #f6ffed;
+  color: var(--color-success);
+  background: var(--color-success-bg);
   padding: 0 6px;
   border-radius: 4px;
 }
 
 .price-estimated {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
 }
 
 .price-pending {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
 }
 
 .distance-meters {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   margin-left: 4px;
 }
 
@@ -400,7 +408,7 @@ const formatDistance = (meters: number): string => {
 
 .amenities-label {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   margin-bottom: 4px;
 }
 
@@ -412,16 +420,16 @@ const formatDistance = (meters: number): string => {
 
 .amenity-tag {
   font-size: var(--font-size-xs);
-  color: #667eea;
-  background: #f0f3ff;
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
   padding: 2px 8px;
   border-radius: 9999px;
   white-space: nowrap;
 }
 
 .room-tag {
-  color: #52c41a;
-  background: #f6ffed;
+  color: var(--color-success);
+  background: var(--color-success-bg);
 }
 
 .description-section {
@@ -430,7 +438,7 @@ const formatDistance = (meters: number): string => {
 
 .description-content {
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -445,7 +453,7 @@ const formatDistance = (meters: number): string => {
 
 .desc-toggle {
   font-size: var(--font-size-xs);
-  color: #667eea;
+  color: var(--color-primary);
   background: none;
   border: none;
   padding: 0;
@@ -468,7 +476,7 @@ const formatDistance = (meters: number): string => {
   align-items: center;
   gap: 4px;
   font-size: var(--font-size-sm);
-  color: #667eea;
+  color: var(--color-primary);
   text-decoration: none;
   font-weight: var(--font-weight-medium);
 }

@@ -28,9 +28,9 @@
 
         <div v-if="budget.is_complete !== true" role="alert" class="budget-limit-info">
           费用尚不完整，所示金额仅为已知费用的预估小计。
-          <ul v-if="budget.unknown_cost_items?.length">
+          <details v-if="budget.unknown_cost_items?.length" :open="expanded"><summary>查看 {{ budget.unknown_cost_items.length }} 项费用缺项</summary><ul>
             <li v-for="item in budget.unknown_cost_items" :key="item">{{ item }}：待确认</li>
-          </ul>
+          </ul></details>
           <span v-else>历史预算未记录缺项状态，请重新核对费用。</span>
         </div>
         <p>大交通仅计入已填写的已知费用；市内交通按每人每天50元估算。酒店未核对的报价不计入小计，未知不代表免费。</p>
@@ -64,170 +64,30 @@ import type { Budget } from '@/types'
 import BudgetChart from '@/components/BudgetChart.vue'
 
 defineProps<{
+  expanded?: boolean
   budget: Budget
 }>()
 </script>
 
 <style scoped>
-.tab-budget {
-  max-width: 800px;
-  margin: 0 auto;
-  animation: fadeInUp var(--transition-normal);
-}
-
-/* Bauhaus card styling */
-.glass-card {
-  background: var(--white);
-  border: var(--border-main) solid var(--border);
-  box-shadow: var(--shadow-main);
-  overflow: hidden;
-  transition: all var(--transition-fast);
-}
-
-.glass-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 6px 6px 0px 0px var(--border);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-6);
-  background: var(--primary-yellow);
-  color: var(--foreground);
-  border-bottom: var(--border-main) solid var(--border);
-}
-
-.card-title {
-  font-size: var(--text-xl);
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.card-icon {
-  font-size: var(--text-2xl);
-}
-
-.budget-body {
-  padding: var(--space-6);
-}
-
-.budget-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
-}
-
-.budget-item {
-  text-align: center;
-  padding: var(--space-4);
-  background: var(--background);
-  border: var(--border-2) solid var(--border);
-  transition: all var(--transition-fast);
-}
-
-.budget-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 3px 3px 0px 0px var(--border);
-}
-
-.budget-label {
-  font-size: var(--text-sm);
-  font-weight: var(--font-bold);
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-  margin-bottom: var(--space-2);
-}
-
-.budget-value {
-  font-size: var(--text-3xl);
-  font-weight: var(--font-black);
-  color: var(--primary-blue);
-}
-
-.budget-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-5);
-  background: var(--primary-blue);
-  border: var(--border-main) solid var(--border);
-  box-shadow: var(--shadow-main);
-  color: var(--white);
-}
-
-.budget-total.over-budget {
-  background: var(--primary-red);
-}
-
-.total-label {
-  font-size: var(--text-lg);
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-}
-
-.total-value {
-  font-size: var(--text-4xl);
-  font-weight: var(--font-black);
-}
-
-.budget-limit-info {
-  margin-top: var(--space-4);
-  padding: var(--space-4);
-  background: var(--background);
-  border: var(--border-2) solid var(--border);
-}
-
-.budget-limit-bar {
-  height: 12px;
-  background: var(--muted);
-  border: var(--border-2) solid var(--border);
-  overflow: hidden;
-  margin-bottom: var(--space-3);
-}
-
-.budget-limit-fill {
-  height: 100%;
-  background: var(--primary-blue);
-  transition: width 0.5s ease;
-}
-
-.budget-limit-fill.over {
-  background: var(--primary-red);
-}
-
-.budget-limit-text {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--text-sm);
-  font-weight: var(--font-bold);
-  color: var(--foreground);
-}
-
-.within-budget {
-  color: var(--primary-blue);
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-}
-
-.over-budget-text {
-  color: var(--primary-red);
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-}
-
-.budget-chart-section {
-  margin-top: var(--space-6);
-  padding-top: var(--space-6);
-  border-top: var(--border-main) solid var(--border);
-}
-
-@media (max-width: 480px) {
-  .budget-grid {
-    grid-template-columns: 1fr;
-  }
-}
+.tab-budget { color: var(--color-text-primary); }
+.glass-card { border: 1px solid var(--color-border); background: var(--color-bg-primary); border-radius: 18px; overflow: hidden; }
+.card-header { display: flex; align-items: center; gap: 10px; padding: 24px 24px 0; }
+.card-icon { display: none; }.card-title { font-size: 24px; font-weight: 500; }
+.budget-body { padding: 24px; }.budget-body > p { color: var(--color-text-secondary); font-size: 12px; line-height: 1.8; }
+.budget-total { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px; background: var(--color-bg-secondary); border-radius: 14px; }
+.total-label { font-size: 14px; }.total-value { font-size: 36px; color: var(--color-primary); font-weight: 500; font-variant-numeric: tabular-nums; }
+.budget-total.over-budget .total-value { color: var(--color-error); }
+.budget-limit-info { margin: 18px 0; font-size: 13px; line-height: 1.8; }
+.budget-limit-info[role=alert] { background: var(--color-warning-bg); color: var(--color-warning); padding: 16px 18px; border-radius: 12px; }
+.budget-limit-info summary { cursor: pointer; margin-top: 8px; }.budget-limit-info ul { padding-left: 20px; margin-bottom: 0; }
+.budget-limit-bar { height: 5px; border-radius: 8px; background: var(--color-bg-tertiary); overflow: hidden; margin-bottom: 12px; }
+.budget-limit-fill { height: 100%; background: var(--color-primary); }.budget-limit-fill.over { background: var(--color-error); }
+.budget-limit-text { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--color-text-secondary); }
+.over-budget-text { color: var(--color-warning); }.within-budget { color: var(--color-success); }
+.budget-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-top: 24px; }
+.budget-item { border: 1px solid var(--color-border); padding: 20px 16px; border-radius: 12px; }.budget-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 10px; }.budget-value { font-size: 25px; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+.budget-chart-section { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--color-border); }
+@media(max-width:800px) { .budget-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:480px) { .budget-body { padding: 18px; }.card-header { padding: 20px 18px 0; }.budget-total { padding: 18px; }.total-value { font-size: 29px; }.total-label { font-size: 12px; } }
 </style>

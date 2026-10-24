@@ -77,12 +77,53 @@ it('keeps legacy session results read only so edits cannot bypass draft rules',a
   wrapper.unmount()
 })
 
+it('opens a day from the overview and keeps the long journey summary behind its navigation', async () => {
+  sessionStorage.setItem('tripPlan', JSON.stringify(plan))
+  const wrapper = openResult(); await flushPromises()
+  expect(wrapper.find('.journey-summary').exists()).toBe(false)
+  wrapper.findComponent({ name: 'TabOverview' }).vm.$emit('openDay', 1)
+  await flushPromises()
+  const itinerary = wrapper.findComponent({ name: 'TabItinerary' })
+  expect(itinerary.props('activeDays')).toEqual([1])
+  await wrapper.findAll('button').find(b => b.text().includes('往返交通'))!.trigger('click')
+  await flushPromises()
+  expect(wrapper.find('.journey-summary').text()).toContain('抵离交通尚未填写')
+  expect(saveTripToHistory).not.toHaveBeenCalled()
+  wrapper.unmount()
+})
+
+it('keeps expanded ticket conditions when comparing transport with costs, without leaving the inactive panel visible', async () => {
+  const journey = { origin_city: '杭州', return_city: '杭州', destination_timezone: 'Asia/Shanghai', outbound: {
+    departure_time: '2026-10-30T10:05', arrival_time: '2026-10-30T11:50',
+    departure_timezone: 'Asia/Shanghai', arrival_timezone: 'Asia/Shanghai',
+    passengers: 2, ticket_total: 1140, currency: 'CNY', price_source: 'user_quote',
+  } }
+  sessionStorage.setItem('tripPlan', JSON.stringify({ ...plan, journey, budget: { total: 3054 } }))
+  const wrapper = openResult(); await flushPromises()
+  const go = async (label: string) => {
+    await wrapper.findAll('.tab-pill').find(b => b.text().includes(label))!.trigger('click')
+    await flushPromises()
+  }
+  await go('往返交通')
+  const details = wrapper.find('.journey-leg details').element as HTMLDetailsElement
+  ;(wrapper.find('.journey-leg summary').element as HTMLElement).click()
+  expect(details.open).toBe(true)
+  await go('费用明细')
+  expect((wrapper.find('#result-panel-transport').element as HTMLElement).style.display).toBe('none')
+  expect((wrapper.find('#result-panel-budget').element as HTMLElement).style.display).not.toBe('none')
+  await go('往返交通')
+  expect(wrapper.find('.journey-leg details').element).toBe(details)
+  expect(details.open).toBe(true)
+  expect((wrapper.find('#result-panel-budget').element as HTMLElement).style.display).toBe('none')
+  expect(saveTripToHistory).not.toHaveBeenCalled()
+  wrapper.unmount()
+})
 
 it('ignores child edit events so saved attraction facts remain unchanged', async () => {
   const saved={...plan,days:[{attractions:[{name:'甲园',image_url:'https://example.invalid/saved.jpg'}],transportation:'步行'}]}
   sessionStorage.setItem('tripPlan',JSON.stringify(saved))
   const wrapper=openResult();await flushPromises()
-  await wrapper.findAll('.tab-pill').find(b=>b.text().includes('每日行程'))!.trigger('click');await flushPromises()
+  await wrapper.findAll('.tab-pill').find(b=>b.text().includes('每日安排'))!.trigger('click');await flushPromises()
   const child=wrapper.findComponent({name:'TabItinerary'})
   expect(child.props('editMode')).toBe(false)
   child.vm.$emit('deleteAttraction',0,0);child.vm.$emit('moveAttraction',0,0,'down')

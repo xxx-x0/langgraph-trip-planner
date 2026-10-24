@@ -1,6 +1,9 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import Antd from 'ant-design-vue'
+import dayjs from 'dayjs'
+import 'dayjs/locale/zh-cn'
+dayjs.locale('zh-cn')
 import 'ant-design-vue/dist/reset.css'
 import './styles/design-tokens.css'
 import './styles/dark-tokens.css'
@@ -8,7 +11,7 @@ import './styles/animations.css'
 // 包豪斯设计系统样式
 import './styles/bauhaus-tokens.css'
 import './styles/bauhaus-components.css'
-import './styles/bauhaus-antd-override.css'
+import './styles/travel-theme.css'
 import './styles/bauhaus-utilities.css'
 import App from './App.vue'
 import Home from './views/Home.vue'
@@ -24,6 +27,11 @@ gsap.registerPlugin(Flip, SplitText)
 
 const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash, top: 88 }
+    if (to.path !== from.path) return { top: 0 }
+  },
   routes: [
     { path: "/multi-trip/:id?", name: "MultiTrip", component: () => import("@/views/MultiTripView.vue") },
     {

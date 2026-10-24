@@ -13,3 +13,14 @@ it('charts known estimates without inventing category budgets from the total lim
  expect(JSON.stringify(option)).not.toContain('实际费用')
  wrapper.unmount()
 })
+
+
+it('refreshes chart colors on theme changes and releases the resize observer',async()=>{
+ const {useTheme}=await import('@/composables/useTheme');const {nextTick}=await import('vue')
+ const disconnect=vi.fn(),observe=vi.fn();vi.stubGlobal('ResizeObserver',class {observe=observe;disconnect=disconnect})
+ const w=mount(BudgetChart,{props:{budget:{total_attractions:1,total_hotels:2,total_meals:3,total_transportation:4,total:10}}})
+ const theme=useTheme();const before=chart.setOption.mock.calls.at(-1)![0].title.textStyle.color
+ theme.toggleTheme();await nextTick()
+ expect(chart.setOption.mock.calls.at(-1)![0].title.textStyle.color).not.toBe(before)
+ expect(observe).toHaveBeenCalledTimes(1);w.unmount();expect(disconnect).toHaveBeenCalledTimes(1);vi.unstubAllGlobals()
+})

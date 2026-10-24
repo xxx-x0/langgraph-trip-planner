@@ -2,38 +2,19 @@
   <div class="bauhaus-home">
     <!-- 蓝色背景 Hero 区域 -->
     <div class="hero-section">
-      <!-- 几何装饰 -->
-      <GeometricDecoration
-        shape="circle"
-        color="yellow"
-        :size="80"
-        class="decoration decoration-1"
-      />
-      <GeometricDecoration
-        shape="square"
-        color="red"
-        :size="60"
-        class="decoration decoration-2"
-      />
-      <GeometricDecoration
-        shape="circle"
-        color="yellow"
-        :size="40"
-        class="decoration decoration-3"
-      />
-
       <!-- Hero 内容 -->
       <div class="hero-content">
+        <p class="home-eyebrow">LET’S GO · 旅途从这里开始</p>
         <h1 class="bauhaus-title bauhaus-title-xl hero-title">
-          智能旅行助手
+          下一站，去喜欢的地方
         </h1>
         <p class="hero-subtitle">
-          基于 AI 的个性化旅行规划，让每一次出行都完美无忧
+          从一座城到一段旅途，把想去的地方慢慢排进日常之外。
         </p>
 
         <!-- 热门城市快选 -->
         <div class="hot-cities">
-          <span class="hot-label">🔥 热门目的地</span>
+          <span class="hot-label">寻找一点目的地灵感</span>
           <div class="city-pills">
             <button
               v-for="city in hotCities"
@@ -49,6 +30,10 @@
       </div>
     </div>
 
+    <nav class="planning-modes form-section" aria-label="选择规划方式">
+      <span class="planning-mode selected" aria-current="page"><small>01 / 一座城</small><strong>在一座城，慢慢探索</strong><span>挑选景点，编排每天的节奏</span></span>
+      <router-link to="/multi-trip" class="planning-mode"><small>02 / 一段旅途</small><strong>串起几座想去的城市 <b>↗</b></strong><span>5～10 天 · 停留、住宿与交通一起安排</span></router-link>
+    </nav>
     <!-- 表单区域 -->
     <div class="form-section">
       <a-form
@@ -59,7 +44,7 @@
         <!-- 卡片 1: 目的地与日期 - 黄色背景 -->
         <div class="form-card card-yellow">
           <div class="card-decoration decoration-circle decoration-red"></div>
-          <h3 class="card-title">📍 目的地与日期</h3>
+          <h3 class="card-title">目的地与日期</h3>
 
           <a-row :gutter="16">
             <a-col :xs="24" :md="12">
@@ -109,16 +94,18 @@
           </div>
         </div>
 
+        <JourneyEditor ref="journeyEditor" v-model="journey" class="form-card" :destination-city="formData.city" :start-date="formData.start_date?.format('YYYY-MM-DD')" :end-date="formData.end_date?.format('YYYY-MM-DD')" :passengers="formData.companions.count" />
+
         <!-- 卡片 2: 偏好设置 - 白色背景 -->
         <div class="form-card">
           <div class="card-decoration decoration-square decoration-blue"></div>
-          <h3 class="card-title">⚙️ 偏好设置</h3>
+          <h3 class="card-title">这次，按你的喜好</h3>
 
           <a-row :gutter="16">
             <a-col :xs="24" :md="12">
               <a-form-item name="transportation">
                 <template #label>
-                  <span class="form-label">交通方式</span>
+                  <span class="form-label">市内交通方式</span>
                 </template>
                 <a-select
                   v-model:value="formData.transportation"
@@ -225,9 +212,12 @@
         </div>
 
         <!-- 卡片 3: 预算与同伴 - 红色背景 -->
-        <div class="form-card card-red">
+        <div ref="partyCard" class="form-card card-red" tabindex="-1">
           <div class="card-decoration decoration-circle decoration-yellow"></div>
-          <h3 class="card-title">💰 预算与同伴</h3>
+          <h3 class="card-title">预算与同行</h3>
+          <p class="setup-hint">预算是全体同行整趟旅行的总额，包含往返交通、住宿、餐饮与游玩；调整人数不会自动增加预算。</p>
+          <p v-if="formData.budget && formData.companions.count" class="budget-at-a-glance">{{ formData.companions.count }} 人总预算 ¥{{ formData.budget.toLocaleString() }} <span>约 ¥{{ Math.round(formData.budget / formData.companions.count).toLocaleString() }} / 人</span></p>
+          <p v-if="knownTicketTotal > 0" class="setup-hint">已填写交通票价合计 ¥{{ knownTicketTotal.toLocaleString() }}（可能含自行估算，不含额外费用）。住宿、餐饮及未填费用仍需核对。</p>
 
           <a-row :gutter="16">
             <a-col :xs="24" :md="8">
@@ -267,10 +257,10 @@
                   <span class="form-label">同伴类型</span>
                 </template>
                 <a-select
-                  v-model:value="formData.companions!.type"
+                  v-model:value="formData.companions!.type" :disabled="formData.companions.count === 1" aria-label="同伴类型"
                   size="large"
                 >
-                  <a-select-option value="solo">🧑 独自</a-select-option>
+                  <a-select-option v-if="formData.companions.count === 1" value="solo">🧑 独自</a-select-option>
                   <a-select-option value="couple">💑 情侣</a-select-option>
                   <a-select-option value="family">👨‍👩‍👧‍👦 家庭</a-select-option>
                   <a-select-option value="friends">👥 朋友</a-select-option>
@@ -298,14 +288,10 @@
           </div>
         </div>
 
-
-
-        <JourneyEditor ref="journeyEditor" v-model="journey" class="form-card" :destination-city="formData.city" :start-date="formData.start_date?.format('YYYY-MM-DD')" :end-date="formData.end_date?.format('YYYY-MM-DD')" :passengers="formData.companions.count" />
-
         <!-- 卡片 4: 额外要求 - 白色背景 -->
         <div class="form-card">
           <div class="card-decoration decoration-square decoration-red"></div>
-          <h3 class="card-title">💬 额外要求</h3>
+          <h3 class="card-title">还有什么想法</h3>
 
           <a-form-item name="free_text_input">
             <a-textarea
@@ -321,10 +307,10 @@
         <div class="submit-section">
           <button
             type="submit"
-            :disabled="submitting"
             class="bauhaus-btn bauhaus-btn-yellow bauhaus-btn-square submit-btn"
+            :disabled="submitting" :aria-busy="submitting"
           >
-            🚀 开始探索景点
+            {{ submitting ? '正在核对交通与入住条件…' : '开始探索景点 →' }}
           </button>
         </div>
       </a-form>
@@ -333,20 +319,22 @@
 </template>
 
 <script setup lang="ts">
+import { computed, reactive, ref, watch } from 'vue'
 import JourneyEditor from '@/components/JourneyEditor.vue'
 import type {Journey} from '@/types'
 import {previewJourney} from '@/services/api'
-import { reactive, watch, ref, computed } from 'vue'
+const journey=ref<Journey|null>(null)
+const journeyEditor=ref<InstanceType<typeof JourneyEditor>>()
+const partyCard=ref<HTMLElement>()
+const submitting=ref(false)
+const knownTicketTotal=computed(()=>[journey.value?.outbound,journey.value?.inbound].reduce((sum,leg)=>sum+(leg && leg.currency==='CNY' && leg.price_source!=='unknown' && leg.passengers===formData.companions.count ? leg.ticket_total??0 : 0),0))
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { TripFormData } from '@/types'
 import type { Dayjs } from 'dayjs'
-import GeometricDecoration from '@/components/bauhaus/GeometricDecoration.vue'
+
 
 const router = useRouter()
-const journey=ref<Journey|null>(null)
-const journeyEditor=ref<InstanceType<typeof JourneyEditor>>()
-const submitting=ref(false)
 
 const hotCities = [
   { name: '北京', emoji: '🏯' },
@@ -366,10 +354,10 @@ const formData = reactive<{
   travel_days: number
   transportation: string
   accommodation: string
-  food_preference: string
   meal_budget_per_person?: number
   dietary_requirements: string
-  dining_style: "on_route" | "dedicated"
+  dining_style: 'on_route' | 'dedicated'
+  food_preference: string
   preferences: string[]
   free_text_input: string
   default_day_start_time: string
@@ -382,10 +370,10 @@ const formData = reactive<{
   travel_days: 1,
   transportation: '公共交通',
   accommodation: '经济型酒店',
-  food_preference: '本地特色',
-  meal_budget_per_person: undefined as number | undefined,
+  meal_budget_per_person: undefined,
   dietary_requirements: '',
-  dining_style: 'on_route' as 'on_route' | 'dedicated',
+  dining_style: 'on_route',
+  food_preference: '本地特色',
   preferences: [],
   free_text_input: '',
   default_day_start_time: '08:00',
@@ -419,8 +407,12 @@ watch(() => formData.companions.count, (count, oldCount) => {
     }
     journey.value = updated
   }
+  if (count === 1) formData.companions.type = 'solo'
+  else if (formData.companions.type === 'solo') formData.companions.type = 'friends'
+  // Follow the party size only while the room allocation is still the simple default.
   if (hotelRoomCount.value === 1 && !hotelChildren.value.trim() && hotelAdults.value === oldCount) hotelAdults.value = count
 })
+
 
 const selectCity = (city: string) => {
   formData.city = city
@@ -448,13 +440,15 @@ const handleSubmit = async () => {
     return
   }
 
-  if (occupancyIssue.value) { message.error(occupancyIssue.value); return }
-
+  if (occupancyIssue.value) {
+    partyCard.value?.scrollIntoView?.({block:'center',behavior:'auto'});partyCard.value?.focus?.({preventScroll:true})
+    message.error(occupancyIssue.value); return
+  }
   if (journeyEditor.value && !await journeyEditor.value.validate()) return
-  if(submitting.value)return
+  if (submitting.value) return
   const requestData: TripFormData = {
-    journey: journey.value,
     hotel_occupancy: occupancy.value,
+    journey: journey.value,
     city: formData.city,
     start_date: formData.start_date.format('YYYY-MM-DD'),
     end_date: formData.end_date.format('YYYY-MM-DD'),
@@ -483,6 +477,7 @@ const handleSubmit = async () => {
     const explanation=Array.isArray(detail) ? detail.map((item:any)=>String(item.msg||'').replace(/^Value error, /,'')).filter(Boolean).join('；') : typeof detail==='string'?detail:''
     message.error(explanation || '交通输入核对失败，请检查日期、人数和价格来源后重试')
   } finally {submitting.value=false}
+
 }
 </script>
 
@@ -756,4 +751,10 @@ const handleSubmit = async () => {
     min-width: 100%;
   }
 }
+.budget-at-a-glance{font-size:20px;color:var(--color-text-primary);margin:18px 0}.budget-at-a-glance span{font-size:12px;color:var(--color-text-secondary);margin-left:12px}.room-presets{display:flex;gap:10px;margin:16px 0;flex-wrap:wrap}.room-presets button{flex:1;min-width:150px;text-align:left;padding:14px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-bg-secondary);color:var(--color-text-primary);cursor:pointer;transition:background .2s,border-color .2s}.room-presets button span{display:block;font-size:11px;color:var(--color-text-secondary);margin-top:6px}.room-presets button[aria-pressed=true]{border-color:var(--color-primary);background:var(--color-primary-bg)}.submit-btn:disabled{opacity:.6;cursor:wait}@media(prefers-reduced-motion:reduce){.room-presets button{transition:none}}
+</style>
+
+<style scoped>
+.stay-with-party{border-top:1px solid var(--color-border);padding-top:22px;margin-top:6px}.stay-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.stay-heading h4{font-size:16px;font-weight:500;margin:0}.stay-heading span,.setup-hint{font-size:12px;color:var(--color-text-secondary);line-height:1.8}.setup-error{font-size:12px;color:var(--color-error);line-height:1.8}.stay-with-party :deep(.ant-input-number){width:100%}
+.budget-at-a-glance{font-size:20px;color:var(--color-text-primary);margin:18px 0}.budget-at-a-glance span{font-size:12px;color:var(--color-text-secondary);margin-left:12px}.room-presets{display:flex;gap:10px;margin:16px 0;flex-wrap:wrap}.room-presets button{flex:1;min-width:150px;text-align:left;padding:14px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-bg-secondary);color:var(--color-text-primary);cursor:pointer;transition:background .2s,border-color .2s}.room-presets button span{display:block;font-size:11px;color:var(--color-text-secondary);margin-top:6px}.room-presets button[aria-pressed=true]{border-color:var(--color-primary);background:var(--color-primary-bg)}.submit-btn:disabled{opacity:.6;cursor:wait}@media(prefers-reduced-motion:reduce){.room-presets button{transition:none}}
 </style>

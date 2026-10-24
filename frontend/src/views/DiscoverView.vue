@@ -9,7 +9,9 @@
       </div>
     </header>
 
-    <JourneySummary v-if="formData?.journey" :journey="formData.journey" :city="formData.city" :days="travelDays.map((d:any)=>({date:d.date,travel_window:d.window}))" />
+    <TripSetupSummary v-if="formData" :request="formData" />
+    <JourneySummary v-if="formData?.journey" :journey="formData.journey" :city="formData.city" />
+    <p v-else class="travel-notice">抵离交通未填写，首末日游玩时间暂定。</p>
     <!-- 阶段1: 景点发现与选择 -->
     <div v-if="phase === 'discover'" class="discover-layout">
       <!-- 左侧: 景点列表 -->
@@ -254,6 +256,10 @@
               </template>
             </span>
           </div>
+          <p v-if="travelDays[dayIdx]" class="travel-notice">
+            {{ travelDays[dayIdx].window.unavailable ? '当天在途，不安排景点' : '可在 '+timeLabel(Math.max(480,travelDays[dayIdx].window.start_minutes ?? 0))+'—'+timeLabel(Math.min(1320,travelDays[dayIdx].window.end_minutes ?? 1440))+' 内安排活动' }}
+            {{ travelDays[dayIdx].window.provisional ? '（暂定）' : '' }}
+          </p>
           <div class="day-attractions">
             <div
               v-for="(attr, attrIdx) in day"
@@ -264,6 +270,18 @@
             >
               <span class="mini-card-name">{{ attr.name }}</span>
               <span v-if="attr.category" class="mini-card-tag">{{ attr.category }}</span>
+              <select
+                class="day-move-select"
+                :aria-label="`${attr.name}安排日期`"
+                :value="dayIdx"
+                @pointerdown.stop
+                @dragstart.stop.prevent
+                @change="moveAttraction(dayIdx, attrIdx, Number(($event.target as HTMLSelectElement).value))"
+              >
+                <option v-for="(_, targetDay) in dayAssignments" :key="targetDay" :value="targetDay">
+                  第 {{ targetDay + 1 }} 天
+                </option>
+              </select>
             </div>
             <div v-if="day.length === 0" class="day-empty">{{multiRoute.query?.multi?"这天先留给休息或移动；餐饮和住宿仍需核对，也可拖入景点。":"拖拽景点到此处"}}</div>
           </div>
@@ -284,8 +302,9 @@
 </template>
 
 <script setup lang="ts">
-import JourneySummary from '@/components/JourneySummary.vue'
 import { ref, computed, onMounted, reactive, watch } from 'vue'
+import JourneySummary from '@/components/JourneySummary.vue'
+import TripSetupSummary from '@/components/TripSetupSummary.vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
@@ -314,6 +333,7 @@ const tripLoader = useTripLoader()
 
 const formData = ref<TripFormData | null>(null)
 const travelDays=computed(()=>{try {const p=JSON.parse(sessionStorage.getItem('journeyPreview')||'null');return JSON.stringify(p?.request)===JSON.stringify(formData.value)?p.days:[]}catch{return []}})
+function timeLabel(n:number){return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`}
 const attractions = reactive<DiscoveredAttraction[]>([])
 const attractionPhotos = ref<Record<string, string>>({})
 const weatherInfo = ref('')
@@ -686,9 +706,14 @@ function handleDragStart(event: DragEvent, dayIdx: number, attrIdx: number) {
 function handleDrop(_event: DragEvent, toDay: number) {
   if (!dragData) return
   const { fromDay, fromIdx } = dragData
+  dragData = null
+  moveAttraction(fromDay, fromIdx, toDay)
+}
+
+function moveAttraction(fromDay: number, fromIdx: number, toDay: number) {
+  if (fromDay === toDay || !dayAssignments.value[toDay] || !dayAssignments.value[fromDay]?.[fromIdx]) return
   const [item] = dayAssignments.value[fromDay].splice(fromIdx, 1)
   dayAssignments.value[toDay].push(item)
-  dragData = null
   recalculateDayDurations()
 }
 
@@ -841,6 +866,7 @@ onMounted(() => {
 .search-recovery:focus-visible { outline: 2px solid #377861; outline-offset: 3px; }
 .search-notice { line-height: 1.7; }
 
+.travel-notice{padding:12px;background:#fff7d6;color:#222;line-height:1.5}
 .discover-page {
   min-height: 100vh;
   background: var(--white, #fff);
@@ -1471,6 +1497,19 @@ onMounted(() => {
   color: var(--foreground, #121212);
   flex: 1;
 }
+
+.day-move-select {
+  max-width: 90px;
+  padding: 5px 6px;
+  border: 1px solid var(--border, #121212);
+  border-radius: 6px;
+  color: var(--foreground, #121212);
+  background: var(--white, #fff);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.day-move-select:focus-visible { outline: 2px solid var(--primary-blue, #1040C0); outline-offset: 2px; }
 
 .mini-card-tag {
   font-size: 11px;

@@ -8,6 +8,8 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import * as echarts from 'echarts'
 import type { Budget } from '@/types'
+import {useTheme} from '@/composables/useTheme'
+const {resolvedTheme}=useTheme()
 
 const props = defineProps<{
   budget: Budget
@@ -15,13 +17,14 @@ const props = defineProps<{
 
 const barChartRef = ref<HTMLElement>()
 let barChart: echarts.ECharts | null = null
+let resizeObserver: ResizeObserver | undefined
 
 const initChart = () => {
   if (!props.budget) return
 
   if (barChartRef.value) {
     barChart = echarts.init(barChartRef.value)
-    barChart.setOption(getBarOption(), true)
+    barChart.setOption(getBarOption())
   }
 }
 
@@ -29,15 +32,18 @@ const getBarOption = () => {
   const b = props.budget
   const categories = ['景点门票', '酒店住宿', '餐饮费用', '交通费用']
   const values = [b.total_attractions, b.total_hotels, b.total_meals, b.total_transportation]
-  const colors = ['#5470c6', '#91cc75', '#fac858', '#ee6666']
+  const colors = ['#8a9da3', '#9aa58c', '#c6ac82', '#a18d7a']
 
+  const dark=resolvedTheme.value==='dark'
+  const text=dark?'#c7c9cb':'#555b62'
+  const grid=dark?'#42464b':'#e0e2e5'
 
   return {
     title: {
       text: '已知费用预估构成',
       left: 'center',
       top: 10,
-      textStyle: { fontSize: 14, color: '#333', fontWeight: 600 }
+      textStyle: { fontSize: 14, color: text, fontWeight: 600 }
     },
     tooltip: {
       trigger: 'axis',
@@ -58,11 +64,13 @@ const getBarOption = () => {
     xAxis: {
       type: 'category',
       data: categories,
-      axisLabel: { fontSize: 11 }
+      axisLabel: { fontSize: 11, color: text },
+      axisLine: {lineStyle:{color:grid}}
     },
     yAxis: {
       type: 'value',
-      axisLabel: { formatter: '¥{value}', fontSize: 11 }
+      axisLabel: { formatter: '¥{value}', fontSize: 11, color:text },
+      splitLine: {lineStyle:{color:grid}}
     },
     series: [
       {
@@ -84,7 +92,7 @@ const getBarOption = () => {
           position: 'top',
           formatter: '¥{c}',
           fontSize: 11,
-          color: '#666'
+          color: text
         }
       },
     ]
@@ -92,22 +100,28 @@ const getBarOption = () => {
 }
 
 const handleResize = () => {
-  barChart?.resize()
+  if (barChartRef.value?.clientWidth) barChart?.resize()
 }
 
 onMounted(() => {
   initChart()
   window.addEventListener('resize', handleResize)
+  if (typeof ResizeObserver !== 'undefined' && barChartRef.value) {
+    resizeObserver = new ResizeObserver(handleResize)
+    resizeObserver.observe(barChartRef.value)
+  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  resizeObserver?.disconnect()
   barChart?.dispose()
 })
 
 watch(() => props.budget, () => {
   if (barChart) barChart.setOption(getBarOption(), true)
 }, { deep: true })
+watch(resolvedTheme,()=>barChart?.setOption(getBarOption(),true))
 </script>
 
 <style scoped>

@@ -44,7 +44,7 @@ const getMealLabel = (type: string): string => {
 
 <style>
 .meal-card {
-  background: #ffffff;
+  background: var(--color-bg-primary);
   border-radius: 12px;
   padding: 16px;
   box-shadow: rgba(0, 0, 0, 0.02) 0px 0px 0px 1px, rgba(0, 0, 0, 0.04) 0px 2px 6px, rgba(102, 126, 234, 0.06) 0px 4px 12px;
@@ -58,11 +58,11 @@ const getMealLabel = (type: string): string => {
 }
 
 .meal-card.source-nearby {
-  border-left: 3px solid #67c23a;
+  border-left: 3px solid var(--color-success);
 }
 
 .meal-card.source-popular {
-  border-left: 3px solid #f56c6c;
+  border-left: 3px solid var(--color-error);
 }
 </style>
 
@@ -81,8 +81,8 @@ const getMealLabel = (type: string): string => {
   border-radius: 9999px;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  color: #ffffff;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: var(--color-primary);
+  background: var(--color-primary-bg);
 }
 
 .meal-cuisine-tag {
@@ -90,8 +90,8 @@ const getMealLabel = (type: string): string => {
   padding: 2px var(--space-2);
   border-radius: 9999px;
   font-size: var(--font-size-xs);
-  color: #faad14;
-  background: #fffbe6;
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
   border: 1px solid rgba(250, 173, 20, 0.2);
 }
 
@@ -104,13 +104,13 @@ const getMealLabel = (type: string): string => {
 }
 
 .source-badge.nearby {
-  color: #67c23a;
-  background: #f6ffed;
+  color: var(--color-success);
+  background: var(--color-success-bg);
 }
 
 .source-badge.popular {
-  color: #f56c6c;
-  background: #fff2f0;
+  color: var(--color-error);
+  background: var(--color-error-bg);
 }
 
 .meal-name {
@@ -132,21 +132,21 @@ const getMealLabel = (type: string): string => {
   align-items: center;
   gap: 4px;
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
 }
 
 .detail-star {
-  color: #faad14;
+  color: var(--color-warning);
 }
 
 .detail-item.price {
-  color: #faad14;
+  color: var(--color-warning);
   font-weight: var(--font-weight-medium);
 }
 
 .meal-address {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   margin-bottom: var(--space-1);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -155,7 +155,7 @@ const getMealLabel = (type: string): string => {
 
 .meal-desc {
   font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   line-height: 1.7;
 }
 </style>

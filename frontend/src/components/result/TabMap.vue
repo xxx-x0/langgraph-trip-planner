@@ -6,6 +6,7 @@
         <span class="card-title">景点地图</span>
       </div>
       <div class="map-body">
+        <p v-if="mapNotice" role="status">{{ mapNotice }}</p>
         <div id="amap-container" class="map-container"></div>
       </div>
     </div>
@@ -26,13 +27,21 @@ const props = defineProps<{
 
 let map: any = null
 const mapInitialized = ref(false)
+const mapNotice = ref('')
+let pendingMap: Promise<void> | null = null
+let disposed = false
+function ensureMap() {
+  if (map || disposed) return Promise.resolve()
+  if (!pendingMap) pendingMap = initMap().finally(() => { pendingMap = null })
+  return pendingMap
+}
 
 watch(() => props.visible, async (val) => {
   if (val) {
     await nextTick()
     if (!mapInitialized.value) {
-      initMap()
-      mapInitialized.value = true
+      await ensureMap()
+      mapInitialized.value = !!map
     } else if (map) {
       map.resize?.()
     }
@@ -40,6 +49,7 @@ watch(() => props.visible, async (val) => {
 }, { immediate: true })
 
 onBeforeUnmount(() => {
+  disposed = true
   if (map) {
     map.destroy()
     map = null
@@ -57,20 +67,23 @@ const getMealLabel = (type: string): string => {
 }
 
 const initMap = async () => {
+  mapNotice.value = '地图加载中；地图需联网，导出前会等待有限时间。'
   try {
     const AMap = await AMapLoader.load({
       key: import.meta.env.VITE_AMAP_WEB_JS_KEY,
       version: '2.0',
       plugins: ['AMap.Marker', 'AMap.Polyline', 'AMap.InfoWindow']
     })
+    if (disposed) return
     map = new AMap.Map('amap-container', {
       zoom: 12,
       center: [116.397128, 39.916527],
       viewMode: '3D'
     })
     addAttractionMarkers(AMap)
+    mapNotice.value = ''
   } catch (error) {
-    console.error('地图加载失败:', error)
+    mapNotice.value = '地图未加载，请联网后重新打开地图；此处不代表已核实路线。'
   }
 }
 
@@ -149,7 +162,7 @@ const addAttractionMarkers = (AMap: any) => {
         }
       })
       const hotelInfoWindow = new AMap.InfoWindow({
-        content: `<div style="padding: 10px; min-width: 200px;"><h4 style="margin: 0 0 8px 0;">🏨 ${escapeHtml(hotelDisplayName)}</h4>${day.hotel.address ? `<p style="margin: 4px 0;"><strong>地址:</strong> ${escapeHtml(day.hotel.address)}</p>` : ''}${day.hotel.price_range ? `<p style="margin: 4px 0;"><strong>价格:</strong> ${escapeHtml(day.hotel.price_range)}</p>` : ''}</div>`,
+        content: `<div style="padding: 10px; min-width: 200px;"><h4 style="margin: 0 0 8px 0;">🏨 ${escapeHtml(hotelDisplayName)}</h4>${day.hotel.address ? `<p style="margin: 4px 0;"><strong>地址:</strong> ${escapeHtml(day.hotel.address)}</p>` : ''}</div>`,
         offset: new AMap.Pixel(0, -30)
       })
       hotelMarker.on('click', () => { hotelInfoWindow.open(map, hotelMarker.getPosition()) })
@@ -185,63 +198,27 @@ const refreshMap = () => {
     map = null
     mapInitialized.value = false
     nextTick(() => {
-      initMap()
-      mapInitialized.value = true
+      ensureMap().then(() => { mapInitialized.value = !!map })
     })
   }
 }
 
-defineExpose({ refreshMap })
+async function prepareForExport() {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([ensureMap(), new Promise<void>(resolve => {
+      timer = setTimeout(() => { mapNotice.value = '地图尚未加载完成，本次导出不包含完整地图；请联网后重试。'; resolve() }, 8000)
+    })])
+    map?.resize?.()
+    await nextTick()
+  } finally { clearTimeout(timer) }
+}
+defineExpose({ refreshMap, prepareForExport })
 </script>
 
 <style scoped>
-.tab-map {
-  animation: fadeInUp var(--transition-normal);
-}
-
-/* Bauhaus card styling */
-.glass-card {
-  background: var(--white);
-  border: var(--border-main) solid var(--border);
-  box-shadow: var(--shadow-main);
-  overflow: hidden;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-6);
-  background: var(--primary-blue);
-  color: var(--white);
-  border-bottom: var(--border-main) solid var(--border);
-}
-
-.card-title {
-  font-size: var(--text-xl);
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.card-icon {
-  font-size: var(--text-2xl);
-}
-
-.map-body {
-  height: 600px;
-  border: var(--border-2) solid var(--border);
-  margin: var(--space-4);
-}
-
-.map-container {
-  width: 100%;
-  height: 100%;
-}
-
-@media (max-width: 768px) {
-  .map-body {
-    height: 400px;
-  }
-}
+.glass-card { background: var(--color-bg-primary); color: var(--color-text-primary); border: 1px solid var(--color-border); border-radius: 18px; overflow: hidden; }
+.card-header { padding: 24px; border-bottom: 1px solid var(--color-border); }.card-icon { display: none; }.card-title { font-size: 24px; font-weight: 500; }
+.weather-body,.map-body { padding: 24px; }.weather-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 16px; }.map-container { width: 100%; height: 520px; border-radius: 12px; overflow: hidden; }
+@media(max-width:600px) { .card-header { padding: 20px 18px; }.weather-body,.map-body { padding: 16px; }.map-container { height: 420px; } }
 </style>

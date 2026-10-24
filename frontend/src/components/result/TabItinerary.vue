@@ -6,7 +6,7 @@
         <span class="card-title">每日行程</span>
       </div>
       <div class="itinerary-body">
-        <a-collapse v-model:activeKey="localActiveDays" accordion>
+        <a-collapse v-model:activeKey="localActiveDays" :accordion="!expanded">
           <a-collapse-panel v-for="(day, index) in tripPlan.days" :key="index" :id="`day-${index}`">
             <template #header>
               <div class="day-header" :class="`day-color-${index % 3}`">
@@ -22,13 +22,13 @@
 
             <!-- 每日信息 - 1+2 布局：描述占满 + 交通住宿横排 -->
             <div class="day-info-grid">
-              <div class="info-card info-card-blue info-card-wide">
+              <details class="info-card info-card-blue info-card-wide" :open="expanded"><summary>当天安排说明</summary>
                 <div class="info-card-icon">📝</div>
                 <div class="info-card-content">
-                  <div class="info-card-label">行程描述</div>
+                  <div class="info-card-label">今天怎么逛</div>
                   <div class="info-card-value">{{ day.description_source === 'itinerary_facts_v1' ? day.description : '旧版说明尚未核对，请以行程数据为参考。' }}</div>
                 </div>
-              </div>
+              </details>
               <div class="info-row-pair">
                 <div class="info-card info-card-yellow">
                   <div class="info-card-icon">🚗</div>
@@ -47,12 +47,19 @@
               </div>
             </div>
 
-            <ul v-if="day.pending_confirmations?.length"><li v-for="item in day.pending_confirmations" :key="item">{{ item }}</li></ul>
+            <p v-if="day.pending_confirmations?.length">下一步：{{ day.pending_confirmations[0] }}</p>
+            <details v-if="day.pending_confirmations?.length" :open="expanded">
+              <summary>出发前还要确认 {{ day.pending_confirmations.length }} 项</summary>
+              <ul><li v-for="item in day.pending_confirmations" :key="item">{{ item }}</li></ul>
+            </details>
             <!-- 日程时间轴 -->
             <div class="section-block section-block-blue">
               <div class="section-block-title">⏰ 日程时间轴</div>
               <div class="section-block-content">
                 <DayTimeline :day="day" />
+                <div v-if="day.meal_warnings?.length" role="alert">
+                  <p v-for="warning in day.meal_warnings" :key="warning">⚠️ {{ warning }}</p>
+                </div>
               </div>
             </div>
 
@@ -79,8 +86,8 @@
             </div>
 
             <!-- 住宿推荐 -->
-            <div v-if="day.hotel && day.overnight_stay !== false" class="section-block section-block-yellow">
-              <div class="section-block-title">🏨 住宿推荐</div>
+            <div v-if="day.hotel" class="section-block section-block-yellow">
+              <div class="section-block-title">{{ day.overnight_stay === false ? '🏨 酒店位置参考（离开日）' : '🏨 住宿推荐' }}</div>
               <div class="section-block-content">
                 <HotelCard :hotel="day.hotel" />
               </div>
@@ -129,6 +136,7 @@ import MealCard from '@/components/MealCard.vue'
 
 const props = defineProps<{
   tripPlan: TripPlan
+  expanded?: boolean
   editMode: boolean
   attractionPhotos: Record<string, string>
   activeDays: number[]
@@ -141,8 +149,12 @@ const emit = defineEmits<{
 }>()
 
 const localActiveDays = computed({
-  get: () => props.activeDays,
-  set: (val) => emit('update:activeDays', val)
+  get: () => props.expanded ? props.tripPlan.days.map((_, index) => index) : props.activeDays,
+  set: (val: string | number | Array<string | number> | undefined) => {
+    if (props.expanded) return
+    const keys = val == null ? [] : Array.isArray(val) ? val : [val]
+    emit('update:activeDays', keys.map(Number).filter(index => Number.isInteger(index) && index >= 0 && index < props.tripPlan.days.length))
+  }
 })
 
 const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number => {
@@ -157,412 +169,31 @@ const getAttractionGlobalIndex = (dayIndex: number, attrIndex: number): number =
 </script>
 
 <style scoped>
-.tab-itinerary {
-  animation: fadeInUp var(--transition-normal);
-}
+.tab-itinerary { color: var(--color-text-primary); }
+.glass-card { background: var(--color-bg-primary); border: 1px solid var(--color-border); border-radius: 18px; overflow: hidden; }
+.card-header { padding: 24px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--color-border); }
+.card-icon { display: none; }.card-title { font-size: 24px; font-weight: 500; }
+.itinerary-body { padding: 12px 24px 24px; }
+:deep(.ant-collapse) { background: transparent; border: 0; }:deep(.ant-collapse-item) { border-bottom: 1px solid var(--color-border); }:deep(.ant-collapse-content) { background: transparent; border: 0; }:deep(.ant-collapse-content-box) { padding: 8px 0 24px !important; }:deep(.ant-collapse-header) { align-items: center !important; padding: 16px 0 !important; }
+.day-header { display: flex; align-items: center; gap: 14px; }.day-badge { width: 40px; height: 40px; display: grid; place-items: center; background: var(--color-bg-secondary); color: var(--color-primary); border-radius: 12px; font-size: 20px; }.day-info-header { display: flex; gap: 12px; align-items: baseline; }.day-title { font-size: 16px; font-weight: 500; }.day-date { color: var(--color-text-secondary); font-size: 12px; }
+.day-info-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }.info-row-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; order: -1; }.info-card { padding: 16px; background: var(--color-bg-secondary); color: var(--color-text-primary); border-radius: 12px; min-width: 0; }.info-card-icon { display: none; }.info-card-label { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 8px; }.info-card-value { font-size: 13px; line-height: 1.85; overflow-wrap: anywhere; }.info-card-wide .info-card-content { margin-top: 14px; }.info-card-wide .info-card-label { display: none; }
+details { font-size: 13px; line-height: 1.85; color: var(--color-text-secondary); }summary { cursor: pointer; color: var(--color-primary); }details ul { padding-left: 20px; } .itinerary-body p { font-size: 13px; line-height: 1.8; }
+.section-block { margin-top: 24px; }.section-block-title { font-size: 16px; font-weight: 500; padding-bottom: 12px; border-bottom: 1px solid var(--color-border); margin-bottom: 16px; }.section-block-content { min-width: 0; }
+.attractions-grid,.meals-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,290px),1fr)); gap: 16px; }.attraction-wrapper { min-width: 0; }.attraction-actions { display: flex; gap: 6px; margin-bottom: 8px; }.meals-group { margin-bottom: 20px; }.meals-group-title { color: var(--color-text-secondary); font-size: 12px; margin-bottom: 12px; }
+@media(max-width:600px) { .card-header { padding: 20px 18px; }.itinerary-body { padding: 8px 16px 18px; }.info-row-pair { grid-template-columns: 1fr; }.day-info-header { flex-wrap: wrap; gap: 4px 12px; } }
 
-/* Bauhaus card styling */
-.glass-card {
-  background: var(--white);
-  border: var(--border-main) solid var(--border);
-  box-shadow: var(--shadow-main);
-  overflow: hidden;
-}
+:deep(.day-timeline) { padding: 0; border: 0; background: transparent; box-shadow: none; }
+:deep(.timeline-header) { border: 0; padding-bottom: 4px; }
+:deep(.timeline-title) { font-size: 13px; font-weight: 400; color: var(--color-text-secondary); }
+:deep(.tl-card:not(.travel)) { border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-bg-secondary); }
+:deep(.tl-card:hover) { box-shadow: none; }
+:deep(.tl-card-header) { flex-wrap: wrap; }
+:deep(.tl-name) { overflow-wrap: anywhere; }
+:deep(.tl-card-detail) { line-height: 1.8; }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-6);
-  background: var(--primary-red);
-  color: var(--white);
-  border-bottom: var(--border-main) solid var(--border);
-  position: relative;
-}
-
-/* 头部右侧装饰 */
-.card-header::after {
-  content: '';
-  position: absolute;
-  right: 24px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
-  background: var(--primary-yellow);
-  border: 3px solid var(--border);
-  border-radius: 50%;
-}
-
-.card-title {
-  font-size: var(--text-xl);
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.card-icon {
-  font-size: var(--text-2xl);
-}
-
-.itinerary-body {
-  padding: var(--space-6);
-  background: var(--background);
-}
-
-/* Collapse 重置 */
-:deep(.ant-collapse) {
-  border: none;
-  background: transparent;
-}
-
-:deep(.ant-collapse-item) {
-  margin-bottom: var(--space-6);
-  border: var(--border-main) solid var(--border) !important;
-  border-radius: 0 !important;
-  overflow: hidden;
-  box-shadow: var(--shadow-main);
-}
-
-:deep(.ant-collapse-item-active) {
-  /* 展开时降低阴影避免与内部叠加 */
-  box-shadow: 4px 4px 0px 0px var(--border);
-}
-
-:deep(.ant-collapse-header) {
-  padding: 0 !important;
-  background: transparent !important;
-  border-bottom: var(--border-main) solid var(--border) !important;
-}
-
-:deep(.ant-collapse-content) {
-  border-top: none !important;
-  background: var(--white) !important;
-}
-
-:deep(.ant-collapse-content-box) {
-  padding: var(--space-6) !important;
-}
-
-/* 隐藏默认箭头 */
-:deep(.ant-collapse-expand-icon) {
-  align-self: center;
-  padding-right: var(--space-4) !important;
-}
-
-:deep(.ant-collapse-arrow) {
-  color: var(--foreground) !important;
-  font-size: 18px !important;
-  font-weight: 900 !important;
-}
-
-/* 彩色日期头部 */
-.day-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  width: 100%;
-  padding: var(--space-4) var(--space-6);
-  transition: all 0.15s ease-out;
-}
-
-.day-header.day-color-0 {
-  background: var(--primary-red);
-  color: var(--white);
-}
-
-.day-header.day-color-1 {
-  background: var(--primary-blue);
-  color: var(--white);
-}
-
-.day-header.day-color-2 {
-  background: var(--primary-yellow);
-  color: var(--foreground);
-}
-
-/* 日期编号徽章 */
-.day-badge {
-  width: 56px;
-  height: 56px;
-  background: var(--white);
-  border: 3px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 3px 3px 0px 0px var(--border);
-  flex-shrink: 0;
-}
-
-.day-number {
-  font-size: 28px;
-  font-weight: var(--font-black);
-  color: var(--foreground);
-  line-height: 1;
-}
-
-.day-info-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.day-title {
-  font-size: var(--text-xl);
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  line-height: 1.1;
-}
-
-.day-date {
-  font-size: var(--text-sm);
-  font-weight: var(--font-bold);
-  opacity: 0.9;
-  letter-spacing: 0.03em;
-}
-
-/* 每日信息卡片 - 1+2 布局 */
-.day-info-grid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
-}
-
-.info-row-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-}
-
-.info-card {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 3px solid var(--border);
-  transition: background 0.15s ease-out;
-}
-
-.info-card-wide {
-  align-items: center;
-}
-
-.info-card-blue {
-  background: var(--primary-blue);
-  color: var(--white);
-}
-
-.info-card-yellow {
-  background: var(--primary-yellow);
-  color: var(--foreground);
-}
-
-.info-card-red {
-  background: var(--primary-red);
-  color: var(--white);
-}
-
-.info-card-icon {
-  font-size: 24px;
-  width: 40px;
-  height: 40px;
-  background: var(--white);
-  border: 2px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.info-card-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.info-card-label {
-  font-size: 11px;
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  opacity: 0.9;
-  margin-bottom: 4px;
-}
-
-.info-card-value {
-  font-size: 14px;
-  font-weight: var(--font-bold);
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-/* Section 块 - 简洁边框，无阴影 */
-.section-block {
-  margin-bottom: var(--space-5);
-  border: 3px solid var(--border);
-  background: var(--white);
-  overflow: hidden;
-}
-
-.section-block-title {
-  padding: var(--space-3) var(--space-4);
-  font-size: 16px;
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-bottom: 3px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.section-block-blue .section-block-title {
-  background: var(--primary-blue);
-  color: var(--white);
-}
-
-.section-block-red .section-block-title {
-  background: var(--primary-red);
-  color: var(--white);
-}
-
-.section-block-yellow .section-block-title {
-  background: var(--primary-yellow);
-  color: var(--foreground);
-}
-
-.section-block-content {
-  padding: var(--space-4);
-  background: var(--white);
-}
-
-/* 内部嵌套的卡片降级阴影 - 避免阴影叠加 */
-.section-block-content :deep(.attraction-card),
-.section-block-content :deep(.hotel-card),
-.section-block-content :deep(.meal-card),
-.section-block-content :deep(.day-timeline) {
-  box-shadow: none !important;
-  border-width: 2px !important;
-}
-
-.section-block-content :deep(.attraction-card:hover),
-.section-block-content :deep(.hotel-card:hover),
-.section-block-content :deep(.meal-card:hover) {
-  box-shadow: 3px 3px 0px 0px var(--border) !important;
-  transform: translate(-1px, -1px);
-}
-
-/* 景点网格 */
-.attractions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-4);
-}
-
-.attraction-wrapper {
-  display: flex;
-  flex-direction: column;
-}
-
-.attraction-actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-:deep(.attraction-actions .ant-btn) {
-  border: 2px solid var(--border) !important;
-  border-radius: 0 !important;
-  font-weight: var(--font-black) !important;
-  background: var(--white) !important;
-  box-shadow: none !important;
-  transition: background 0.15s ease-out;
-}
-
-:deep(.attraction-actions .ant-btn:hover) {
-  background: var(--primary-yellow) !important;
-}
-
-:deep(.attraction-actions .ant-btn-dangerous) {
-  background: var(--primary-red) !important;
-  color: var(--white) !important;
-}
-
-:deep(.attraction-actions .ant-btn-dangerous:hover) {
-  background: var(--foreground) !important;
-}
-
-/* 餐饮分组 - 简洁边框，无外层阴影 */
-.meals-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.meals-group {
-  background: var(--white);
-  border: 2px solid var(--border);
-  overflow: hidden;
-}
-
-.meals-group-title {
-  font-size: 14px;
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 2px solid var(--border);
-}
-
-.meals-group-title-blue {
-  background: var(--primary-blue);
-  color: var(--white);
-}
-
-.meals-group-title-red {
-  background: var(--primary-red);
-  color: var(--white);
-}
-
-.meals-group-title-yellow {
-  background: var(--primary-yellow);
-  color: var(--foreground);
-}
-
-.meals-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-3);
-  padding: var(--space-3);
-}
-
-@media (max-width: 768px) {
-  .info-row-pair {
-    grid-template-columns: 1fr;
-  }
-
-  .attractions-grid,
-  .meals-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .day-badge {
-    width: 48px;
-    height: 48px;
-  }
-
-  .day-number {
-    font-size: 22px;
-  }
-
-  .day-header {
-    padding: var(--space-3) var(--space-4);
-  }
-
-  .card-header::after {
-    display: none;
-  }
-}
+:deep(.hotel-card),:deep(.attraction-card),:deep(.meal-card) { border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-bg-secondary); box-shadow: none; }
+:deep(.hotel-card:hover),:deep(.attraction-card:hover),:deep(.meal-card:hover) { transform: none; box-shadow: none; }
+:deep(.hotel-card::after),:deep(.attraction-card::after) { display: none; }
+:deep(.hotel-name) { white-space: normal; text-transform: none; letter-spacing: 0; line-height: 1.6; }
+:deep(.meal-address) { white-space: normal; line-height: 1.8; }
 </style>

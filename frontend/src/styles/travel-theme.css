@@ -1,0 +1,674 @@
+/* Shared palette and component treatment across every planning workspace. */
+:root,[data-theme="light"] {
+  color-scheme: light;
+  --desk-bg: #f4f3ef;
+  --desk-input: #faf9f6;
+  --desk-glass: #f8f7f2ed;
+  --desk-on-accent: #fffaf4;
+  --desk-atmosphere: radial-gradient(ellipse at 80% 0%,#c29d7020,transparent 44%),var(--desk-bg);
+  --color-bg-primary: #fcfbf8;
+  --color-bg-secondary: #eeede8;
+  --color-bg-tertiary: #e7e5de;
+  --color-bg-elevated: #fff;
+  --color-text-primary: #292b2d;
+  --color-text-secondary: #696b6b;
+  --color-text-tertiary: #777976;
+  --color-text-disabled: #94958f;
+  --color-primary: #8c552e;
+  --color-primary-light: #a26437;
+  --color-primary-dark: #734322;
+  --color-primary-bg: #ab753614;
+  --color-primary-bg-hover: #ab753625;
+  --color-border: #32332b1c;
+  --color-border-strong: #32332b2e;
+  --color-warning: #8c5b24;
+  --color-warning-bg: #f4eadb;
+  --color-success: #426d59;
+  --color-success-bg: #e8eee6;
+  --color-error: #b3473b;
+  --color-error-bg: #f6e7e4;
+  --color-info: #4e7481;
+  --color-info-bg: #e8eff0;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --desk-bg: #151719;
+  --desk-input: #191c1f;
+  --desk-glass: #202326ed;
+  --desk-on-accent: #272019;
+  --desk-atmosphere: radial-gradient(ellipse at 80% 0%,#68513d36,transparent 42%),radial-gradient(ellipse at 0 30%,#34474c28,transparent 40%),var(--desk-bg);
+  --color-bg-primary: #232629;
+  --color-bg-secondary: #1b1e20;
+  --color-bg-tertiary: #2c3033;
+  --color-bg-elevated: #2c3033;
+  --color-text-primary: #f0efeb;
+  --color-text-secondary: #a7a9ab;
+  --color-text-tertiary: #979b9e;
+  --color-text-disabled: #777c80;
+  --color-primary: #e8ba88;
+  --color-primary-light: #f3c99c;
+  --color-primary-dark: #d0a373;
+  --color-primary-bg: #e8ba8812;
+  --color-primary-bg-hover: #e8ba8825;
+  --color-border: #ffffff16;
+  --color-border-strong: #ffffff28;
+  --color-warning: #e7c59f;
+  --color-warning-bg: #332b23;
+  --color-success: #b0cbae;
+  --color-success-bg: #26332a;
+  --color-error: #efa39a;
+  --color-error-bg: #3b2928;
+  --color-info: #a7c4cb;
+  --color-info-bg: #253239;
+}
+/* Compatibility aliases let existing feature components share the new palette. */
+:root,[data-theme] {
+  --background: var(--desk-bg);
+  --background-secondary: var(--color-bg-secondary);
+  --foreground: var(--color-text-primary);
+  --white: var(--color-bg-primary);
+  --border: var(--color-border-strong);
+  --muted: var(--color-bg-tertiary);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --border-color: var(--color-border);
+  --primary-blue: var(--color-info);
+  --primary-red: var(--color-error);
+  --primary-yellow: var(--color-primary);
+  --color-accent: var(--color-primary);
+  --color-text-link: var(--color-primary);
+  --color-text-inverse: var(--desk-on-accent);
+  --color-gradient: linear-gradient(130deg,#b2885e,#50717a);
+  --color-bg-hero: var(--desk-atmosphere);
+  --color-divider: var(--color-border);
+  --color-border-light: var(--color-border);
+  --color-glass-bg: var(--desk-glass);
+  --color-glass-border: var(--color-border);
+  --border-main: 1px;
+  --border-2: 1px;
+  --border-3: 1px;
+  --border-4: 1px;
+  --radius-none: 10px;
+  --font-black: 600;
+  --font-bold: 600;
+  --shadow-sm: 0 2px 8px #00000005;
+  --shadow-md: 0 5px 18px #00000008;
+  --shadow-lg: 0 10px 30px #0000000c;
+  --shadow-xl: 0 16px 45px #00000010;
+  --shadow-main: var(--shadow-md);
+  --shadow-card: var(--shadow-sm);
+  --shadow-card-hover: var(--shadow-lg);
+  --shadow-elevated: var(--shadow-xl);
+  --shadow-modal: 0 20px 70px #00000028;
+  --shadow-button: none;
+  --shadow-button-hover: var(--shadow-sm);
+  --trip-bg: var(--desk-bg);
+  --trip-surface: var(--color-bg-primary);
+  --trip-soft: var(--color-bg-tertiary);
+  --trip-text: var(--color-text-primary);
+  --trip-muted: var(--color-text-secondary);
+  --trip-line: var(--color-border);
+  --trip-accent: var(--color-primary);
+  --trip-on-accent: var(--desk-on-accent);
+  --trip-warning: var(--color-warning);
+  --trip-warning-bg: var(--color-warning-bg);
+  --trip-sans: var(--font-family);
+  --trip-serif: var(--font-family);
+}
+#app .ant-layout {
+  background: var(--desk-bg)!important;
+}
+#app :is(h1,h2,h3,h4) {
+  letter-spacing: -.025em;
+}
+#app :is(button,a,input,select,textarea,summary):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+#app .ant-card {
+  border-radius: 18px!important;
+  box-shadow: var(--shadow-card)!important;
+}
+#app .ant-card-head {
+  background: transparent!important;
+  border-bottom: 1px solid var(--color-border)!important;
+  color: var(--color-text-primary)!important;
+}
+#app .ant-card-head::before,#app .ant-card-head::after {
+  display: none;
+}
+#app .ant-btn {
+  border-radius: 10px!important;
+  font-weight: 500!important;
+  letter-spacing: 0!important;
+  text-transform: none!important;
+  box-shadow: none!important;
+}
+#app .ant-btn-primary {
+  background: var(--color-primary)!important;
+  border-color: var(--color-primary)!important;
+  color: var(--desk-on-accent)!important;
+}
+#app .ant-btn:disabled {
+  opacity: .45;
+}
+#app .bauhaus-btn {
+  border-radius: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+#app :is(.bauhaus-btn-primary,.bauhaus-btn-secondary,.submit-btn) {
+  background: var(--color-primary);
+  color: var(--desk-on-accent);
+  border-color: var(--color-primary);
+}
+#app :is(.bauhaus-btn,.back-btn,.filter-pill,.tab-pill,.hero-btn):active {
+  transform: none;
+}
+#app .bauhaus-home {
+  background: var(--desk-atmosphere);
+  padding: 48px 24px 80px;
+}
+#app .hero-section {
+  max-width: 1000px;
+  margin-bottom: 32px;
+  text-align: left;
+}
+#app .home-eyebrow,.desk-eyebrow {
+  font-size: 10px;
+  letter-spacing: .16em;
+  color: var(--color-primary);
+  margin: 0 0 20px;
+}
+#app .hero-title {
+  color: var(--color-text-primary);
+  font-size: clamp(30px,3.5vw,46px);
+  font-weight: 500;
+  text-shadow: none;
+  line-height: 1.4;
+}
+#app .hero-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.9;
+  margin-bottom: 28px;
+}
+#app .hot-cities {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  backdrop-filter: none;
+}
+#app .hot-label {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 400;
+}
+#app .city-pills {
+  gap: 8px;
+  justify-content: flex-start;
+}
+#app .city-pill {
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  border-radius: 100px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 400;
+}
+#app .city-pill:is(:hover,.active) {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  box-shadow: none;
+}
+#app .form-section {
+  max-width: 1000px;
+}
+#app .planning-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+#app .planning-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  text-decoration: none;
+  transition: background .25s,transform .25s,border-color .25s;
+}
+#app .planning-mode small {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  letter-spacing: .08em;
+}
+#app .planning-mode strong {
+  font-size: 18px;
+  font-weight: 500;
+}
+#app .planning-mode b {
+  float: right;
+  font-weight: 400;
+  color: var(--color-primary);
+}
+#app .planning-mode>span {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+#app .planning-mode.selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+#app a.planning-mode:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+}
+#app .form-card {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: none;
+}
+#app .card-decoration {
+  display: none;
+}
+#app .form-card .card-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 24px;
+}
+#app .form-label {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+#app .days-display {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  text-align: left;
+  padding: 12px 18px;
+}
+#app .days-value {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+#app .my-trips-page {
+  max-width: 1240px;
+  min-height: calc(100vh - 150px);
+  padding: 42px 24px 60px;
+}
+#app .my-trips-page .page-header {
+  background: transparent;
+  border: 0;
+  padding: 0 0 18px;
+  text-align: left;
+}
+#app .my-trips-page .page-title {
+  font-size: 36px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  text-shadow: none;
+}
+#app .page-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+#app .my-trips-page>.toolbar {
+  padding: 24px 0;
+}
+#app .my-trips-page>p>a {
+  color: var(--color-primary);
+  font-size: 13px;
+}
+#app .trips-grid {
+  padding: 0;
+  gap: 20px;
+}
+#app .trip-card {
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  box-shadow: none;
+}
+#app .trip-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+}
+#app .trip-card::before {
+  display: none;
+}
+#app .card-status-badge {
+  border-radius: 100px;
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+}
+#app .card-cover {
+  border-bottom: 0;
+}
+#app :is(.filter-pill,.tab-pill,.back-btn,.hero-btn) {
+  box-shadow: none;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+#app :is(.filter-pill,.tab-pill):is(.active,:hover) {
+  background: var(--color-primary-bg);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: none;
+  transform: none;
+}
+#app .discover-page {
+  background: var(--desk-bg);
+}
+#app .discover-header {
+  top: 64px;
+  background: var(--desk-glass);
+  border-bottom: 1px solid var(--color-border);
+  backdrop-filter: blur(18px);
+}
+#app .discover-header .header-content {
+  max-width: 1240px;
+}
+#app .header-title {
+  font-weight: 500;
+}
+#app .header-info {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  font-size: 12px;
+}
+#app .discover-layout {
+  max-width: 1240px;
+  padding-top: 26px;
+}
+#app .right-panel {
+  top: 150px;
+  height: calc(100vh - 175px);
+  border-radius: 18px;
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+}
+#app .ai-select-panel {
+  background: var(--color-primary-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  box-shadow: none;
+}
+#app .ai-select-kicker {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--color-primary);
+  font-weight: 500;
+}
+#app .attraction-card {
+  border-radius: 16px;
+  box-shadow: none;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+#app .attraction-card.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+#app .attraction-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+#app :is(.result-hero,.stats-section,.tab-bar) {
+  background: var(--desk-atmosphere);
+  border-color: var(--color-border);
+}
+#app .result-hero .hero-content {
+  text-align: left;
+  max-width: 1192px;
+}
+#app .hero-actions {
+  justify-content: flex-start;
+}
+#app .hero-btn {
+  color: var(--color-text-secondary);
+}
+#app .hero-btn:hover:not(:disabled) {
+  background: var(--color-bg-primary);
+  color: var(--color-primary);
+}
+#app .tab-bar-inner {
+  justify-content: flex-start;
+  overflow: auto;
+}
+#app .stat-value {
+  font-weight: 500;
+  color: var(--color-primary);
+}
+#app .stat-label {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+#app .draft-page {
+  max-width: 1240px;
+}
+#app .draft-hero-city {
+  font-weight: 500;
+}
+#app .journey-draft .finalize-bar {
+  background: var(--desk-glass);
+}
+#app .bh-loader {
+  background: var(--desk-bg);
+}
+#app .bh-poster {
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+#app :is(.bh-hero,.pb-banner) {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border-radius: 18px;
+}
+.page-enter-active {
+  transition: opacity .22s ease,transform .32s cubic-bezier(.22,1,.36,1);
+}
+.page-leave-active {
+  transition: opacity .12s ease;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: none;
+}
+@media(max-width:640px) {
+  #app .bauhaus-home {
+    padding: 28px 18px 60px;
+  }
+  #app .planning-modes {
+    gap: 10px;
+  }
+  #app .planning-mode {
+    padding: 16px 14px;
+  }
+  #app .planning-mode strong {
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  #app .planning-mode>span {
+    font-size: 11px;
+    line-height: 1.8;
+  }
+  #app .form-card {
+    padding: 20px 18px;
+  }
+  #app .my-trips-page {
+    padding: 28px 18px;
+  }
+  #app .my-trips-page .toolbar {
+    gap: 16px;
+  }
+  #app .search-box,#app .search-box .ant-input-group-wrapper {
+    max-width: 100%;
+  }
+  #app .result-hero {
+    padding: 32px 18px;
+  }
+  #app .discover-header .header-content {
+    padding: 12px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  #app .discover-layout {
+    padding: 18px 12px 100px;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  #app *,#app *::before,#app *::after {
+    animation-duration: .01ms!important;
+    animation-iteration-count: 1!important;
+    transition: none!important;
+    scroll-behavior: auto!important;
+  }
+}
+/* Photo covers intentionally keep their ink palette in either app theme. */
+#app .journey-cover {
+  background: linear-gradient(135deg,#31373b,#1c2023);
+  color: #f7f2ec;
+}
+#app .journey-cover :is(.cover-city,.cover-end) {
+  color: #f7f2ec;
+}
+#app .journey-cover .route-connection {
+  color: #e8ba88;
+}
+#app .selectable-card-wrapper {
+  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+}
+#app .selectable-card-wrapper:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+#app .selectable-card-wrapper.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+#app .page-enter-active,#app .page-leave-active {
+  animation: none;
+}
+#app .success-note {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+#app .discover-page :is(.bottom-bar,.assign-header) {
+  background: var(--desk-glass);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-elevated);
+  backdrop-filter: blur(18px);
+}
+#app .discover-page .assign-header {
+  border-radius: 18px;
+  box-shadow: none;
+}
+#app .discover-page :is(.selection-info,.hint) {
+  color: var(--color-text-secondary);
+}
+#app .discover-page .selection-info strong {
+  color: var(--color-primary);
+}
+#app .discover-page :is(.day-column,.search-results-dropdown,.ai-select-summary) {
+  border-radius: 14px;
+  box-shadow: none;
+  border-width: 1px;
+}
+#app .ant-input-search {
+  border-radius: 10px;
+  border: 0;
+}
+#app .ant-input-search .ant-input-group-addon {
+  background: var(--color-bg-primary);
+  border: 0;
+}
+#app .ant-input-search .ant-btn {
+  color: var(--color-primary);
+}
+#app .my-trips-page {
+  background: transparent;
+}
+#app .travel-notice {
+  max-width: 1192px;
+  margin: 20px auto 0;
+  padding: 12px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: 12px;
+}
+#app .discover-page .filter-btn {
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  box-shadow: none;
+  font-weight: 400;
+  transform: none;
+}
+#app .discover-page .filter-btn:is(.active,:hover) {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+}
+#app .bh-loader {
+  --bh-green: var(--color-success);
+  --bh-orange: var(--color-primary);
+  --bh-cream: var(--color-bg-secondary);
+}
+#app .selectable-card-wrapper .checkbox-inner {
+  border-radius: 50%;
+  border: 1px solid #ffffff80;
+  box-shadow: none;
+  background: #202326ba;
+  backdrop-filter: blur(8px);
+}
+#app .selectable-card-wrapper .checkbox-inner.checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+#app .selectable-card-wrapper .check-icon {
+  color: var(--desk-on-accent);
+}
+@media(max-width:768px) {
+  #app .discover-layout .right-panel {
+    position: relative;
+    top: 0;
+    height: 260px;
+    flex: 0 0 260px;
+    order: -1;
+  }
+  #app .travel-notice {
+    margin: 16px 12px 0;
+  }
+  #app .discover-layout {
+    padding-bottom: 160px;
+  }
+}
+#app .discovery-map-container {
+  min-height: 0;
+}
+@media (max-width: 640px) {
+  #app .planning-mode b { display: none; }
+}

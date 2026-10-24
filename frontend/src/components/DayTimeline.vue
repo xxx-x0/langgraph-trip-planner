@@ -479,7 +479,7 @@ function getModeIcon(mode: string): string {
 
 .tl-row {
   display: grid;
-  grid-template-columns: 72px 24px 1fr;
+  grid-template-columns: 72px 24px minmax(0, 1fr);
   gap: 0 var(--space-2, 8px);
   cursor: pointer;
 }
@@ -577,6 +577,7 @@ function getModeIcon(mode: string): string {
 
 /* Card column */
 .tl-card {
+  min-width: 0;
   border-radius: 0;
   padding: var(--space-3, 12px);
   margin-bottom: var(--space-3, 12px);
@@ -631,7 +632,8 @@ function getModeIcon(mode: string): string {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   letter-spacing: 0.03em;
 }
 
@@ -650,6 +652,7 @@ function getModeIcon(mode: string): string {
 
 .tl-card-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1, 4px);
   margin-top: 4px;
@@ -675,8 +678,11 @@ function getModeIcon(mode: string): string {
 }
 
 @media (max-width: 480px) {
+  .day-timeline { padding: 12px; }
+  .timeline-header { flex-wrap: wrap; gap: 8px; }
   .tl-row {
-    grid-template-columns: 56px 20px 1fr;
+    grid-template-columns: 44px 14px minmax(0, 1fr);
+    gap: 0 6px;
   }
   .tl-time-start {
     font-size: 12px;

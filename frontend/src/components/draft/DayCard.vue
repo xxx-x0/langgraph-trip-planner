@@ -8,6 +8,7 @@
         </a-tag>
       </div>
     </template>
+
     <a-alert v-if="saveError" type="error" show-icon role="alert"
              :message="saveError" class="save-error" />
     <a-modal v-model:open="aiDialogOpen" title="AI 重排提示" ok-text="重新安排"
@@ -18,7 +19,7 @@
     </a-modal>
     <template #extra>
       <a-button v-if="!isExpanded" type="link" @click="onExpand"
-                :loading="busy === '装配中'">展开装配 →</a-button>
+                :loading="busy === '安排中'">查看当天安排 →</a-button>
       <template v-else>
         <a-button type="link" @click="onAIRearrange"
                   :disabled="!!busy">AI 重新安排</a-button>
@@ -28,9 +29,9 @@
     </template>
 
     <!-- 首次装配：骨架屏 -->
-    <div v-if="isExpanded && !detail && busy === '装配中'" class="day-loading">
+    <div v-if="isExpanded && !detail && busy === '安排中'" class="day-loading">
       <a-skeleton :active="true" :paragraph="{ rows: 4 }" />
-      <div class="loading-hint">正在装配第 {{ context.day_index + 1 }} 天行程…</div>
+      <div class="loading-hint">正在安排第 {{ context.day_index + 1 }} 天行程…</div>
     </div>
 
     <!-- 已装配内容（可叠加遮罩） -->
@@ -172,7 +173,7 @@
       <HotelCard v-if="detail.hotel && detail.overnight_stay" :hotel="detail.hotel" />
 
       <!-- 非首次装配的遮罩 -->
-      <div v-if="busy && busy !== '装配中'" class="day-overlay">
+      <div v-if="busy && busy !== '安排中'" class="day-overlay">
         <a-spin size="large" />
         <div class="overlay-label">{{ busy }}…</div>
       </div>
@@ -184,10 +185,10 @@
 import { ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { DeleteOutlined, LockOutlined, UndoOutlined, UnlockOutlined } from '@ant-design/icons-vue'
-import DayTimeline from '../DayTimeline.vue'
+import AddDiningPopover from './AddDiningPopover.vue'
 import HotelCard from '../HotelCard.vue'
 import MealCard from '../MealCard.vue'
-import AddDiningPopover from './AddDiningPopover.vue'
+import DayTimeline from '../DayTimeline.vue'
 
 interface Props {
   context: any
@@ -333,10 +334,25 @@ function onAddMeal(meal: any) {
   emit('recompute', buildEditBody({ meals }))
 }
 
+function onReplaceMeal(previous: any, replacement: any) {
+  const meals = currentMeals().map((m: any) => m.name === previous.name ? replacement : m)
+  if (new Set(meals.map((m: any) => m.name)).size !== meals.length) return
+  emit('recompute', buildEditBody({ meals }))
+}
+
 function onRemoveMeal(meal: any) {
   const remaining = currentMeals()
     .filter((m: any) => !(m.name === meal.name && (m.category || m.type) === (meal.category || meal.type)))
   emit('recompute', buildEditBody({ meals: remaining }))
+}
+
+function onMealPlacement(meal:any,event:Event){
+  const input=event.target as HTMLSelectElement
+  const position=input.value
+  const meals=currentMeals()
+  const previous=meals.find((m:any)=>m.name===meal.name)
+  input.value=previous?.schedule_mode==='auto'?'':previous?.insert_after || ''
+  emit('recompute',buildEditBody({meals:meals.map((m:any)=>m.name===meal.name?{...m,insert_after:position,schedule_mode:position?'manual':'auto'}:m)}))
 }
 
 function isAttractionLocked(name: string) {
@@ -386,22 +402,6 @@ function getMealLabel(meal: any) {
   return mealLabels[key] || '用餐'
 }
 
-
-function onReplaceMeal(previous: any, replacement: any) {
-  const meals = currentMeals().map((m: any) => m.name === previous.name ? replacement : m)
-  if (new Set(meals.map((m: any) => m.name)).size !== meals.length) return
-  emit('recompute', buildEditBody({ meals }))
-}
-
-function onMealPlacement(meal:any,event:Event){
-  const input=event.target as HTMLSelectElement
-  const position=input.value
-  const meals=currentMeals()
-  const previous=meals.find((m:any)=>m.name===meal.name)
-  input.value=previous?.schedule_mode==='auto'?'':previous?.insert_after || ''
-  emit('recompute',buildEditBody({meals:meals.map((m:any)=>m.name===meal.name?{...m,insert_after:position,schedule_mode:position?'manual':'auto'}:m)}))
-}
-
 function getMealTime(meal: any) {
   const item = props.detail?.timeline_schedule?.find((entry: any) => entry.kind === 'meal' && entry.ref_name === meal.name)
   return item ? `${item.start_time}–${item.end_time}` : ''
@@ -410,8 +410,10 @@ function getMealTime(meal: any) {
 </script>
 
 <style scoped>
-.meal-facts { flex: 1; min-width: 0; }
-.description-text { white-space: pre-line; }
+.save-error {
+  margin-bottom: 16px;
+}
+
 /* Bauhaus Card Wrapper */
 :deep(.ant-card) {
   background: var(--white, #fff);
@@ -508,6 +510,9 @@ function getMealTime(meal: any) {
   position: relative;
   font-weight: var(--font-medium, 500);
 }
+
+.description-text { white-space: pre-line; }
+.narrative small { display: block; margin-bottom: 12px; }
 
 .narrative::before {
   content: '✦';
@@ -690,6 +695,48 @@ function getMealTime(meal: any) {
   background: var(--primary-blue, #1040C0);
 }
 
+.attr-row-locked::before {
+  background: var(--primary-yellow, #F0C020);
+}
+
+.attr-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 8px);
+}
+
+.icon-action {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border, #121212);
+  border-radius: 0;
+  box-shadow: 2px 2px 0px 0px var(--border, #121212);
+}
+
+.removed-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+  margin-top: var(--space-3, 12px);
+}
+
+.removed-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border: 2px dashed var(--border, #121212);
+  background: var(--background, #F0F0F0);
+  opacity: 0.78;
+}
+
+.removed-row .name {
+  text-decoration: line-through;
+}
+
 /* 用餐行 - 红色左边框 */
 .meal-row {
   display: flex;
@@ -722,6 +769,15 @@ function getMealTime(meal: any) {
 .drag-handle {
   cursor: grab;
   color: var(--border, #121212);
+  user-select: none;
+  font-weight: var(--font-black, 900);
+  font-size: 18px;
+  padding: 0 4px;
+}
+
+.drag-handle-static {
+  color: var(--border, #121212);
+  opacity: 0.35;
   user-select: none;
   font-weight: var(--font-black, 900);
   font-size: 18px;
@@ -829,51 +885,29 @@ function getMealTime(meal: any) {
   text-decoration: underline !important;
   text-decoration-thickness: 2px !important;
 }
-.save-error {
-  margin-bottom: 16px;
-}
-.attr-row-locked::before {
-  background: var(--primary-yellow, #F0C020);
-}
-.attr-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2, 8px);
-}
-.icon-action {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--border, #121212);
-  border-radius: 0;
-  box-shadow: 2px 2px 0px 0px var(--border, #121212);
-}
-.removed-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2, 8px);
-  margin-top: var(--space-3, 12px);
-}
-.removed-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3, 12px);
-  padding: var(--space-2, 8px) var(--space-3, 12px);
-  border: 2px dashed var(--border, #121212);
-  background: var(--background, #F0F0F0);
-  opacity: 0.78;
-}
-.removed-row .name {
-  text-decoration: line-through;
-}
-.drag-handle-static {
-  color: var(--border, #121212);
-  opacity: 0.35;
-  user-select: none;
-  font-weight: var(--font-black, 900);
-  font-size: 18px;
-  padding: 0 4px;
+</style>
+
+<style scoped>
+.schedule-details { margin: 16px 0; padding: 12px; background: #fff; color: #222; border: 1px solid #aaa; }
+.pending-confirmations { margin: 16px 0; padding: 14px; background: #fff8dd; color: #332b12; border: 1px solid #d6c67a; }
+.pending-confirmations li { margin: 8px 0; }
+.meal-facts { flex: 1; min-width: 0; }
+@media (max-width: 600px) {
+  .day-header, .meal-row, .section-header { flex-wrap: wrap; }
+  .meal-facts { flex-basis: 100%; }
+  :deep(.ant-card-head) { padding: 16px 28px; }
+  :deep(.ant-card-head-wrapper) { flex-wrap: wrap; }
+  :deep(.ant-card-body) { padding: 12px; }
 }
 </style>
+
+<style scoped>
+@media (max-width: 600px) {
+  :deep(.ant-card-head-title) { flex: 0 0 100%; white-space: normal; font-size: 17px; padding-bottom: 4px; }
+  :deep(.ant-card-extra) { margin-left: 0; padding: 4px 0; }
+  :deep(.ant-card-head)::before, :deep(.ant-card-head)::after { display: none; }
+  :deep(.ant-card-head) { padding: 12px; }
+}
+</style>
+
+<style scoped>.meal-placement{display:flex;flex-direction:column;gap:6px;font-size:11px;color:var(--muted-foreground,#666)}.meal-placement select{max-width:210px;width:100%;padding:8px;border:1px solid var(--border,#ddd);border-radius:8px;background:var(--background,#fff);color:var(--foreground,#222);font:inherit}.meal-placement select:focus-visible{outline:2px solid #a78646;outline-offset:2px}</style>

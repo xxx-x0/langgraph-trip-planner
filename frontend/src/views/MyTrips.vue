@@ -1,17 +1,12 @@
 <template>
   <div class="my-trips-page">
-    <!-- Bauhaus Three-Color Mosaic Header -->
-    <div class="mosaic-header">
-      <div class="mosaic-red"></div>
-      <div class="mosaic-blue"></div>
-      <div class="mosaic-yellow"></div>
-    </div>
-
     <div class="page-header">
+      <p class="desk-eyebrow">YOUR JOURNEYS · 旅行收藏</p>
       <h1 class="page-title">我的行程</h1>
       <p class="page-subtitle">查看和管理你的旅行计划</p>
     </div>
 
+    <p><router-link to="/multi-trip">查看多城市旅行与保存版本 →</router-link></p>
     <div class="toolbar">
       <div class="filter-pills">
         <button
@@ -30,7 +25,7 @@
           v-model:value="searchKeyword"
           placeholder="搜索城市、标题..."
           @search="handleSearch"
-          style="width: 260px"
+          style="width: 100%"
           allow-clear
         />
       </div>
@@ -62,13 +57,13 @@
             <div class="card-city">{{ trip.city }}</div>
           </div>
           <div class="card-body">
-            <div class="card-title">{{ trip.title }}</div>
+            <router-link class="card-title trip-title-link" :to="`/trip/${trip.id}`" @click.stop>{{ trip.title }}</router-link>
             <div class="card-meta">
               <span class="meta-item">📅 {{ formatDateRange(trip) }}</span>
               <span class="meta-item">⏱️ {{ trip.travel_days }}天</span>
             </div>
             <div class="card-meta">
-              <span v-if="trip.total_cost" class="meta-item cost">💰 ¥{{ trip.total_cost }}</span>
+              <span v-if="trip.total_cost" class="meta-item cost" title="保存时的参考金额；费用缺项及旧报价条件请查看详情">💰 保存时参考 ¥{{ trip.total_cost }}</span>
               <span v-if="trip.companion_type" class="meta-item">{{ getCompanionLabel(trip.companion_type) }}</span>
             </div>
             <div v-if="trip.tags && trip.tags.length" class="card-tags">
@@ -76,6 +71,7 @@
             </div>
           </div>
           <div class="card-actions" @click.stop>
+            <router-link class="trip-open-link" :to="`/trip/${trip.id}`">查看行程 <span aria-hidden="true">↗</span></router-link>
             <button
               class="action-btn"
               :class="{ 'fav-active': trip.status === 'favorite' }"
@@ -622,4 +618,14 @@ onMounted(loadTrips)
     padding: 0 var(--space-3, 12px) var(--space-6, 24px);
   }
 }
+
+.trip-title-link { display: block; color: var(--color-text-primary); text-decoration: none; }
+.trip-title-link:hover,.trip-open-link:hover { color: var(--color-primary); }
+.trip-open-link { margin-right: auto; align-self: center; color: var(--color-primary); font-size: 12px; text-decoration: none; }
+.trip-open-link span { margin-left: 8px; }.search-box { width: min(100%,280px); }
+@media(prefers-reduced-motion:reduce) { .trip-card { animation: none !important; transition: none !important; }.trip-card:hover { transform: none !important; } }
+
+.card-actions { border-top: 1px solid var(--color-border); padding: 12px 18px; background: transparent; gap: 8px; }
+.action-btn { border: 1px solid var(--color-border); border-radius: 8px; box-shadow: none; color: var(--color-text-secondary); }
+.action-btn:hover { transform: none; box-shadow: none; background: var(--color-bg-secondary); }
 </style>

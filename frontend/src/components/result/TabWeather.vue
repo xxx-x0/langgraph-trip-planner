@@ -24,58 +24,8 @@ defineProps<{
 </script>
 
 <style scoped>
-.tab-weather {
-  animation: fadeInUp var(--transition-normal);
-}
-
-/* Bauhaus card styling */
-.glass-card {
-  background: var(--white);
-  border: var(--border-main) solid var(--border);
-  box-shadow: var(--shadow-main);
-  overflow: hidden;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-6);
-  background: var(--primary-yellow);
-  color: var(--foreground);
-  border-bottom: var(--border-main) solid var(--border);
-}
-
-.card-title {
-  font-size: var(--text-xl);
-  font-weight: var(--font-black);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.card-icon {
-  font-size: var(--text-2xl);
-}
-
-.weather-body {
-  padding: var(--space-6);
-}
-
-.weather-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: var(--space-4);
-}
-
-@media (max-width: 768px) {
-  .weather-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .weather-grid {
-    grid-template-columns: 1fr;
-  }
-}
+.glass-card { background: var(--color-bg-primary); color: var(--color-text-primary); border: 1px solid var(--color-border); border-radius: 18px; overflow: hidden; }
+.card-header { padding: 24px; border-bottom: 1px solid var(--color-border); }.card-icon { display: none; }.card-title { font-size: 24px; font-weight: 500; }
+.weather-body,.map-body { padding: 24px; }.weather-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 16px; }.map-container { width: 100%; height: 520px; border-radius: 12px; overflow: hidden; }
+@media(max-width:600px) { .card-header { padding: 20px 18px; }.weather-body,.map-body { padding: 16px; }.map-container { height: 420px; } }
 </style>
