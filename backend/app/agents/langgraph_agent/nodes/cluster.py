@@ -477,12 +477,21 @@ async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any
                 dist_matrix[i][j] = d
                 dist_matrix[j][i] = d
 
-        clusters = _cluster_attractions_by_proximity(valid_attractions, request.travel_days)
+        if request.journey and request.journey.planning:
+            from ....services.journey_planning import dates, capacity
+            open_days=[i for i,day in enumerate(dates(request)) if capacity(request,day)>0]
+            groups=_cluster_attractions_by_proximity(valid_attractions,len(open_days)) if open_days else []
+            clusters=[[] for _ in range(request.travel_days)]
+            for index,group in zip(open_days,groups): clusters[index]=group
+        else:
+            clusters = _cluster_attractions_by_proximity(valid_attractions, request.travel_days)
         for i in range(len(clusters)):
             clusters[i] = _order_cluster_by_tsp(clusters[i])
 
         valid_attractions_for_format = valid_attractions
 
+    from ....services.journey_planning import reserve_clusters
+    clusters = reserve_clusters(request, clusters, explicit=bool(day_assignments))
     all_attrs = []
     for c in clusters:
         all_attrs.extend(c)

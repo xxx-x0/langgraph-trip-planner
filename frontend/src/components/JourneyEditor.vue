@@ -18,7 +18,14 @@
         <button type="button" :aria-pressed="!value[direction.key]" :class="{selected:!value[direction.key]}" @click="selectMode(direction.key,null)">稍后确定</button>
         <button v-for="mode in modes" :key="mode.key" type="button" :aria-pressed="value[direction.key]?.mode === mode.key" :class="{selected:value[direction.key]?.mode === mode.key}" @click="selectMode(direction.key,mode.key)">{{ mode.label }}</button>
       </div>
-      <p v-if="!value[direction.key]" class="leg-empty">先规划游玩也可以。{{ direction.label }}时间与费用保持待定，可在每日行程里用查票助手补充。</p>
+      <div v-if="!value[direction.key] && !singleLeg" class="leg-empty">
+        <p>班次可以稍后确定。先预留交通占用时间，避免首尾日排满；填写出发城市后生效。这里设置的是目的地活动边界，包含你预计的接驳和办理时间。</p>
+        <label>{{direction.label}}交通时间预留<select :value="reservationPolicy(direction.key)" @change="setReservationPolicy(direction.key,($event.target as HTMLSelectElement).value)"><option value="travel_day">{{direction.key==='outbound'?'首日留给交通':'末日留给交通'}}</option><option value="time_window">填写预计目的地可用时间</option><option value="unreserved">暂不预留，按全天游玩</option></select></label>
+        <label v-if="reservationPolicy(direction.key)==='time_window'">{{direction.key==='outbound'?'预计可以开始本城活动的时间':'预计必须结束本城活动的时间'}}<input type="datetime-local" :value="direction.key==='outbound'?value.planning?.ready_at:value.planning?.leave_by" @input="setReservationTime(direction.key,($event.target as HTMLInputElement).value)" /></label>
+        <p v-if="reservationPolicy(direction.key)==='travel_day'">{{direction.key==='outbound'?'首日':'末日'}}暂不安排景点；景点优先放到其他可用日期，放不下的保留待安排。这不是已查到或已订的班次。</p>
+        <p v-if="showErrors && reservationIssue(direction.key)" role="alert" class="passenger-warning">{{reservationIssue(direction.key)}}</p>
+      </div>
+      <p v-else-if="!value[direction.key]" class="leg-empty">本段班次及费用待定。</p>
       <template v-if="value[direction.key]">
           <p v-if="showErrors && legIssue(direction.key)" class="passenger-warning" role="alert">{{ legIssue(direction.key) }}</p>
           <p v-if="value[direction.key]!.passengers !== (passengers || 1) && !(showErrors && legIssue(direction.key).includes('同行人数'))" class="passenger-warning" role="alert">这程按 {{ value[direction.key]!.passengers }} 人填写，与本次 {{ passengers || 1 }} 人同行不同，请核对人数与报价。</p>
@@ -72,10 +79,10 @@
 </template>
 <script setup lang="ts">
 import {ref, watch, computed, nextTick} from 'vue'
-import type {Journey,JourneyExtras,JourneyLeg} from '@/types'
+import type {Journey,JourneyExtras,JourneyLeg,JourneyPlanning} from '@/types'
 const props=defineProps<{modelValue?:Journey|null; startDate?:string; endDate?:string; passengers?:number; singleLeg?:boolean; destinationCity?:string}>()
 const emit=defineEmits<{(e:'update:modelValue',value:Journey|null):void}>()
-const emptyJourney=()=>({origin_city:'',return_city:'',destination_timezone:'Asia/Shanghai'})
+const emptyJourney=()=>({origin_city:'',return_city:'',destination_timezone:'Asia/Shanghai',...(props.singleLeg?{}:{planning:{arrival_policy:'travel_day' as const,departure_policy:'travel_day' as const,ready_at:null,leave_by:null}})})
 const value=ref<Journey>(JSON.parse(JSON.stringify(props.modelValue || emptyJourney())))
 const activeLeg=ref<'outbound'|'inbound'>('outbound')
 const editorRoot=ref<HTMLElement>()
@@ -92,6 +99,17 @@ watch(()=>props.modelValue, v=>{
  value.value=updated
 })
 function returnCityChanged(){followOrigin=!value.value.return_city.trim();publish()}
+function reservationPolicy(key:'outbound'|'inbound'){return (key==='outbound'?value.value.planning?.arrival_policy:value.value.planning?.departure_policy)||'unreserved'}
+function ensurePlanning(){return value.value.planning ||= {arrival_policy:'unreserved',departure_policy:'unreserved',ready_at:null,leave_by:null}}
+function setReservationPolicy(key:'outbound'|'inbound',policy:string){const planning=ensurePlanning();if(key==='outbound')planning.arrival_policy=policy as JourneyPlanning['arrival_policy'];else planning.departure_policy=policy as JourneyPlanning['departure_policy'];publish()}
+function setReservationTime(key:'outbound'|'inbound',time:string){const planning=ensurePlanning();if(key==='outbound')planning.ready_at=time||null;else planning.leave_by=time||null;publish()}
+function reservationIssue(key:'outbound'|'inbound'){
+ if(value.value[key]||!value.value.origin_city.trim()||reservationPolicy(key)!=='time_window')return ''
+ const time=key==='outbound'?value.value.planning?.ready_at:value.value.planning?.leave_by
+ if(!time)return '请填写预计目的地可用时间，或改为整天留给交通。'
+ if((props.startDate && time.slice(0,10)<props.startDate)||(props.endDate && time.slice(0,10)>props.endDate))return '预计可用时间须在整趟出行日期范围内。'
+ return ''
+}
 function legIssue(key:'outbound'|'inbound'){
  const leg=value.value[key];const label=key==='outbound'?'去程':'返程'
  if(!leg)return ''
@@ -104,7 +122,7 @@ function legIssue(key:'outbound'|'inbound'){
 }
 async function validate(){
  showErrors.value=true
- const direction=directions.value.find(d=>legIssue(d.key))
+ const direction=directions.value.find(d=>legIssue(d.key)||reservationIssue(d.key))
  if((value.value.origin_city.trim() && !direction) || (!value.value.origin_city.trim() && !value.value.return_city.trim() && !value.value.outbound && !value.value.inbound))return true
  if(direction)activeLeg.value=direction.key
  await nextTick()

@@ -55,6 +55,7 @@
         <a-button :disabled="!!busy" @click="emit('recompute', buildEditBody({day_start_time: detail.schedule_suggestion.day_start_time}))">采用较晚出发时间</a-button>
       </div>
       <div class="timeline-editor">
+
         <section class="editor-section">
           <div class="section-header">
             <h4>开始时间</h4>
@@ -67,6 +68,19 @@
             />
           </div>
         </section>
+        <details class="editor-section time-constraints"><summary>时间约束（可选）</summary>
+          <p>排序锁只保护顺序。固定预约时刻与最早出发时间在这里设置。</p>
+          <p v-if="!detail.time_constraints">旧安排未声明时刻是否可移；交通预览会保留原时间。</p>
+          <label><input v-model="allowStartShift" type="checkbox" :disabled="!!busy" @change="saveTimeConstraints" />交通预览可延后非固定开始时间</label>
+          <label>最早出发时间<input v-model="earliestStart" type="time" :disabled="!!busy" @change="saveTimeConstraints" /></label>
+          <p v-if="!allowStartShift">开始时间固定为 {{dayStartTime}}；手动修改开始时间会同步更新固定时刻。</p>
+          <div v-for="(a,i) in detail.time_constraints?.appointments || []" :key="i">
+            <span>{{a.ref_name}} 固定时刻</span><input type="time" :value="a.start_time" :disabled="!!busy" @change="setAppointment(Number(i),($event.target as HTMLInputElement).value)" />
+            <button :disabled="!!busy" @click="removeAppointment(Number(i))">取消固定 {{a.ref_name}}</button>
+          </div>
+          <label>添加固定活动<select v-model="appointmentName" :disabled="!!busy"><option value="">请选择已有活动</option><option v-for="a in fixedActivityOptions" :key="a.kind+a.name" :value="a.kind+'|'+a.name">{{a.name}}</option></select></label>
+          <button :disabled="!!busy || !appointmentName" @click="addAppointment">按当前安排固定该活动时刻</button>
+        </details>
 
         <section class="editor-section">
           <div class="section-header">
@@ -182,7 +196,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { DeleteOutlined, LockOutlined, UndoOutlined, UnlockOutlined } from '@ant-design/icons-vue'
 import AddDiningPopover from './AddDiningPopover.vue'
@@ -232,6 +246,16 @@ function confirmAIRearrange() {
 
 const orderedAttractions = ref<any[]>([])
 const dayStartTime = ref('08:00')
+const allowStartShift=ref(false),earliestStart=ref(''),appointmentName=ref('')
+const fixedActivityOptions=computed(()=>[...(props.detail?.attractions||[]).map((a:any)=>({kind:'attraction',name:a.name})),...(props.detail?.meals||[]).map((a:any)=>({kind:'meal',name:a.name}))].filter((a:any)=>!(props.detail?.time_constraints?.appointments||[]).some((f:any)=>f.kind===a.kind&&f.ref_name===a.name)))
+function timeBody(appointments=props.detail?.time_constraints?.appointments || []) {
+  return {allow_start_shift:allowStartShift.value, earliest_start_time:earliestStart.value||null,
+    fixed_start_time:allowStartShift.value?null:dayStartTime.value, appointments}
+}
+function saveTimeConstraints(){ emit('recompute',buildEditBody({time_constraints:timeBody()})) }
+function setAppointment(i:number,time:string){if(!time)return;const rows=(props.detail?.time_constraints?.appointments||[]).map((a:any,n:number)=>n===i?{...a,start_time:time}:a);emit('recompute',buildEditBody({time_constraints:timeBody(rows)}))}
+function removeAppointment(i:number){emit('recompute',buildEditBody({time_constraints:timeBody((props.detail?.time_constraints?.appointments||[]).filter((_:any,n:number)=>n!==i))}))}
+function addAppointment(){const [kind,...names]=appointmentName.value.split('|');const name=names.join('|');const row=props.detail?.timeline_schedule?.find((x:any)=>x.kind===kind&&x.ref_name===name);if(!row)return;emit('recompute',buildEditBody({time_constraints:timeBody([...(props.detail?.time_constraints?.appointments||[]),{kind,ref_name:name,start_time:row.start_time}])}));appointmentName.value=''}
 const lockedAttractionNames = ref<string[]>([])
 const removedAttractionNames = ref<string[]>([])
 
@@ -240,6 +264,8 @@ function restoreSavedState() {
   orderedAttractions.value = [...(d?.attractions || [])]
   lockedAttractionNames.value = uniqueNames(d?.locked_attraction_names || [])
   removedAttractionNames.value = uniqueNames(d?.removed_attraction_names || [])
+  allowStartShift.value=d?.time_constraints?.allow_start_shift ?? false
+  earliestStart.value=d?.time_constraints?.earliest_start_time || ''
   dayStartTime.value = d?.day_start_time || props.context?.day_start_time || '08:00'
 }
 
@@ -323,6 +349,7 @@ function onOrderChange() {
 
 function onStartTimeChange() {
   emit('recompute', buildEditBody({
+    ...(props.detail?.time_constraints ? {time_constraints:timeBody()} : {}),
     day_start_time: dayStartTime.value || props.context?.day_start_time || '08:00',
   }))
 }

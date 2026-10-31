@@ -1,0 +1,580 @@
+{
+  "schema": "conditional-v2.2",
+  "content_sha256": "1de729c6d768411bdfc27493cafbfc5fdbc433d16b1e826aff727bdfc3482aa3",
+  "cases": [
+    {
+      "id": "PS01",
+      "version": "2.2-draft",
+      "source_id": "T04",
+      "source_family": "synthetic-ticket-template-v1",
+      "source_split": "holdout",
+      "source_input_sha256": "8ffa26c9a2a88d5424dd1bff6defd45d5eb0a61ca9b4a1ed807f7c4af3f9dac6",
+      "query_overrides": {
+        "priority": "price",
+        "preferences": {},
+        "intent_note": "只优先已知列表参考价，席别均接受。"
+      },
+      "reference": {
+        "eligible_ids": [
+          "SYN_T04_A",
+          "SYN_T04_B",
+          "SYN_T04_C"
+        ],
+        "acceptable_first": [
+          "SYN_T04_B"
+        ],
+        "rank_key": "price",
+        "preferred_pairs": [],
+        "stages": {}
+      },
+      "reference_sha256": "7fda37c810be160ffd1149097323793e13afef2ed4760908dff241d0909e67a6",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS02",
+      "version": "2.2-draft",
+      "source_id": "T04",
+      "source_family": "synthetic-ticket-template-v1",
+      "source_split": "holdout",
+      "source_input_sha256": "8ffa26c9a2a88d5424dd1bff6defd45d5eb0a61ca9b4a1ed807f7c4af3f9dac6",
+      "query_overrides": {
+        "priority": "time",
+        "preferences": {},
+        "intent_note": "只优先车上时间，价格都接受，不以价格打破同车程并列。"
+      },
+      "reference": {
+        "eligible_ids": [
+          "SYN_T04_A",
+          "SYN_T04_B",
+          "SYN_T04_C"
+        ],
+        "acceptable_first": [
+          "SYN_T04_A",
+          "SYN_T04_C"
+        ],
+        "rank_key": "time",
+        "preferred_pairs": [],
+        "stages": {}
+      },
+      "reference_sha256": "9905537679baae26ae34e68a68515af0de7549092ddd0824578d96076d9ea10b",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS03",
+      "version": "2.2-draft",
+      "source_id": "T04",
+      "source_family": "synthetic-ticket-template-v1",
+      "source_split": "holdout",
+      "source_input_sha256": "8ffa26c9a2a88d5424dd1bff6defd45d5eb0a61ca9b4a1ed807f7c4af3f9dac6",
+      "query_overrides": {
+        "priority": "balanced",
+        "preferences": {},
+        "intent_note": "SYN_T04_A的价格和时间可接受；少花至少60元可接受多坐不超过30分钟，同时间优先便宜。"
+      },
+      "reference": {
+        "eligible_ids": [
+          "SYN_T04_A",
+          "SYN_T04_B",
+          "SYN_T04_C"
+        ],
+        "acceptable_first": [
+          "SYN_T04_A",
+          "SYN_T04_B"
+        ],
+        "rank_key": null,
+        "preferred_pairs": [
+          [
+            "SYN_T04_A",
+            "SYN_T04_C"
+          ]
+        ],
+        "stages": {}
+      },
+      "reference_sha256": "0c56539e24836dee40fa533bb462a3b390425d3ece66ddfabd949176378e01aa",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS04",
+      "version": "2.2-draft",
+      "source_id": "T04",
+      "source_family": "synthetic-ticket-template-v1",
+      "source_split": "holdout",
+      "source_input_sha256": "8ffa26c9a2a88d5424dd1bff6defd45d5eb0a61ca9b4a1ed807f7c4af3f9dac6",
+      "query_overrides": {
+        "priority": "unspecified",
+        "preferences": {},
+        "intent_note": "未说明价格或时长偏好，先看不同取舍。"
+      },
+      "reference": {
+        "eligible_ids": [
+          "SYN_T04_A",
+          "SYN_T04_B",
+          "SYN_T04_C"
+        ],
+        "acceptable_first": null,
+        "rank_key": null,
+        "preferred_pairs": [],
+        "stages": {}
+      },
+      "reference_sha256": "f2f04e88a682df21c063bffe64216b0cfa1a5038f8e3761047a214fcb3fa1141",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS05",
+      "version": "2.2-draft",
+      "source_id": "T03",
+      "source_family": "synthetic-ticket-template-v1",
+      "source_split": "dev",
+      "source_input_sha256": "489673b2ceb6f0afd51b26329dcd0ae15dee86bcb8936ce57f1cefbf1237ff7c",
+      "query_overrides": {
+        "priority": "daytime",
+        "preferences": {},
+        "intent_note": "尽量07:00后出发、22:00前到达且不跨日，这是软偏好。"
+      },
+      "reference": {
+        "eligible_ids": [
+          "SYN_T03_A",
+          "SYN_T03_B",
+          "SYN_T03_C"
+        ],
+        "acceptable_first": [
+          "SYN_T03_B"
+        ],
+        "rank_key": null,
+        "preferred_pairs": [],
+        "stages": {}
+      },
+      "reference_sha256": "899903d474b0f3f16a6483c6e10c1aaf293caabbf4596ca753d010ff36d261a5",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS06",
+      "version": "2.2-draft",
+      "source_id": "T05",
+      "source_family": "synthetic-ticket-template-v1",
+      "source_split": "dev",
+      "source_input_sha256": "93fc739ce9e9ba5311e961b001a2bfea097fc85df9fb75727b8cc27bb90eab6a",
+      "query_overrides": {
+        "priority": "price",
+        "preferences": {},
+        "intent_note": "先比较已知参考价，未知价可展示但不要猜价。"
+      },
+      "reference": {
+        "eligible_ids": [
+          "SYN_T05_A",
+          "SYN_T05_B",
+          "SYN_T05_C"
+        ],
+        "acceptable_first": [
+          "SYN_T05_A"
+        ],
+        "rank_key": "price",
+        "preferred_pairs": [],
+        "stages": {},
+        "rank_scope": "known_prices_only"
+      },
+      "reference_sha256": "bcaa02fcfc1e8901612903f4d14d731b0caf8c5e3248b1e07ff6f08be670d98e",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS07",
+      "version": "2.2-draft",
+      "source_id": "T18",
+      "source_family": "ltp27-suhang-20261020",
+      "source_split": "holdout",
+      "source_input_sha256": "28fe3bb3ade86701442593d2059de4cc0bfed16d9f9b6e5cc4b54f1fa4478ae2",
+      "query_overrides": {
+        "priority": "price",
+        "preferences": {},
+        "intent_note": "接受本批已知席别，不限制晚出发晚到，只比较已知参考价。"
+      },
+      "reference": {
+        "eligible_ids": [
+          "rail_69_G3106",
+          "rail_70_G7690",
+          "rail_72_G3342",
+          "rail_73_G1482",
+          "rail_75_G7696",
+          "rail_76_G7696",
+          "rail_78_G48",
+          "rail_81_D3296",
+          "rail_82_G7652",
+          "rail_83_D18",
+          "rail_85_G1666",
+          "rail_86_G230",
+          "rail_88_Z282",
+          "rail_90_G7310",
+          "rail_91_G1098",
+          "rail_95_G46",
+          "rail_96_G1510",
+          "rail_92_G1098",
+          "rail_98_G7626",
+          "rail_99_G1380",
+          "rail_101_G3380",
+          "rail_102_G1662",
+          "rail_104_G7588",
+          "rail_106_G7566",
+          "rail_107_G7642",
+          "rail_110_G7582",
+          "rail_112_G7666",
+          "rail_114_D2282",
+          "rail_115_G3024",
+          "rail_117_G3060",
+          "rail_120_G3072",
+          "rail_122_G1656",
+          "rail_124_D3240",
+          "rail_126_G206",
+          "rail_127_G236"
+        ],
+        "acceptable_first": [
+          "rail_127_G236"
+        ],
+        "rank_key": "price",
+        "preferred_pairs": [],
+        "stages": {
+          "rail_109_K5834": {
+            "stage": "date",
+            "margins": null
+          },
+          "rail_118_K552": {
+            "stage": "date",
+            "margins": null
+          }
+        }
+      },
+      "reference_sha256": "faa73ff709e6c8db9d45cd4e78e51d57b5d65f88b532fffc4b5cd155a75d776a",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS08",
+      "version": "2.2-draft",
+      "source_id": "T18",
+      "source_family": "ltp27-suhang-20261020",
+      "source_split": "holdout",
+      "source_input_sha256": "28fe3bb3ade86701442593d2059de4cc0bfed16d9f9b6e5cc4b54f1fa4478ae2",
+      "query_overrides": {
+        "priority": "price",
+        "preferences": {
+          "accepted_seats": [
+            "二等座"
+          ]
+        },
+        "intent_note": "只接受二等座，不限制晚到，只比较已知参考价。"
+      },
+      "reference": {
+        "eligible_ids": [
+          "rail_70_G7690",
+          "rail_72_G3342",
+          "rail_73_G1482",
+          "rail_75_G7696",
+          "rail_76_G7696",
+          "rail_78_G48",
+          "rail_81_D3296",
+          "rail_82_G7652",
+          "rail_85_G1666",
+          "rail_86_G230",
+          "rail_91_G1098",
+          "rail_95_G46",
+          "rail_96_G1510",
+          "rail_92_G1098",
+          "rail_98_G7626",
+          "rail_99_G1380",
+          "rail_101_G3380",
+          "rail_102_G1662",
+          "rail_104_G7588",
+          "rail_106_G7566",
+          "rail_107_G7642",
+          "rail_110_G7582",
+          "rail_112_G7666",
+          "rail_115_G3024",
+          "rail_117_G3060",
+          "rail_120_G3072",
+          "rail_122_G1656",
+          "rail_124_D3240",
+          "rail_126_G206",
+          "rail_127_G236"
+        ],
+        "acceptable_first": [
+          "rail_127_G236"
+        ],
+        "rank_key": "price",
+        "preferred_pairs": [],
+        "stages": {}
+      },
+      "reference_sha256": "61acc90476232c52822989b0d2a56b1a4e7f668d7c68be6ea05593ebb90b5d1a",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS09",
+      "version": "2.2-draft",
+      "source_id": "T18",
+      "source_family": "ltp27-suhang-20261020",
+      "source_split": "holdout",
+      "source_input_sha256": "28fe3bb3ade86701442593d2059de4cc0bfed16d9f9b6e5cc4b54f1fa4478ae2",
+      "query_overrides": {
+        "priority": "unspecified",
+        "preferences": {
+          "accepted_seats": [
+            "一等座"
+          ]
+        },
+        "intent_note": "只接受一等座，未说明其他优先级。"
+      },
+      "reference": {
+        "eligible_ids": [
+          "rail_69_G3106",
+          "rail_90_G7310",
+          "rail_114_D2282"
+        ],
+        "acceptable_first": null,
+        "rank_key": null,
+        "preferred_pairs": [],
+        "stages": {}
+      },
+      "reference_sha256": "b70c5d823747dc3209dee6b4f38375ed2b9d8c6d885c36b533af1418afdf0dc7",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS10",
+      "version": "2.2-draft",
+      "source_id": "T18",
+      "source_family": "ltp27-suhang-20261020",
+      "source_split": "holdout",
+      "source_input_sha256": "28fe3bb3ade86701442593d2059de4cc0bfed16d9f9b6e5cc4b54f1fa4478ae2",
+      "query_overrides": {
+        "priority": "unspecified",
+        "preferences": {
+          "accepted_seats": [
+            "商务座"
+          ]
+        },
+        "intent_note": "必须商务座，不接受自动降级。"
+      },
+      "reference": {
+        "eligible_ids": [],
+        "acceptable_first": [],
+        "rank_key": null,
+        "preferred_pairs": [],
+        "stages": {},
+        "empty_outcome": "empty_preferences"
+      },
+      "reference_sha256": "668fcbc97f1e70f61bba7c282a39619a9516169e01bdb650f9cb0e5eaba7f8c2",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS11",
+      "version": "2.2-draft",
+      "source_id": "T18",
+      "source_family": "ltp27-suhang-20261020",
+      "source_split": "holdout",
+      "source_input_sha256": "28fe3bb3ade86701442593d2059de4cc0bfed16d9f9b6e5cc4b54f1fa4478ae2",
+      "query_overrides": {
+        "priority": "time",
+        "preferences": {},
+        "intent_note": "只优先车上时长，接受本批席别，不限制价格。"
+      },
+      "reference": {
+        "eligible_ids": [
+          "rail_69_G3106",
+          "rail_70_G7690",
+          "rail_72_G3342",
+          "rail_73_G1482",
+          "rail_75_G7696",
+          "rail_76_G7696",
+          "rail_78_G48",
+          "rail_81_D3296",
+          "rail_82_G7652",
+          "rail_83_D18",
+          "rail_85_G1666",
+          "rail_86_G230",
+          "rail_88_Z282",
+          "rail_90_G7310",
+          "rail_91_G1098",
+          "rail_95_G46",
+          "rail_96_G1510",
+          "rail_92_G1098",
+          "rail_98_G7626",
+          "rail_99_G1380",
+          "rail_101_G3380",
+          "rail_102_G1662",
+          "rail_104_G7588",
+          "rail_106_G7566",
+          "rail_107_G7642",
+          "rail_110_G7582",
+          "rail_112_G7666",
+          "rail_114_D2282",
+          "rail_115_G3024",
+          "rail_117_G3060",
+          "rail_120_G3072",
+          "rail_122_G1656",
+          "rail_124_D3240",
+          "rail_126_G206",
+          "rail_127_G236"
+        ],
+        "acceptable_first": [
+          "rail_86_G230"
+        ],
+        "rank_key": "time",
+        "preferred_pairs": [],
+        "stages": {
+          "rail_109_K5834": {
+            "stage": "date",
+            "margins": null
+          },
+          "rail_118_K552": {
+            "stage": "date",
+            "margins": null
+          }
+        }
+      },
+      "reference_sha256": "d423d24575901cf1fe9a87270140fd12b9469166636d446603ad228479f307fa",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    },
+    {
+      "id": "PS12",
+      "version": "2.2-draft",
+      "source_id": "R10",
+      "source_family": "meal-recovery-suzhou-20261014",
+      "source_split": "holdout",
+      "source_input_sha256": "fadb6460068013b24562b41ac5c2318124fa4016e50b648d0c3dea8335940d97",
+      "query_overrides": {},
+      "reference": {
+        "eligible_ids": [],
+        "acceptable_first": null,
+        "rank_key": null,
+        "preferred_pairs": [],
+        "stages": {},
+        "route_contract": {
+          "default_end_minutes": 1440,
+          "dinner_start_range": [
+            1050,
+            1380
+          ],
+          "end_limit_source": "same local date unless a request window is declared; no implicit22:00 limit"
+        }
+      },
+      "reference_sha256": "4cf8eb155842a27906ff6172cd5699c2b109997f6d25cc981bd6630fa90cb49a",
+      "annotation": {
+        "status": "pending_human",
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null
+      },
+      "specification": "docs/eval-observability-v22-offline-handoff.md",
+      "limitations": [
+        "Existing source families already seen; repetitions and variants do not create independent holdout.",
+        "v2.2 offline business repair; neutral models do not prove model-quality improvement."
+      ]
+    }
+  ]
+}

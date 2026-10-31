@@ -10,6 +10,7 @@ from ....models.schemas import (
 )
 from ....services import trip_draft_service
 from ....services.journey_service import apply_context, conflicts
+from ....services.place_hours import place_hours_report
 from ..assemble.timeline import rule_assemble_day_timeline
 from ..assemble.route import compute_day_route
 from ..assemble.budget import compute_day_budget, combine_budgets, parse_ticket_price as _parse_ticket_price
@@ -51,8 +52,10 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         description=detail.description,
         trip_intent=detail.trip_intent,
         locked_attraction_names=detail.locked_attraction_names,
+        removed_attraction_names=detail.removed_attraction_names,
         pending_confirmations=detail.pending_confirmations,
         schedule_suggestion=detail.schedule_suggestion,
+        route_comparison=detail.route_comparison,
         travel_window=detail.travel_window, rest_periods=detail.rest_periods,
         description_source=detail.description_source,
         transportation=transportation,
@@ -63,6 +66,7 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         route_segments=detail.route_segments,
         timeline_order=detail.timeline_order,
         day_start_time=detail.day_start_time,
+        time_constraints=detail.time_constraints,
         timeline_schedule=detail.timeline_schedule,
         meal_warnings=detail.meal_warnings,
         meal_adjustments=detail.meal_adjustments,
@@ -144,6 +148,8 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
     record = await trip_draft_service.get_draft(draft_id)
     if record is None:
         raise ValueError(f"draft {draft_id} 不存在")
+    if record.status!='finalized' and json.loads(record.request_json).get('_transport_unassigned'):
+        raise ValueError('还有待安排景点，请先选择日期，或明确确认不再安排；本次未定稿')
     if record.status == "finalized":
         return await trip_draft_service.read_finalized_trip(record)
 
@@ -189,7 +195,7 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
             if attraction.ticket_price == 0 and raw and _parse_ticket_price(raw.get('ticket_price')) is None:
                 attraction.ticket_price = None
         schedule_day(detail)
-        problems = conflicts(detail)
+        problems = conflicts(detail) + place_hours_report(detail)['violations']
         if problems: raise ValueError("与交通或休息安排冲突，请先调整第"+str(idx+1)+"天："+"；".join(problems))
         detail.day_budget = compute_day_budget(detail)
         refresh_day_description(detail, next((WeatherInfo.model_validate(w) for w in weather_info

@@ -45,7 +45,7 @@ async def test_atomic_cas_rejects_a_change_after_confirmation_read(case,racer):
         else:
             with patch('app.agents.langgraph_agent.finalize.pipeline.compute_day_route',new=AsyncMock(return_value=[])):
                 finalized=await client.post(f'/api/trip/draft/{draft}/finalize')
-            assert any(json.loads(l[6:]).get('type')=='complete' for l in finalized.text.splitlines() if l.startswith('data: '))
+            assert any(json.loads(l[6:]).get('type')=='complete' for l in finalized.text.splitlines() if l.startswith('data: ')), finalized.text
         before=await snapshot(draft);resume.set();response=await pending
     assert response.status_code==409 and await snapshot(draft)==before
 

@@ -1,0 +1,49 @@
+{
+  "expected_outcome": "recommended",
+  "expected_http": 200,
+  "eligible_ids": [
+    "SYN_T12_B"
+  ],
+  "candidate_checks": [
+    {
+      "candidate_id": "SYN_T12_A",
+      "eligible": false,
+      "reasons": [
+        "outside_trip_dates"
+      ],
+      "margins": [
+        420
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "SYN_T12_B",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        120
+      ],
+      "tight": false
+    }
+  ],
+  "bounds": {
+    "start_date": "2027-04-12",
+    "end_date": "2027-04-15",
+    "departure_after": "2027-04-15T16:00"
+  },
+  "buffer_fields": {
+    "transfer_before_minutes": 0,
+    "station_buffer_minutes": 0,
+    "transfer_after_minutes": 0,
+    "baggage_minutes": 0,
+    "lodging_buffer_minutes": 0
+  },
+  "acceptable_first": [
+    "SYN_T12_B"
+  ],
+  "rank_key": null,
+  "preferred_pairs": [],
+  "expected_ticket_total": null,
+  "checkpoint_statuses": {},
+  "method": "Independent date/interval arithmetic; candidate preference specification; no production evaluator called"
+}

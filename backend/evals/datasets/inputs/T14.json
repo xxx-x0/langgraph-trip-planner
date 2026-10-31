@@ -1,0 +1,198 @@
+{
+  "query": {
+    "mode": "train",
+    "direction": "inbound",
+    "from_place": "苏州",
+    "to_place": "南京",
+    "date": "2027-04-15",
+    "passengers": 2,
+    "priority": "balanced"
+  },
+  "candidates": [
+    {
+      "id": "SYN_T14_A",
+      "mode": "train",
+      "service": "SYN_T14_A",
+      "from_station": "苏州站",
+      "to_station": "南京南",
+      "departure": "2027-04-15T16:00",
+      "arrival": "2027-04-15T19:00",
+      "seat": "二等座",
+      "fare_per_person": 120,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "SYN_T14_B",
+      "mode": "train",
+      "service": "SYN_T14_B",
+      "from_station": "苏州站",
+      "to_station": "南京南",
+      "departure": "2027-04-15T17:00",
+      "arrival": "2027-04-15T20:00",
+      "seat": "二等座",
+      "fare_per_person": 120,
+      "availability": "available",
+      "source": "12306"
+    }
+  ],
+  "context": {
+    "kind": "draft",
+    "draft_id": "eval_T14",
+    "request": {
+      "city": "苏州",
+      "start_date": "2027-04-12",
+      "end_date": "2027-04-15",
+      "travel_days": 4,
+      "transportation": "公共交通",
+      "accommodation": "经济型酒店",
+      "companions": {
+        "count": 2,
+        "type": "friends"
+      },
+      "journey": {
+        "origin_city": "南京",
+        "return_city": "南京",
+        "inbound": {
+          "mode": "train",
+          "departure_station": "苏州站",
+          "arrival_station": "南京南",
+          "departure_time": "2027-04-15T16:00",
+          "arrival_time": "2027-04-15T19:00",
+          "passengers": 2,
+          "ticket_total": null,
+          "price_source": "unknown",
+          "transfer_before_minutes": 30,
+          "station_buffer_minutes": 30,
+          "transfer_after_minutes": 0,
+          "baggage_minutes": 0,
+          "lodging_buffer_minutes": 0
+        }
+      }
+    },
+    "days_detail": [
+      null,
+      null,
+      null,
+      {
+        "day_index": 3,
+        "date": "2027-04-15",
+        "day_start_time": "16:00",
+        "attractions": [
+          {
+            "name": "SYN_T14_活动",
+            "address": "人工测试地点",
+            "description": "",
+            "visit_duration": 60,
+            "ticket_price": null,
+            "open_hours": "00:00-23:59"
+          }
+        ],
+        "meals": [],
+        "hotel": null,
+        "timeline_order": [
+          {
+            "kind": "attraction",
+            "ref_name": "SYN_T14_活动"
+          }
+        ],
+        "timeline_schedule": [
+          {
+            "kind": "attraction",
+            "ref_name": "SYN_T14_活动",
+            "start_minutes": 960,
+            "end_minutes": 1020,
+            "duration": 60,
+            "start_time": "16:00",
+            "end_time": "17:00"
+          }
+        ],
+        "route_segments": [],
+        "locked_attraction_names": [
+          "SYN_T14_活动"
+        ],
+        "removed_attraction_names": [],
+        "rest_periods": []
+      }
+    ]
+  },
+  "saved_state": {
+    "request": {
+      "city": "苏州",
+      "start_date": "2027-04-12",
+      "end_date": "2027-04-15",
+      "travel_days": 4,
+      "transportation": "公共交通",
+      "accommodation": "经济型酒店",
+      "companions": {
+        "count": 2,
+        "type": "friends"
+      },
+      "journey": {
+        "origin_city": "南京",
+        "return_city": "南京",
+        "inbound": {
+          "mode": "train",
+          "departure_station": "苏州站",
+          "arrival_station": "南京南",
+          "departure_time": "2027-04-15T16:00",
+          "arrival_time": "2027-04-15T19:00",
+          "passengers": 2,
+          "ticket_total": null,
+          "price_source": "unknown",
+          "transfer_before_minutes": 30,
+          "station_buffer_minutes": 30,
+          "transfer_after_minutes": 0,
+          "baggage_minutes": 0,
+          "lodging_buffer_minutes": 0
+        }
+      }
+    },
+    "days_detail": [
+      null,
+      null,
+      null,
+      {
+        "day_index": 3,
+        "date": "2027-04-15",
+        "day_start_time": "16:00",
+        "attractions": [
+          {
+            "name": "SYN_T14_活动",
+            "address": "人工测试地点",
+            "description": "",
+            "visit_duration": 60,
+            "ticket_price": null,
+            "open_hours": "00:00-23:59"
+          }
+        ],
+        "meals": [],
+        "hotel": null,
+        "timeline_order": [
+          {
+            "kind": "attraction",
+            "ref_name": "SYN_T14_活动"
+          }
+        ],
+        "timeline_schedule": [
+          {
+            "kind": "attraction",
+            "ref_name": "SYN_T14_活动",
+            "start_minutes": 960,
+            "end_minutes": 1020,
+            "duration": 60,
+            "start_time": "16:00",
+            "end_time": "17:00"
+          }
+        ],
+        "route_segments": [],
+        "locked_attraction_names": [
+          "SYN_T14_活动"
+        ],
+        "removed_attraction_names": [],
+        "rest_periods": []
+      }
+    ]
+  },
+  "fault": null
+}

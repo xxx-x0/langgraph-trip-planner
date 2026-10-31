@@ -302,12 +302,27 @@ export async function previewJourney(request: TripFormData) {
 export async function changeJourney(draftId:string, journey:import('@/types').Journey|null, preview_token?:string, synchronize=false,ticket_basis?:string) {
   return (await apiClient.post(`/api/trip/draft/${draftId}/journey`,{journey,preview_token,synchronize,ticket_basis})).data
 }
+export async function adjustJourney(draftId:string,body:unknown) {
+ return (await apiClient.post(`/api/trip/draft/${draftId}/journey-adjustment`,body,{timeout:115000})).data
+}
 
 export async function compareJourneys(draftId:string,candidates:unknown[]) {
  return (await apiClient.post(`/api/trip/draft/${draftId}/journey-comparison`,{candidates})).data
 }
 export async function recommendTickets(body:unknown,signal?:AbortSignal) {
  return (await apiClient.post('/api/tickets/recommend',body,{signal,timeout:45000})).data
+}
+export async function startTicketSearch(body:unknown,signal?:AbortSignal) {
+ return (await apiClient.post('/api/tickets/search',body,{signal,timeout:10000})).data
+}
+export async function getTicketSearch(id:string,signal?:AbortSignal) {
+ return (await apiClient.get(`/api/tickets/search/${encodeURIComponent(id)}`,{signal,timeout:10000})).data
+}
+export async function continueTicketSearch(id:string,showBrowser=false,signal?:AbortSignal) {
+ return (await apiClient.post(`/api/tickets/search/${encodeURIComponent(id)}/${showBrowser?'browser':'continue'}`,{},{signal,timeout:10000})).data
+}
+export async function cancelTicketSearch(id:string) {
+ return (await apiClient.delete(`/api/tickets/search/${encodeURIComponent(id)}`,{timeout:10000})).data
 }
 export async function checkFlightSource(signal?:AbortSignal) {
  return (await apiClient.post('/api/trip/draft/transport-sources/check-flight',{}, {signal,timeout:25000})).data

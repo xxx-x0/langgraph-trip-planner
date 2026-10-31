@@ -62,6 +62,16 @@ class TripRequest(BaseModel):
             raise ValueError('行程日期须正序且不超过30天')
         validate_rest_periods(self.rest_periods, start, end)
         if self.journey:
+            planning = self.journey.planning
+            if planning:
+                for direction, policy, boundary in [('outbound', planning.arrival_policy, planning.ready_at), ('inbound', planning.departure_policy, planning.leave_by)]:
+                    if getattr(self.journey, direction) or policy != 'time_window':
+                        continue
+                    if not boundary:
+                        raise ValueError('请选择班次未定时的目的地可用时间')
+                    value = local_instant(boundary, self.journey.destination_timezone)
+                    if not start <= value.date() <= end:
+                        raise ValueError('预计目的地可用时间须在整趟出行日期范围内')
             for leg in (self.journey.outbound, self.journey.inbound):
                 if not leg: continue
                 if leg.passengers != (self.companions.count if self.companions else 1):
@@ -284,12 +294,38 @@ class RouteSegment(BaseModel):
     is_estimated: bool = False
 
 
+class FixedActivityTime(BaseModel):
+    kind: Literal['attraction', 'meal'] = 'attraction'
+    ref_name: str = Field(min_length=1, max_length=160)
+    start_time: str = Field(pattern=r'^(?:[01]\d|2[0-3]):[0-5]\d$')
+
+
+class DayTimeConstraints(BaseModel):
+    """Explicit clock constraints; ordering locks remain a separate concern."""
+    allow_start_shift: bool = True
+    earliest_start_time: Optional[str] = Field(default=None, pattern=r'^(?:[01]\d|2[0-3]):[0-5]\d$')
+    fixed_start_time: Optional[str] = Field(default=None, pattern=r'^(?:[01]\d|2[0-3]):[0-5]\d$')
+    appointments: List[FixedActivityTime] = Field(default_factory=list, max_length=30)
+
+    @model_validator(mode='after')
+    def consistent_times(self):
+        if not self.allow_start_shift and not self.fixed_start_time:
+            raise ValueError('固定开始时间须填写时刻')
+        if self.fixed_start_time and self.earliest_start_time and self.fixed_start_time < self.earliest_start_time:
+            raise ValueError('固定开始时间早于最早出发下界')
+        keys = [(x.kind, x.ref_name) for x in self.appointments]
+        if len(keys) != len(set(keys)):
+            raise ValueError('同一活动不可设置重复固定时刻')
+        return self
+
+
 class DayPlan(BaseModel):
     """单日行程"""
     locked_attraction_names: List[str] = Field(default_factory=list)
+    removed_attraction_names: List[str] = Field(default_factory=list)
     date: str = Field(..., description="日期 YYYY-MM-DD")
     day_index: int = Field(..., description="第几天(从0开始)")
-    description: str = Field(..., description="当日行程描述")
+    description: str = Field(..., description="当日行程说明")
     description_source: Optional[str] = None
     transportation: str = Field(..., description="交通方式")
     accommodation: str = Field(..., description="住宿")
@@ -301,6 +337,7 @@ class DayPlan(BaseModel):
         default_factory=list,
         description="单日结果时间轴顺序",
     )
+    time_constraints: Optional[DayTimeConstraints] = None
     day_start_time: Optional[str] = Field(
         default=None,
         description="单日行程开始时间 HH:mm",
@@ -308,11 +345,12 @@ class DayPlan(BaseModel):
     timeline_schedule: List[Dict[str, Any]] = Field(default_factory=list, description="按路线计算的活动开始/结束时间")
     meal_warnings: List[str] = Field(default_factory=list, description="缺餐或用餐时段需要确认")
     meal_adjustments: List[str] = Field(default_factory=list, description="本次编辑的用餐保留与调整说明")
-    overnight_stay: bool = Field(default=True)
+    overnight_stay: bool = Field(default=True, description="当天是否计一晚住宿，离开日为false")
 
     trip_intent: Dict[str, Any] = Field(default_factory=dict)
     pending_confirmations: List[str] = Field(default_factory=list)
     schedule_suggestion: Dict[str, Any] = Field(default_factory=dict)
+    route_comparison: Dict[str, Any] = Field(default_factory=dict)
     travel_window: Dict[str, Any] = Field(default_factory=dict)
     rest_periods: List[RestPeriod] = Field(default_factory=list)
 
@@ -382,7 +420,7 @@ class TripPlan(BaseModel):
     budget: Optional[Budget] = Field(default=None, description="预算信息")
     companions: Optional[CompanionInfo] = Field(default=None, description="出行同伴信息")
     narrative_source: Optional[str] = None
-    trip_tagline: str = Field(default="", description="行程标语")
+    trip_tagline: str = Field(default="", description="行程标题")
     weather_summary: str = Field(default="", description="天气一句话摘要")
 
 
@@ -524,6 +562,7 @@ class DraftDayContext(BaseModel):
     companion_count: int = Field(default=1, ge=1)
 
     trip_intent: Dict[str, Any] = Field(default_factory=dict)
+    pending_confirmations: List[str] = Field(default_factory=list)
     schedule_suggestion: Dict[str, Any] = Field(default_factory=dict)
     travel_window: Dict[str, Any] = Field(default_factory=dict)
     rest_periods: List[RestPeriod] = Field(default_factory=list)
@@ -533,13 +572,14 @@ class DayDetail(BaseModel):
     """详细阶段产物（每日装配后的完整时间轴）"""
     day_index: int
     date: str
-    description: str = Field(default="", description="按当前保存安排生成的说明")
+    description: str = Field(default="", description="依据当前已保存安排生成的说明")
     description_source: Optional[str] = None
     attractions: List[Attraction] = Field(default_factory=list)
     hotel: Optional[Hotel] = Field(default=None)
     meals: List[Meal] = Field(default_factory=list)
     route_segments: List[RouteSegment] = Field(default_factory=list)
     day_start_time: Optional[str] = Field(default=None)
+    time_constraints: Optional[DayTimeConstraints] = None
     timeline_order: List[Dict[str, Any]] = Field(
         default_factory=list,
         description="[{kind:'attraction|meal|hotel', ref_name:'...'}]"
@@ -563,6 +603,7 @@ class DayDetail(BaseModel):
     trip_intent: Dict[str, Any] = Field(default_factory=dict)
     pending_confirmations: List[str] = Field(default_factory=list)
     schedule_suggestion: Dict[str, Any] = Field(default_factory=dict)
+    route_comparison: Dict[str, Any] = Field(default_factory=dict)
     travel_window: Dict[str, Any] = Field(default_factory=dict)
     rest_periods: List[RestPeriod] = Field(default_factory=list)
 
@@ -577,6 +618,7 @@ class TripDraftPayload(BaseModel):
     macro_plan: MacroPlan
     days: List[DraftDayContext]
     days_detail: List[Optional[DayDetail]]
+    unassigned_attractions: List[Dict[str, Any]] = Field(default_factory=list)
     weather_info: List[WeatherInfo] = Field(default_factory=list)
     created_at: str
     updated_at: str
@@ -584,6 +626,7 @@ class TripDraftPayload(BaseModel):
 
 class DayEditRequest(BaseModel):
     """所有用户编辑端点共享的请求模型"""
+    time_constraints: Optional[DayTimeConstraints] = None
     attractions_order: Optional[List[str]] = Field(
         default=None,
         description="按用户拖拽后的景点名顺序；不传则保留当前 day_detail.attractions 顺序"

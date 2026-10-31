@@ -61,6 +61,13 @@ def schedule_day(detail: DayDetail, *, suggest=True) -> None:
     warnings, schedule = [], []
     previous = None
     actual_slots = set()
+    appointments = {(a.kind, a.ref_name): clock_minutes(a.start_time)
+                    for a in detail.time_constraints.appointments} if detail.time_constraints else {}
+
+    def reserve_appointment(kind, name):
+        target = appointments.get((kind, name))
+        if target is not None and now < target:
+            append('wait', '等待固定活动时刻', target - now, detail='本次明确设置的活动时刻')
 
     def append(kind, name, duration, **extra):
         nonlocal now
@@ -84,6 +91,7 @@ def schedule_day(detail: DayDetail, *, suggest=True) -> None:
                    detail=route.detail if route else '路线尚未获取，暂按20分钟估算')
         if kind == 'attraction' and name in attractions:
             a = attractions[name]
+            reserve_appointment(kind, name)
             append(kind, name, a.visit_duration or 120, cost=a.ticket_price,
                    detail=a.description[:60])
         elif kind == 'meal' and name in meals:
@@ -125,6 +133,7 @@ def schedule_day(detail: DayDetail, *, suggest=True) -> None:
                 actual_slots.add(meal.type)
                 if original in {'breakfast', 'lunch', 'dinner'} and original != meal.type:
                     warnings.append(f'{meal.name}原{slot_label(original)}在{clock(now)}，已按实际时段标记为{slot_label(meal.type)}')
+            reserve_appointment(kind, name)
             append(kind, name, 60 if is_main else 30, cost=meal.estimated_cost,
                    detail=slot_label(meal.type))
         elif kind == 'hotel' and detail.hotel:

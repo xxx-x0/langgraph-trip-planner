@@ -33,6 +33,10 @@ const router = createRouter({
     if (to.path !== from.path) return { top: 0 }
   },
   routes: [
+    { path: "/quality", redirect: "/quality/runs" },
+    { path: "/quality/runs", component: () => import("@/views/quality/QualityView.vue") },
+    { path: "/quality/experiments", component: () => import("@/views/quality/QualityView.vue") },
+    { path: "/quality/runs/:runId", component: () => import("@/views/quality/QualityView.vue") },
     { path: "/multi-trip/:id?", name: "MultiTrip", component: () => import("@/views/MultiTripView.vue") },
     {
       path: '/',

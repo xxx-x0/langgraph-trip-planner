@@ -72,6 +72,8 @@ app.include_router(trip_draft.router, prefix="/api")
 @app.on_event("startup")
 async def startup_event():
     """应用启动事件"""
+    from ..services.observability import get_runtime
+    get_runtime()
     await init_db()
     log_print("✅ 数据库初始化完成")
     log_print("\n" + "="*60)
@@ -116,6 +118,8 @@ async def shutdown_event():
     print("\n" + "="*60)
     print("👋 应用正在关闭...")
     print("="*60 + "\n")
+    from ..services.observability import close_observability
+    await asyncio.to_thread(close_observability, 2)
     task = getattr(app.state, "draft_ttl_task", None)
     if task and not task.done():
         task.cancel()
@@ -129,6 +133,8 @@ async def shutdown_event():
     await asyncio.gather(*(module._reset_mcp_client() for module in
         [langchain_amap_tools, aigohotel_mcp_service, bing_mcp_service]), return_exceptions=True)
     await close_llm()
+    from ..services.ticket_search import searches
+    await searches.close()
     clear_external_state()
 
 
@@ -148,11 +154,13 @@ async def root():
 @app.get("/health")
 async def health():
     """健康检查"""
+    from ..services.observability import get_runtime
     return {
         "status": "healthy",
         "service": settings.app_name,
         "version": settings.app_version,
-        "framework": "LangGraph"
+        "framework": "LangGraph",
+        "observability": get_runtime().status(),
     }
 
 
@@ -171,3 +179,7 @@ from .routes.multicity import router as multicity_router
 app.include_router(multicity_router, prefix="/api")
 from .routes.ticket_assistant import router as ticket_assistant_router
 app.include_router(ticket_assistant_router, prefix="/api")
+
+# Read-only, explicitly enabled evaluation workbench; never opens a business session.
+from .routes.quality import router as quality_router
+app.include_router(quality_router, prefix="/api")

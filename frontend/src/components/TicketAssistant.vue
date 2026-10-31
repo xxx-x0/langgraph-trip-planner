@@ -1,13 +1,15 @@
 <template>
   <section class="ticket-assistant" aria-label="查票与文字导入">
     <h3>查票、筛选，再采用合适的一班</h3>
-    <p>确认本段日期和起终点，浏览器助手可以自动带回候选，由 AI 帮你筛选。</p>
+    <p>确认本段日期和起终点，后台查票后比较可行班次，无需安装扩展；需要登录或验证时会提示处理。</p>
     <details class="query-settings" :open="!singleSegment"><summary><span>{{query.from || '出发地'}} <b>→</b> {{query.to || '目的地'}}</span><span>{{query.date}} · {{query.passengers}} 人 · {{query.mode==='train'?'高铁 / 火车':'飞机'}}<small>修改查询条件 ＋</small></span></summary><div class="ticket-fields">
       <label v-if="!singleSegment">查询方向<select v-model="query.direction"><option value="outbound">去程</option><option value="inbound">返程</option></select></label>
       <label>查询交通方式<select v-model="query.mode"><option value="train">火车／高铁</option><option value="flight">飞机</option></select></label>
       <label>查询出发日期<input type="date" v-model="query.date" /></label>
       <label>查询出发地<input v-model="query.from" :list="listId" placeholder="城市或具体车站，不填详细住址" maxlength="80" /></label>
       <label>查询目的地<input v-model="query.to" :list="listId" placeholder="城市或具体车站" maxlength="80" /></label>
+      <label v-if="query.mode==='train'">后台铁路出发地范围<select v-model="query.fromScope"><option value="auto">自动判断</option><option value="exact">仅该车站</option><option value="city">城市内车站</option></select></label>
+      <label v-if="query.mode==='train'">后台铁路目的地范围<select v-model="query.toScope"><option value="auto">自动判断</option><option value="exact">仅该车站</option><option value="city">城市内车站</option></select></label>
       <label>查询同行人数<input type="number" min="1" max="20" v-model.number="query.passengers" /></label>
     </div>
     </details><datalist :id="listId"><option v-for="place in suggestions" :key="place" :value="place" /></datalist>
@@ -19,7 +21,7 @@
       <a :href="link.url" target="_blank" rel="noopener noreferrer">{{ link.prefilled?'带日期和起终点去查票':'打开查票网站' }} ↗</a>
       <button :disabled="!!queryError(query)" @click="copy">复制查询条件</button>
     </div>
-    <p class="muted">直接跳转不会自动带回；自动带回请使用上方浏览器助手。网站可能要求登录或重新选择条件。</p>
+    <p class="muted">直接跳转不会自动带回；自动获取候选请使用上方后台查询或扩展备用方式。网站可能要求登录或重新选择条件。</p>
     <p v-if="copyMessage" role="status">{{ copyMessage }}</p>
     <details><summary>查看／手动复制查询条件</summary><textarea aria-label="查询条件" readonly :value="queryText(query)" rows="6" @focus="($event.target as HTMLTextAreaElement).select()" /></details>
     </details>
@@ -77,9 +79,9 @@ import {parseTicket,previewError,ticketLeg,type TicketPreview} from '@/utils/tic
 import BrowserTicketAssistant from './BrowserTicketAssistant.vue'
 import type {TicketScheduleContext} from '@/utils/ticketSchedule'
 const props=defineProps<{request:TripFormData;disabled?:boolean;singleSegment?:boolean;comparisonFull?:boolean;scheduleContext?:TicketScheduleContext}>()
-const emit=defineEmits<{(e:'adjust',value:{leg:JourneyLeg;ticketBasis?:string}):void;(e:'add',value:{name:string;journey:Journey;start_date:string;end_date:string}):void;(e:'adopt',value:{leg:JourneyLeg;direction:'outbound'|'inbound';ticketBasis?:string}):void}>()
+const emit=defineEmits<{(e:'adjust',value:{leg:JourneyLeg;ticketBasis?:string;direction?:'outbound'|'inbound'}):void;(e:'add',value:{name:string;journey:Journey;start_date:string;end_date:string}):void;(e:'adopt',value:{leg:JourneyLeg;direction:'outbound'|'inbound';ticketBasis?:string}):void}>()
 const directions=computed(()=>props.singleSegment?[{key:'outbound' as const,label:'本段'}]:[{key:'outbound' as const,label:'去程'},{key:'inbound' as const,label:'返程'}])
-const query=reactive<TicketQuery>({mode:props.request.journey?.outbound?.mode==='flight'?'flight':'train',direction:'outbound',from:props.request.journey?.origin_city||'',to:props.request.city||'',date:props.request.start_date||'',passengers:props.request.companions?.count||1})
+const query=reactive<TicketQuery>({mode:props.request.journey?.outbound?.mode==='flight'?'flight':'train',direction:'outbound',from:props.request.journey?.origin_city||'',to:props.request.city||'',date:props.request.start_date||'',passengers:props.request.companions?.count||1,fromScope:'auto',toScope:'auto'})
 const originCity=ref(props.request.journey?.origin_city||''),returnCity=ref(props.request.journey?.return_city||'')
 const candidateName=ref('导入的交通备选'),pending=reactive<{outbound:JourneyLeg|null;inbound:JourneyLeg|null}>({outbound:null,inbound:null})
 const raw=ref(''),preview=ref<TicketPreview|null>(null),source=ref('12306'),confirmed=ref(false),importOpen=ref(false),importDirection=ref<'outbound'|'inbound'>('outbound')

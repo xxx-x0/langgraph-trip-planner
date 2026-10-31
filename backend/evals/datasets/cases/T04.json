@@ -1,0 +1,132 @@
+{
+  "schema_version": "trip-eval-v1",
+  "case_id": "T04",
+  "case_version": "1.0.1-draft",
+  "title": "均衡并列首选",
+  "target": "ticket_recommendation",
+  "split": "holdout",
+  "family": "synthetic-ticket-template-v1",
+  "execution_mode": "live_model_with_replay",
+  "tool_mode": "replay",
+  "data_origin": "synthetic",
+  "sources": [
+    {
+      "source_id": "T04-authored",
+      "origin": "synthetic",
+      "component": "entire_fixture",
+      "author": "codex",
+      "constructed_at": "2026-10-24",
+      "note": "Agent-authored artificial data; not human supplied or human annotated"
+    }
+  ],
+  "clock": "2027-04-01T12:00:00+08:00",
+  "random_seed": 20261024,
+  "input_path": "inputs/T04.json",
+  "reference_path": "references/T04.json",
+  "route_path": null,
+  "input_sha256": "8ffa26c9a2a88d5424dd1bff6defd45d5eb0a61ca9b4a1ed807f7c4af3f9dac6",
+  "reference_sha256": "c7502f9b6e981c096e82e267d816a90174f92f4399c336800b771b325dba3660",
+  "route_sha256": null,
+  "expected_assertions": [
+    {
+      "rule_id": "T-VALID",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-VALID",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-ELIG",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-FACT",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-MARGIN",
+      "layer": "system",
+      "applicable": false,
+      "reason": "no constrained arrival/departure interval",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-RANK",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-RANK",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-DISCLOSE",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-OUTCOME",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "S-PERSIST",
+      "layer": "system",
+      "applicable": true,
+      "reason": "operation evidence required",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "S-TRACE",
+      "layer": "observability",
+      "applicable": true,
+      "reason": "operation evidence required",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "J-TRADEOFF",
+      "layer": "judge",
+      "applicable": true,
+      "reason": "optional semantic score; human calibration pending",
+      "evaluator_version": "rules-v1.1"
+    }
+  ],
+  "annotation": {
+    "status": "pending_human",
+    "author_kind": "agent_draft",
+    "reviewer": null,
+    "reviewed_at": null,
+    "confirmed_reference_sha256": null,
+    "pending_items": [
+      "scenario_and_reference_review"
+    ],
+    "rationale": "Agent-authored or independently calculated draft; no human confirmation has been received"
+  },
+  "limitations": [
+    "Not executed against a live model in P2",
+    "Scenario holdout only; shared synthetic templates and source-family leakage require review before any unseen-quality claim",
+    "Artificial values are not supplier observations"
+  ]
+}

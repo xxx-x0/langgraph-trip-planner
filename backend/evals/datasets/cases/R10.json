@@ -1,0 +1,336 @@
+{
+  "schema_version": "trip-eval-v1",
+  "case_id": "R10",
+  "case_version": "1.0.1-draft",
+  "title": "旧日程与补采路线改善",
+  "target": "day_rearrangement",
+  "split": "holdout",
+  "family": "meal-recovery-suzhou-20261014",
+  "execution_mode": "live_model_with_replay",
+  "tool_mode": "replay",
+  "data_origin": "mixed_historical_day_and_new_route_capture",
+  "sources": [
+    {
+      "source_id": "R10-historical",
+      "origin": "historical_capture",
+      "component": "itinerary_and_public_POI_facts",
+      "original_date": "2026-10-14",
+      "revalidated": false,
+      "upstream_manifest_sha256": "e6df4117c7ff9121e23506bc64949dda94890929d58365972de1902af244b951",
+      "sha256": "b3bc2d7a7bebce4ef9a313fb89cad584ce64c139d7b458cbc4d345c5933efa17",
+      "bytes": 42123,
+      "archive_relative_path": "raw/R10-historical-snapshot.json",
+      "date_kind": "archive_date_not_per_field_query_time"
+    },
+    {
+      "source_id": "R10-supplement",
+      "origin": "new_capture",
+      "component": "route_matrix",
+      "collected_at": "2026-10-24T11:30:12.382785+00:00",
+      "provider": "amap",
+      "note": "Collected in P0, not collected again in P2",
+      "upstream_manifest_sha256": "e6df4117c7ff9121e23506bc64949dda94890929d58365972de1902af244b951",
+      "raw_files": [
+        {
+          "archive_relative_path": "raw/R10-route-0828909642be49ed.json",
+          "sha256": "6e06f47ad1295c715871a8f4a1fda248dd6e0d5db388a94e9fdd2e5f41ded7aa",
+          "bytes": 2787
+        },
+        {
+          "archive_relative_path": "raw/R10-route-23c88d14792b6a6c.json",
+          "sha256": "acf489da52fa9cf61359757c3193ac3378b117c08699796d4c73d8fdf7975448",
+          "bytes": 1488
+        },
+        {
+          "archive_relative_path": "raw/R10-route-2530dfaeaa206612.json",
+          "sha256": "8979731f0299ae9c2aa3d5835b54ebc9d0a08051d5e7501a0db306ed301e3eda",
+          "bytes": 2084
+        },
+        {
+          "archive_relative_path": "raw/R10-route-27f6b397db6f7105.json",
+          "sha256": "3b001ad0aba89a22763c75bebae3e185ac6f8235bb60c8298fa15e2d524ccbd4",
+          "bytes": 3091
+        },
+        {
+          "archive_relative_path": "raw/R10-route-2c0e65864606301e.json",
+          "sha256": "3b5153ef79de7f87ed36bc716d9387d2b67fdbaee509c3ceb7cc3f0b6a11df26",
+          "bytes": 1467
+        },
+        {
+          "archive_relative_path": "raw/R10-route-2c888c47c3f28f5d.json",
+          "sha256": "83b4faa52e28298d294e42962123a02802dd47ff03e6188180fca8b3933de0de",
+          "bytes": 1904
+        },
+        {
+          "archive_relative_path": "raw/R10-route-2efda47a172ce510.json",
+          "sha256": "ed5fdca929a107417e7b7b54c9308dd3ccdb80288ede98b529f461403954d6ef",
+          "bytes": 5410
+        },
+        {
+          "archive_relative_path": "raw/R10-route-2f4d3bd7052f45c4-retry1.json",
+          "sha256": "eff9578d3ed95cb1430b17d994bc7f37f1e96a38f2edf4d081842776e24301b0",
+          "bytes": 1774
+        },
+        {
+          "archive_relative_path": "raw/R10-route-2f4d3bd7052f45c4.json",
+          "sha256": "58c22aade8b55ec5bffe36c94579fb761ed94d2e1761a6844f4e8cbb260e98cb",
+          "bytes": 820
+        },
+        {
+          "archive_relative_path": "raw/R10-route-47d72403dc39fd81.json",
+          "sha256": "f387f223290ed1d1ec406593c934fa1f7eecb6fdbd2de585a452a472ff168d5c",
+          "bytes": 1995
+        },
+        {
+          "archive_relative_path": "raw/R10-route-4a1f88f608c80e16.json",
+          "sha256": "139f989e10f58e38d97d0221f96b68ff3566e6124da25ae96bd3203eb5c95659",
+          "bytes": 4925
+        },
+        {
+          "archive_relative_path": "raw/R10-route-4ce3f95fd540606c.json",
+          "sha256": "7ca60623e11869e7c521e5ae1de2b54af1cb5a095cd3869a682571734b668e35",
+          "bytes": 9943
+        },
+        {
+          "archive_relative_path": "raw/R10-route-6177aa9202b4e0ef.json",
+          "sha256": "184b122eba0c391b833048afaba7251eeb0937eff754d0ffcacce203b5ac9e5b",
+          "bytes": 1485
+        },
+        {
+          "archive_relative_path": "raw/R10-route-7a8ca341ec454673.json",
+          "sha256": "6b233951f7c1fb128bd1dfe20a46c3d08ff3f82f6ef674e9261d16e68d7a69fe",
+          "bytes": 1507
+        },
+        {
+          "archive_relative_path": "raw/R10-route-8174beac483e8c8a.json",
+          "sha256": "c0ecbb59f083ef244177fc6c8718e27b70cd61a2a5bf1e52b3103278b80e7e08",
+          "bytes": 22395
+        },
+        {
+          "archive_relative_path": "raw/R10-route-865d9b0dd6e7b85a.json",
+          "sha256": "f9771ae2b45a9ac667283c697553c62ff97776484d268d5b33e8286fa134da1a",
+          "bytes": 1714
+        },
+        {
+          "archive_relative_path": "raw/R10-route-8fc63723cb5df973.json",
+          "sha256": "39947c0533c9728126bdcd77bf8f853f6d8354ffaf949333583bcd128f036321",
+          "bytes": 1658
+        },
+        {
+          "archive_relative_path": "raw/R10-route-af3c51b8ff56a323.json",
+          "sha256": "927fbe9bb80e122b7a4c43d68e9c3913e4daaefdfe21cc3b15023761b6f404aa",
+          "bytes": 5200
+        },
+        {
+          "archive_relative_path": "raw/R10-route-c052d1ed4218d187.json",
+          "sha256": "3e5876e5ec35f57cfdb9705fc0e09d80de3a1af391d7261e207787c11e815edf",
+          "bytes": 2021
+        },
+        {
+          "archive_relative_path": "raw/R10-route-c46aa7396be18eee.json",
+          "sha256": "a69540aeb3c9f3ef431234048c1257cfde864cfe191e23376cd82a7a58c8f349",
+          "bytes": 18095
+        },
+        {
+          "archive_relative_path": "raw/R10-route-c5fa1117fa803002.json",
+          "sha256": "fea92c9db2a64eb63d2494166b6a862dc958929371fb54b64a4a7c14e26b6b1e",
+          "bytes": 17322
+        },
+        {
+          "archive_relative_path": "raw/R10-route-ca8a880d5036bfb7.json",
+          "sha256": "3ac0aec193269f2fe2435368b10ada4b8eacbfc61765b9a8d32be426795ee48d",
+          "bytes": 8699
+        },
+        {
+          "archive_relative_path": "raw/R10-route-ce769fe83e3d3c6a.json",
+          "sha256": "489136cc8de511e124c9eed7911ad46e53a2c2a7e537aff79ac18659773f43c7",
+          "bytes": 1486
+        },
+        {
+          "archive_relative_path": "raw/R10-route-ec5c2d84c36b385b.json",
+          "sha256": "d4c9a0765d8b1ddbe94711cf3704bff1e5245b629ea2557ca7e0456c33dbd36f",
+          "bytes": 1762
+        }
+      ],
+      "collection_end": "2026-10-24T11:31:05.434589+00:00",
+      "new_missing_edges": 15,
+      "refreshed_control_edges": 8,
+      "synthetic_routes": 0,
+      "original_travel_date": "2026-10-15"
+    },
+    {
+      "source_id": "R10-p0-input",
+      "origin": "projection_lineage",
+      "component": "input",
+      "sha256": "2172a7260f50676b5860a676efd80964452a6be952d70ff9c1f20526a3689ddc",
+      "archive_relative_path": "fixtures/R10-input.json"
+    },
+    {
+      "source_id": "R10-p0-reference",
+      "origin": "projection_lineage",
+      "component": "reference",
+      "sha256": "7f770c4f52121abfe8e322aa333cc07c506c985c40833306a4bfd24a55cb4911",
+      "archive_relative_path": "fixtures/R10-reference.json"
+    }
+  ],
+  "clock": "2026-10-24T19:40:00+08:00",
+  "random_seed": 20261024,
+  "input_path": "inputs/R10.json",
+  "reference_path": "references/R10.json",
+  "route_path": "routes/R10.json",
+  "input_sha256": "fadb6460068013b24562b41ac5c2318124fa4016e50b648d0c3dea8335940d97",
+  "reference_sha256": "55b03b8523f74e534cf58b773f10cc979b326730206150e832a91861e0a52002",
+  "route_sha256": "beacb46d18a7c5082332509f639fd07dd5ea3c726a215d6b895387ef8af4ddea",
+  "expected_assertions": [
+    {
+      "rule_id": "R-LOCK",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-LOCK",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-REMOVED",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-REMOVED",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-MANUAL",
+      "layer": "system",
+      "applicable": false,
+      "reason": "no manual meal",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-MEAL",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-MEAL",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-FACT",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-DURATION",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-REST",
+      "layer": "system",
+      "applicable": false,
+      "reason": "no fixed rest period",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-WINDOW",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-INTENT",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-INTENT",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-ROUTE",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-DISCLOSE",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "S-PERSIST",
+      "layer": "system",
+      "applicable": true,
+      "reason": "operation evidence required",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "S-TRACE",
+      "layer": "observability",
+      "applicable": true,
+      "reason": "operation evidence required",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "J-INTENT",
+      "layer": "judge",
+      "applicable": true,
+      "reason": "optional semantic score; human calibration pending",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "J-TRADEOFF",
+      "layer": "judge",
+      "applicable": true,
+      "reason": "optional semantic score; human calibration pending",
+      "evaluator_version": "rules-v1.1"
+    }
+  ],
+  "annotation": {
+    "status": "pending_human",
+    "author_kind": "agent_draft",
+    "reviewer": null,
+    "reviewed_at": null,
+    "confirmed_reference_sha256": null,
+    "pending_items": [
+      "scenario_and_reference_review",
+      "opening_windows_and_route_quality"
+    ],
+    "rationale": "Agent-authored or independently calculated draft; no human confirmation has been received"
+  },
+  "limitations": [
+    "Not executed against a live model in P2",
+    "Scenario holdout only; shared synthetic templates and source-family leakage require review before any unseen-quality claim",
+    "Historic itinerary facts are not revalidated; supplement date differs from historical travel date"
+  ]
+}

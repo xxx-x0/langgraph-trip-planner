@@ -77,3 +77,11 @@ backend/app/services/amap_service.py
 
 # Local design prompts; keep files locally without publishing.
 /designpropmts/
+
+# Historical local-only scripts; see backend/tests/manual/README.md.
+/backend/tests/manual/journey_replay.py
+/backend/tests/manual/phase1_baseline.py
+/backend/tests/manual/phase1_sources.py
+/backend/tests/manual/phase1_verify.py
+/backend/tests/manual/recommendation_journey.py
+/backend/tests/manual/ticket_browser_demo.py

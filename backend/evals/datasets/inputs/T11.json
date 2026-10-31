@@ -1,0 +1,244 @@
+{
+  "query": {
+    "mode": "train",
+    "direction": "outbound",
+    "from_place": "苏州",
+    "to_place": "杭州",
+    "date": "2027-04-14",
+    "passengers": 2,
+    "priority": "balanced"
+  },
+  "candidates": [
+    {
+      "id": "SYN_T11_A",
+      "mode": "train",
+      "service": "SYN_T11_A",
+      "from_station": "苏州站",
+      "to_station": "杭州东",
+      "departure": "2027-04-14T18:00",
+      "arrival": "2027-04-14T20:00",
+      "seat": "二等座",
+      "fare_per_person": 120,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "SYN_T11_B",
+      "mode": "train",
+      "service": "SYN_T11_B",
+      "from_station": "苏州站",
+      "to_station": "杭州东",
+      "departure": "2027-04-14T18:15",
+      "arrival": "2027-04-14T19:00",
+      "seat": "二等座",
+      "fare_per_person": 120,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "SYN_T11_C",
+      "mode": "train",
+      "service": "SYN_T11_C",
+      "from_station": "苏州站",
+      "to_station": "杭州东",
+      "departure": "2027-04-14T17:30",
+      "arrival": "2027-04-14T18:15",
+      "seat": "二等座",
+      "fare_per_person": 120,
+      "availability": "available",
+      "source": "12306"
+    }
+  ],
+  "context": {
+    "kind": "multi",
+    "draft_id": "mc_eval_T11",
+    "revision": 1,
+    "from_stop": "a",
+    "to_stop": "b"
+  },
+  "saved_state": {
+    "kind": "multi_city_v1",
+    "id": "mc_eval_T11",
+    "revision": 1,
+    "status": "draft",
+    "plan": {
+      "title": "人工换城边界样本",
+      "start_date": "2027-04-12",
+      "end_date": "2027-04-16",
+      "origin": {
+        "id": "o",
+        "name": "南京"
+      },
+      "destination": {
+        "id": "d",
+        "name": "南京"
+      },
+      "companions": {
+        "count": 2,
+        "type": "friends"
+      },
+      "stops": [
+        {
+          "id": "a",
+          "city": {
+            "id": "sz",
+            "name": "苏州"
+          },
+          "start_date": "2027-04-12",
+          "end_date": "2027-04-14"
+        },
+        {
+          "id": "b",
+          "city": {
+            "id": "hz",
+            "name": "杭州"
+          },
+          "start_date": "2027-04-14",
+          "end_date": "2027-04-16"
+        }
+      ],
+      "transfers": [
+        {
+          "from_stop": "a",
+          "to_stop": "b",
+          "leg": {
+            "mode": "train",
+            "departure_station": "苏州站",
+            "arrival_station": "杭州东",
+            "departure_time": "2027-04-14T18:15",
+            "arrival_time": "2027-04-14T19:00",
+            "passengers": 2,
+            "ticket_total": null,
+            "price_source": "unknown",
+            "transfer_before_minutes": 30,
+            "station_buffer_minutes": 30,
+            "transfer_after_minutes": 60,
+            "baggage_minutes": 0,
+            "lodging_buffer_minutes": 0
+          }
+        }
+      ]
+    },
+    "snapshots": {
+      "a": {
+        "request": {
+          "city": "苏州",
+          "start_date": "2027-04-12",
+          "end_date": "2027-04-14",
+          "travel_days": 3,
+          "transportation": "公共交通",
+          "accommodation": "经济型酒店",
+          "companions": {
+            "count": 2,
+            "type": "friends"
+          }
+        },
+        "days_detail": [
+          null,
+          null,
+          {
+            "day_index": 2,
+            "date": "2027-04-14",
+            "day_start_time": "16:00",
+            "attractions": [
+              {
+                "name": "SYN_T11_a",
+                "address": "人工测试地点",
+                "description": "",
+                "visit_duration": 60,
+                "ticket_price": null,
+                "open_hours": "00:00-23:59"
+              }
+            ],
+            "meals": [],
+            "hotel": null,
+            "timeline_order": [
+              {
+                "kind": "attraction",
+                "ref_name": "SYN_T11_a"
+              }
+            ],
+            "timeline_schedule": [
+              {
+                "kind": "attraction",
+                "ref_name": "SYN_T11_a",
+                "start_minutes": 960,
+                "end_minutes": 1020,
+                "duration": 60,
+                "start_time": "16:00",
+                "end_time": "17:00"
+              }
+            ],
+            "route_segments": [],
+            "locked_attraction_names": [
+              "SYN_T11_a"
+            ],
+            "removed_attraction_names": [],
+            "rest_periods": []
+          }
+        ],
+        "draft_id": "eval_T11_a"
+      },
+      "b": {
+        "request": {
+          "city": "杭州",
+          "start_date": "2027-04-14",
+          "end_date": "2027-04-16",
+          "travel_days": 3,
+          "transportation": "公共交通",
+          "accommodation": "经济型酒店",
+          "companions": {
+            "count": 2,
+            "type": "friends"
+          }
+        },
+        "days_detail": [
+          {
+            "day_index": 0,
+            "date": "2027-04-14",
+            "day_start_time": "20:00",
+            "attractions": [
+              {
+                "name": "SYN_T11_b",
+                "address": "人工测试地点",
+                "description": "",
+                "visit_duration": 60,
+                "ticket_price": null,
+                "open_hours": "00:00-23:59"
+              }
+            ],
+            "meals": [],
+            "hotel": null,
+            "timeline_order": [
+              {
+                "kind": "attraction",
+                "ref_name": "SYN_T11_b"
+              }
+            ],
+            "timeline_schedule": [
+              {
+                "kind": "attraction",
+                "ref_name": "SYN_T11_b",
+                "start_minutes": 1200,
+                "end_minutes": 1260,
+                "duration": 60,
+                "start_time": "20:00",
+                "end_time": "21:00"
+              }
+            ],
+            "route_segments": [],
+            "locked_attraction_names": [
+              "SYN_T11_b"
+            ],
+            "removed_attraction_names": [],
+            "rest_periods": []
+          },
+          null,
+          null
+        ],
+        "draft_id": "eval_T11_b"
+      }
+    }
+  },
+  "fault": null
+}

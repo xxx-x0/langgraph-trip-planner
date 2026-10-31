@@ -288,6 +288,7 @@
         </div>
       </div>
 
+      <p v-if="unassignedSelectionNames.length">{{unassignedSelectionNames.length}} 个所选景点暂未分配：{{unassignedSelectionNames.join('、')}}。生成草稿后会保留在待安排列表，不会自动删除。</p>
       <div class="assign-actions">
         <a-button @click="phase = 'discover'">← 返回选择</a-button>
         <a-button type="primary" size="large" @click="confirmAndPlan">
@@ -314,7 +315,7 @@ import { useTripLoader } from '@/composables/useTripLoader'
 import { useDiscoverySearch } from '@/composables/useDiscoverySearch'
 import { labelForNode, progressForNode } from '@/components/loader/constructionSteps'
 import { sortAttractionsByRating } from '@/utils/discoverySort'
-import { mergeDayAssignmentsWithSelected, hasUnsupportedEmptyDay } from '@/utils/dayAssignmentMerge'
+import { mergeDayAssignmentsWithSelected, hasUnsupportedEmptyDay, reserveAssignmentWindows } from '@/utils/dayAssignmentMerge'
 import {
   applyAiSelectionRecommendations,
   isCurrentAiSelectionRequest,
@@ -345,6 +346,7 @@ const activeCategory = ref('全部')
 const highlightedAttraction = ref('')
 const phase = ref<'discover' | 'assign' | 'planning'>('discover')
 const dayAssignments = ref<DiscoveredAttraction[][]>([])
+const unassignedSelectionNames=computed(()=>{const assigned=new Set(dayAssignments.value.flatMap(day=>day.map(a=>a.name)));return attractions.filter(a=>a.selected&&!assigned.has(a.name)).map(a=>a.name)})
 const dayDurations = ref<DayDurationInfo[]>([])
 const smartAssignmentCache = ref<DiscoveredAttraction[][] | null>(null)
 const assignLoading = ref(false)
@@ -637,7 +639,9 @@ async function startDayAssignment() {
     dayAssignments.value = mergeDayAssignmentsWithSelected(resp.day_assignments, selected)
     while(dayAssignments.value.length<days) dayAssignments.value.push([])
     const openDays=travelDays.value.map((d:any,i:number)=>d.window.unavailable?-1:i).filter((i:number)=>i>=0)
-    if(openDays.length && travelDays.value.length===days){
+    if(formData.value?.journey?.planning && travelDays.value.length===days){
+      dayAssignments.value=reserveAssignmentWindows(dayAssignments.value,travelDays.value.map((d:any)=>d.window))
+    }else if(openDays.length && travelDays.value.length===days){
       for(let i=0;i<days;i++){
         if(!travelDays.value[i].window.unavailable)continue
         const moved=dayAssignments.value[i].splice(0)
@@ -655,6 +659,7 @@ async function startDayAssignment() {
       assignments.push(selected.slice(d * perDay, (d + 1) * perDay))
     }
     dayAssignments.value = assignments
+    if(formData.value?.journey?.planning && travelDays.value.length===days)dayAssignments.value=reserveAssignmentWindows(assignments,travelDays.value.map((d:any)=>d.window))
     dayDurations.value = assignments.map((day, idx) => ({
       day_index: idx,
       total_minutes: day.reduce((sum, a) => sum + (a.visit_minutes || 90), 0),
@@ -711,7 +716,7 @@ function handleDrop(_event: DragEvent, toDay: number) {
 }
 
 function moveAttraction(fromDay: number, fromIdx: number, toDay: number) {
-  if (fromDay === toDay || !dayAssignments.value[toDay] || !dayAssignments.value[fromDay]?.[fromIdx]) return
+  if (fromDay === toDay || travelDays.value[toDay]?.window.unavailable || !dayAssignments.value[toDay] || !dayAssignments.value[fromDay]?.[fromIdx]) return
   const [item] = dayAssignments.value[fromDay].splice(fromIdx, 1)
   dayAssignments.value[toDay].push(item)
   recalculateDayDurations()
@@ -720,7 +725,7 @@ function moveAttraction(fromDay: number, fromIdx: number, toDay: number) {
 async function confirmAndPlan() {
   if (!formData.value) return
 
-  const hasEmpty = hasUnsupportedEmptyDay(dayAssignments.value, !!multiRoute.query?.multi, travelDays.value.map((d:any)=>!!d.window.unavailable))
+  const hasEmpty = hasUnsupportedEmptyDay(dayAssignments.value, !!multiRoute.query?.multi || !!formData.value.journey?.planning, travelDays.value.map((d:any)=>!!d.window.unavailable))
   if (hasEmpty) {
     message.warning('每天至少需要安排一个景点')
     return

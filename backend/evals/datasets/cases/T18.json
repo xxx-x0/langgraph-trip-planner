@@ -1,0 +1,164 @@
+{
+  "schema_version": "trip-eval-v1",
+  "case_id": "T18",
+  "case_version": "1.0.1-draft",
+  "title": "旧日程与补采铁路候选",
+  "target": "ticket_recommendation",
+  "split": "holdout",
+  "family": "ltp27-suhang-20261020",
+  "execution_mode": "live_model_with_replay",
+  "tool_mode": "replay",
+  "data_origin": "mixed_historical_itinerary_and_new_capture",
+  "sources": [
+    {
+      "source_id": "T18-historical",
+      "origin": "historical_capture",
+      "component": "itinerary_and_public_POI_facts",
+      "original_date": "2026-10-20",
+      "revalidated": false,
+      "upstream_manifest_sha256": "e6df4117c7ff9121e23506bc64949dda94890929d58365972de1902af244b951",
+      "sha256": "0188226d263fb9d34c9ea0bbb9e8811a7ea7e1feb2bf77c4922eafcea1e37953",
+      "bytes": 613327,
+      "archive_relative_path": "raw/T18-historical-snapshot.json",
+      "date_kind": "archive_date_not_per_field_query_time"
+    },
+    {
+      "source_id": "T18-supplement",
+      "origin": "new_capture",
+      "component": "ticket_candidates",
+      "collected_at": "2026-10-24T11:28:27.916Z",
+      "provider": "12306",
+      "note": "Collected in P0, not collected again in P2",
+      "upstream_manifest_sha256": "e6df4117c7ff9121e23506bc64949dda94890929d58365972de1902af244b951",
+      "raw_files": [
+        {
+          "archive_relative_path": "raw/T18-rail-dom.json",
+          "sha256": "37d8b5cd4394be48c8a550cab4ce4d7e6c4e3d16044adf06ff1403686d73e15a",
+          "bytes": 130393
+        }
+      ],
+      "dom_rows": 156,
+      "supported_available_rows": 128,
+      "frozen_candidates": 80,
+      "synthetic_candidates": 0
+    },
+    {
+      "source_id": "T18-p0-input",
+      "origin": "projection_lineage",
+      "component": "input",
+      "sha256": "1ac7e7d2560b5c1881169565c9662bcead439ee168606c26fc2e9b7e41939b4b",
+      "archive_relative_path": "fixtures/T18-input.json"
+    },
+    {
+      "source_id": "T18-p0-reference",
+      "origin": "projection_lineage",
+      "component": "reference",
+      "sha256": "aed78735aff1978d5f59b2fed9b9f32c8540dcd4182580e1f675e4b4721803d0",
+      "archive_relative_path": "fixtures/T18-reference.json"
+    }
+  ],
+  "clock": "2026-10-24T19:40:00+08:00",
+  "random_seed": 20261024,
+  "input_path": "inputs/T18.json",
+  "reference_path": "references/T18.json",
+  "route_path": null,
+  "input_sha256": "28fe3bb3ade86701442593d2059de4cc0bfed16d9f9b6e5cc4b54f1fa4478ae2",
+  "reference_sha256": "48ee8135e6c2f7a3150a92bb1983848cdd887251c69b45063297042c887e3291",
+  "route_sha256": null,
+  "expected_assertions": [
+    {
+      "rule_id": "T-VALID",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-VALID",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-ELIG",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-FACT",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-MARGIN",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-RANK",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-RANK",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-DISCLOSE",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "T-OUTCOME",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "S-PERSIST",
+      "layer": "system",
+      "applicable": true,
+      "reason": "operation evidence required",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "S-TRACE",
+      "layer": "observability",
+      "applicable": true,
+      "reason": "operation evidence required",
+      "evaluator_version": "rules-v1.1"
+    }
+  ],
+  "annotation": {
+    "status": "pending_human",
+    "author_kind": "agent_draft",
+    "reviewer": null,
+    "reviewed_at": null,
+    "confirmed_reference_sha256": null,
+    "pending_items": [
+      "scenario_and_reference_review",
+      "acceptable_first_set"
+    ],
+    "rationale": "Agent-authored or independently calculated draft; no human confirmation has been received"
+  },
+  "limitations": [
+    "Not executed against a live model in P2",
+    "Scenario holdout only; shared synthetic templates and source-family leakage require review before any unseen-quality claim",
+    "Historic itinerary facts are not revalidated; supplement date differs from historical travel date"
+  ]
+}

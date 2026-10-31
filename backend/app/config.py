@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     llm_structured_output_mode: Literal["json_prompt", "function_calling", "auto"] = "json_prompt"
     external_llm_timeout: float = 60.0
 
+    # Local single-user ticket browser; independent of the user's daily profile.
+    ticket_browser_profile_dir: str = str(Path.home() / '.local/share/langgraph-trip-planner/ticket-browser')
+    ticket_browser_channel: Literal['chromium', 'chrome', 'msedge'] = 'chromium'
+
     # 日志配置
     log_level: str = "INFO"
 

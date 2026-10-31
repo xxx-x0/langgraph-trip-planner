@@ -1,0 +1,198 @@
+{
+  "query": {
+    "mode": "flight",
+    "direction": "outbound",
+    "from_place": "南京",
+    "to_place": "上海",
+    "date": "2027-04-12",
+    "passengers": 2,
+    "priority": "balanced"
+  },
+  "candidates": [
+    {
+      "id": "SYN_T10_A",
+      "mode": "flight",
+      "service": "SYN_T10_A",
+      "from_station": "南京禄口",
+      "to_station": "上海虹桥",
+      "departure": "2027-04-12T07:00",
+      "arrival": "2027-04-12T08:50",
+      "seat": "经济舱",
+      "fare_per_person": 120,
+      "availability": "available",
+      "source": "ctrip"
+    },
+    {
+      "id": "SYN_T10_B",
+      "mode": "flight",
+      "service": "SYN_T10_B",
+      "from_station": "南京禄口",
+      "to_station": "上海虹桥",
+      "departure": "2027-04-12T07:00",
+      "arrival": "2027-04-12T09:10",
+      "seat": "经济舱",
+      "fare_per_person": 120,
+      "availability": "available",
+      "source": "ctrip"
+    }
+  ],
+  "context": {
+    "kind": "draft",
+    "draft_id": "eval_T10",
+    "request": {
+      "city": "上海",
+      "start_date": "2027-04-12",
+      "end_date": "2027-04-15",
+      "travel_days": 4,
+      "transportation": "公共交通",
+      "accommodation": "经济型酒店",
+      "companions": {
+        "count": 2,
+        "type": "friends"
+      },
+      "journey": {
+        "origin_city": "南京",
+        "return_city": "南京",
+        "outbound": {
+          "mode": "flight",
+          "departure_station": "南京禄口",
+          "arrival_station": "上海虹桥",
+          "departure_time": "2027-04-12T07:00",
+          "arrival_time": "2027-04-12T08:50",
+          "passengers": 2,
+          "ticket_total": null,
+          "price_source": "unknown",
+          "transfer_before_minutes": 0,
+          "station_buffer_minutes": 0,
+          "transfer_after_minutes": 60,
+          "baggage_minutes": 40,
+          "lodging_buffer_minutes": 20
+        }
+      }
+    },
+    "days_detail": [
+      {
+        "day_index": 0,
+        "date": "2027-04-12",
+        "day_start_time": "11:00",
+        "attractions": [
+          {
+            "name": "SYN_T10_活动",
+            "address": "人工测试地点",
+            "description": "",
+            "visit_duration": 60,
+            "ticket_price": null,
+            "open_hours": "00:00-23:59"
+          }
+        ],
+        "meals": [],
+        "hotel": null,
+        "timeline_order": [
+          {
+            "kind": "attraction",
+            "ref_name": "SYN_T10_活动"
+          }
+        ],
+        "timeline_schedule": [
+          {
+            "kind": "attraction",
+            "ref_name": "SYN_T10_活动",
+            "start_minutes": 660,
+            "end_minutes": 720,
+            "duration": 60,
+            "start_time": "11:00",
+            "end_time": "12:00"
+          }
+        ],
+        "route_segments": [],
+        "locked_attraction_names": [
+          "SYN_T10_活动"
+        ],
+        "removed_attraction_names": [],
+        "rest_periods": []
+      },
+      null,
+      null,
+      null
+    ]
+  },
+  "saved_state": {
+    "request": {
+      "city": "上海",
+      "start_date": "2027-04-12",
+      "end_date": "2027-04-15",
+      "travel_days": 4,
+      "transportation": "公共交通",
+      "accommodation": "经济型酒店",
+      "companions": {
+        "count": 2,
+        "type": "friends"
+      },
+      "journey": {
+        "origin_city": "南京",
+        "return_city": "南京",
+        "outbound": {
+          "mode": "flight",
+          "departure_station": "南京禄口",
+          "arrival_station": "上海虹桥",
+          "departure_time": "2027-04-12T07:00",
+          "arrival_time": "2027-04-12T08:50",
+          "passengers": 2,
+          "ticket_total": null,
+          "price_source": "unknown",
+          "transfer_before_minutes": 0,
+          "station_buffer_minutes": 0,
+          "transfer_after_minutes": 60,
+          "baggage_minutes": 40,
+          "lodging_buffer_minutes": 20
+        }
+      }
+    },
+    "days_detail": [
+      {
+        "day_index": 0,
+        "date": "2027-04-12",
+        "day_start_time": "11:00",
+        "attractions": [
+          {
+            "name": "SYN_T10_活动",
+            "address": "人工测试地点",
+            "description": "",
+            "visit_duration": 60,
+            "ticket_price": null,
+            "open_hours": "00:00-23:59"
+          }
+        ],
+        "meals": [],
+        "hotel": null,
+        "timeline_order": [
+          {
+            "kind": "attraction",
+            "ref_name": "SYN_T10_活动"
+          }
+        ],
+        "timeline_schedule": [
+          {
+            "kind": "attraction",
+            "ref_name": "SYN_T10_活动",
+            "start_minutes": 660,
+            "end_minutes": 720,
+            "duration": 60,
+            "start_time": "11:00",
+            "end_time": "12:00"
+          }
+        ],
+        "route_segments": [],
+        "locked_attraction_names": [
+          "SYN_T10_活动"
+        ],
+        "removed_attraction_names": [],
+        "rest_periods": []
+      },
+      null,
+      null,
+      null
+    ]
+  },
+  "fault": null
+}

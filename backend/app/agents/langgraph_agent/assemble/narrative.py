@@ -6,6 +6,8 @@ from typing import Optional
 from ....models.schemas import DayDetail, DayPlan, WeatherInfo, TripPlan
 
 DESCRIPTION_SOURCE = "itinerary_facts_v1"
+_MEAL_LABELS = {"breakfast": "早餐", "lunch": "午餐", "dinner": "晚餐",
+                "main": "用餐", "snack": "小吃", "dessert": "甜品", "cafe": "咖啡", "late_night": "夜宵"}
 
 
 def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherInfo] = None) -> str:
@@ -17,6 +19,8 @@ def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherI
         focus = '、'.join(names[:2])
         lines.append(f"今天先把时间留给{focus}。" if len(names) <= 2 else
                      f"今天从{names[0]}开始，接着去{names[1]}，后面还有{len(names)-2}处安排。")
+    elif day.travel_window.get('unavailable'):
+        lines.append('今天留给交通与抵离办理，不安排目的地景点。在途用餐和抵达后的住宿仍需核对。')
     else:
         lines.append('今天还没有安排景点，可以先把用餐和休息时间定下来。')
     kind = intent.get('companion_type')
@@ -42,6 +46,22 @@ def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherI
         lines.append(f'目前游览约{visits//60}小时{visits%60:02d}分，路上约{travel}分钟；这还没有算排队和额外休息。')
     elif names:
         lines.append('活动之间的时间还没有核对，先不要据此预约固定时段。')
+    comparison=getattr(day,'route_comparison',{})
+    if comparison:
+        from ....services.day_route_optimizer import result_basis
+        if comparison.get('result_basis_sha256')!=result_basis(day):
+            comparison={};day.route_comparison={}
+    if comparison:
+        if comparison['status']=='improved':
+            lines.append(f"按本次已知路线比较，交通比已存安排减少{comparison['delta_minutes']}分钟；旧路段未重新核实。")
+        elif comparison['baseline_minutes'] is None:
+            lines.append('已核对当前安排的路线；缺少可比较的已存路线，尚不能确认交通是否减少。')
+        else:
+            lines.append('本次未找到可核实的更少交通方案，已保留原安排；未知路段没有当作零分钟。')
+        end=comparison.get('end_minutes')
+        if end is not None:
+            lines.append(f"当前预计{end//60:02d}:{end%60:02d}结束；减少交通不代表一定更早结束。")
+        lines.append('这次只比较了有界候选，景点开放日期、预约和未知资料仍需确认。')
     foodie = intent.get('dining_style') == 'dedicated' or '美食' in intent.get('preferences', [])
     if day.meals and foodie:
         meal = next((m for m in day.meals if m.type in {'lunch','dinner'}),day.meals[0])
@@ -64,6 +84,10 @@ def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherI
     if travel_notes: lines.append("；".join(travel_notes)+"。")
     pending = [("与交通或休息安排冲突：" if day.rest_periods else "与抵离交通冲突：")+"；".join(conflicts(day))] if conflicts(day) else []
     pending.extend(n for n in travel_notes if "超出所填旅行日期" in n)
+    from ....services.place_hours import place_hours_report
+    hours=place_hours_report(day)
+    pending.extend(hours['unknown'])
+    pending.extend('开放时间冲突：'+p for p in hours['violations'])
     pending += [w for w in day.meal_warnings if '分钟未安排' in w]
     if not day.hotel and day.overnight_stay:
         pending.append('今晚住宿尚未确定，请先确认住宿再核对晚间回程。')

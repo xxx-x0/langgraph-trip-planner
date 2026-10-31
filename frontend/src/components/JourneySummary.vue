@@ -2,6 +2,7 @@
  <section class="journey-summary">
   <header class="journey-heading"><p class="eyebrow">ON THE WAY</p><h2>往返交通</h2><p>{{ journey ? `${journey.origin_city} → ${city} → ${journey.return_city}` : '抵离交通尚未填写；首末日时间暂定，往返费用尚未计入。' }}</p></header>
   <template v-if="journey">
+   <p v-if="days?.length" class="journey-capacity">整趟 {{days.length}} 天（含去返程）；按08:00—22:00估算，目的地有 {{capacitySummary.full}} 个完整可用日、{{capacitySummary.partial}} 个部分可用日、{{capacitySummary.travel}} 个在途或暂无游玩时间的日期。{{journey.planning && (!journey.outbound || !journey.inbound)?'部分边界仍按本次预留暂定。':''}}</p>
    <div class="journey-legs">
     <article v-for="item in directions" :key="item.key" class="journey-leg">
      <template v-if="journey[item.key]">
@@ -23,7 +24,7 @@
      <p v-if="journey[item.key]!.seat_class || journey[item.key]!.baggage_policy || journey[item.key]!.refund_policy">{{journey[item.key]!.seat_class || '席别待确认'}}；行李：{{journey[item.key]!.baggage_policy || '待确认'}}；退改：{{journey[item.key]!.refund_policy || '待确认'}}。</p>
       </details>
      </template>
-     <template v-else><h3>{{ item.label }}</h3><p>尚未填写，时间和费用暂定。</p></template>
+     <template v-else><h3>{{ item.label }}</h3><p>尚未填写，时间和费用暂定。</p><p v-if="journey.planning">{{reservationLabel(item.key)}}</p></template>
     </article>
    </div>
    <details v-if="days?.length" class="journey-windows" :open="expanded"><summary>每日目的地可用时间 · {{ journey.destination_timezone }}</summary><div class="window-grid"><p v-for="day in days" :key="day.date"><span>{{ day.date }}</span><strong>{{ !day.travel_window ? '尚未核对' : day.travel_window.unavailable ? '在途／暂无游玩时间' : timeLabel(day.travel_window.start_minutes ?? 0)+'—'+timeLabel(day.travel_window.end_minutes ?? 1440) }}</strong><small>{{ day.travel_window?.provisional ? '暂定' : '' }}</small></p></div></details>
@@ -36,6 +37,8 @@ import type {Journey} from '@/types'
 import {computed} from 'vue'
 const props=defineProps<{expanded?:boolean;journey?:Journey|null;city:string;days?:Array<{date:string;travel_window?:Record<string,any>}>}>()
 const timings=computed<Record<string,any>>(()=>Object.fromEntries((props.days||[]).flatMap(d=>d.travel_window?.legs||[]).map(l=>[l.direction,l])))
+const capacitySummary=computed(()=>{const result={full:0,partial:0,travel:0};for(const day of props.days||[]){const w=day.travel_window||{};const minutes=w.unavailable?0:Math.max(0,Math.min(1320,w.end_minutes??1440)-Math.max(480,w.start_minutes??0));if(!minutes)result.travel++;else if(minutes>=840)result.full++;else result.partial++}return result})
+function reservationLabel(key:'outbound'|'inbound'){const p=props.journey?.planning;if(!p)return '';const policy=key==='outbound'?p.arrival_policy:p.departure_policy;return policy==='travel_day'?(key==='outbound'?'首日':'末日')+'已暂留给交通，不作为完整游玩日；实际班次待定。':policy==='time_window'?'按本次预计活动边界预留：'+((key==='outbound'?p.ready_at:p.leave_by)||'待填写').replace('T',' ')+'，尚非实际班次。':'本方向尚未预留交通占用时间。'}
 function timeLabel(n:number){return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`}
 const directions=[{key:'outbound' as const,label:'去程'},{key:'inbound' as const,label:'返程'}]
 const sources={unknown:'价格未知',user_estimate:'用户估算',user_quote:'用户记录报价，需重新核价',paid:'用户记录已付金额'}

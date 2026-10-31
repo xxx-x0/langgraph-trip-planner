@@ -33,9 +33,12 @@ def synchronize_days(payload, request):
             detail.overnight_stay = ctx.date < request.end_date
             apply_context(detail, request)
             proposed = detail.model_copy(deep=True)
-            proposed.day_start_time = clock(max(clock_minutes(detail.day_start_time), window.get('start_minutes', 0)))
+            proposed.day_start_time = clock(max(clock_minutes(detail.day_start_time), window.get('start_minutes', 0),
+                clock_minutes(detail.time_constraints.earliest_start_time) if detail.time_constraints and detail.time_constraints.earliest_start_time else 0))
             schedule_day(proposed)
             problems = conflicts(proposed) + meal_plan_violations(proposed, detail)
+            from .schedule_constraints import legacy_time_changes
+            problems += legacy_time_changes(detail, proposed)
             attractions = {a.name:a for a in proposed.attractions}
             for item in proposed.timeline_schedule:
                 if item['kind'] == 'attraction':

@@ -11,6 +11,23 @@ const plan = { city: '青岛', days: [
 ], narrative_source: 'itinerary_facts_v1', overall_suggestions: '保存的完整说明' } as any
 
 describe('saved trip reading', () => {
+  it('distinguishes a cross-midnight arrival travel day from the absence of a new hotel night', () => {
+    const saved = { ...plan, days: [
+      { date: '2026-10-28', attractions: [], meals: [], overnight_stay: false, accommodation: '酒店', travel_window: { day_role: 'travel' } },
+      { date: '2026-10-30', attractions: [], meals: [], overnight_stay: false, hotel: { name: '已存酒店位置' } },
+    ] } as any
+    const before = JSON.stringify(saved)
+    const wrapper = mount(TabOverview, { props: { tripPlan: saved } })
+    const cards = wrapper.findAll('.day-card')
+    expect(cards[0].text()).toContain('本日留给交通与抵离')
+    expect(cards[0].text()).toContain('交通日')
+    expect(cards[0].find('.day-stay').text()).toBe('在途用餐与住宿待核对')
+    expect(cards[1].text()).toContain('不计新增住宿')
+    expect(cards[1].text()).toContain('已存酒店位置')
+    expect(wrapper.text()).not.toContain('离开日')
+    expect(JSON.stringify(saved)).toBe(before)
+    wrapper.unmount()
+  })
   it('opens the chosen day and deduplicates pending confirmations without hiding their meaning', async () => {
     const wrapper = mount(TabOverview, { props: { tripPlan: plan } })
     await wrapper.findAll('.day-card')[1].trigger('click')

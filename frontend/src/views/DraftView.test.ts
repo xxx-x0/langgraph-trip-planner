@@ -2,14 +2,14 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Antd from 'ant-design-vue'
 import DraftView from './DraftView.vue'
-import { getDraft, recomputeDay, aiRearrangeDay, multiApi, changeJourney, refreshDiningOptions } from '@/services/api'
+import { getDraft, recomputeDay, aiRearrangeDay, multiApi, changeJourney, refreshDiningOptions, adjustJourney } from '@/services/api'
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn(), query: {} as Record<string,string> }))
 
 vi.mock('@/services/api', () => ({
   getDraft: vi.fn(), recomputeDay: vi.fn(), aiRearrangeDay: vi.fn(),
   assembleDay: vi.fn(), rewriteNarrative: vi.fn(), refreshDiningOptions: vi.fn(),
-  multiApi: vi.fn(), changeJourney: vi.fn(),
+  multiApi: vi.fn(), changeJourney: vi.fn(), adjustJourney: vi.fn(),
 }))
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { id: 'draft-test' }, query: navigation.query }),
@@ -145,9 +145,9 @@ describe('saved draft editing', () => {
     await wrapper.get('[aria-label="解锁 B"]').trigger('click')
     await flushPromises()
     expect(wrapper.find('[aria-label="解锁 B"]').exists()).toBe(true)
-    await wrapper.get('input[type="time"]').setValue('11:30')
+    await wrapper.get('input.day-start-input').setValue('11:30')
     await flushPromises()
-    expect((wrapper.get('input[type="time"]').element as HTMLInputElement).value).toBe('09:00')
+    expect((wrapper.get('input.day-start-input').element as HTMLInputElement).value).toBe('09:00')
     wrapper.unmount()
   })
 
@@ -236,7 +236,7 @@ describe('current itinerary descriptions', () => {
     const saved=draft().days_detail[0]
     Object.assign(saved,{description:'10:15开始，游览：<img src=x onerror=alert(1)>',description_source:'itinerary_facts_v1',day_start_time:'10:15'})
     vi.mocked(recomputeDay).mockResolvedValue({day_detail:saved} as any)
-    await wrapper.get('input[type="time"]').setValue('10:15');await flushPromises()
+    await wrapper.get('input.day-start-input').setValue('10:15');await flushPromises()
     expect(wrapper.get('.description-text').text()).toContain('10:15开始')
     expect(wrapper.get('.description-text').text()).toContain('<img')
     expect(wrapper.find('.description-text img').exists()).toBe(false)
@@ -249,7 +249,7 @@ describe('current itinerary descriptions', () => {
     vi.mocked(getDraft).mockResolvedValue(initial)
     const wrapper=await openDraft()
     vi.mocked(recomputeDay).mockRejectedValue(new Error('route unavailable'))
-    await wrapper.get('input[type="time"]').setValue('11:30');await flushPromises()
+    await wrapper.get('input.day-start-input').setValue('11:30');await flushPromises()
     expect(wrapper.get('.description-text').text()).toContain('09:00开始')
     expect(wrapper.get('.description-text').text()).not.toContain('11:30')
     expect(wrapper.get('[role="alert"]').text()).toContain('本次修改尚未保存')
@@ -263,18 +263,18 @@ describe('current itinerary descriptions', () => {
     newer.days_detail[0].removed_attraction_names=['C']
     vi.mocked(getDraft).mockResolvedValueOnce(newer)
     vi.mocked(recomputeDay).mockRejectedValue({response:{status:409,data:{detail:'该天安排已被更新'}}})
-    await wrapper.get('input[type="time"]').setValue('11:30');await flushPromises()
+    await wrapper.get('input.day-start-input').setValue('11:30');await flushPromises()
     expect(wrapper.get('.description-text').text()).toContain('12:00开始')
     expect(wrapper.find('[aria-label="恢复 C"]').exists()).toBe(true)
     expect(wrapper.get('[role="alert"]').text()).toContain('已加载最新保存内容')
-    expect((wrapper.get('input[type="time"]').element as HTMLInputElement).value).toBe('12:00')
+    expect((wrapper.get('input.day-start-input').element as HTMLInputElement).value).toBe('12:00')
     wrapper.unmount()
   })
   it('blocks another save if a conflict cannot reload the latest draft', async () => {
     const wrapper=await openDraft()
     vi.mocked(getDraft).mockRejectedValueOnce(new Error('offline'))
     vi.mocked(recomputeDay).mockRejectedValue({response:{status:409,data:{detail:'changed'}}})
-    await wrapper.get('input[type="time"]').setValue('11:30');await flushPromises()
+    await wrapper.get('input.day-start-input').setValue('11:30');await flushPromises()
     expect(wrapper.text()).toContain('最新草稿读取失败')
     expect(wrapper.findAll('button').some(b=>b.text()==='定稿并保存')).toBe(false)
     expect(wrapper.find('[aria-label="删除 C"]').exists()).toBe(false)
@@ -417,4 +417,55 @@ it('carries the recommendation basis into both preview and confirmation and clea
  await w.findAll('button').find(b=>b.text()==='取消本次交通变更')!.trigger('click');await flushPromises()
  await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
  expect(vi.mocked(changeJourney).mock.calls.at(-1)![4]).toBeUndefined();w.unmount()
+})
+
+
+it('treats movable clocks separately from ordering locks and restores failed optional changes',async()=>{
+ vi.mocked(recomputeDay).mockRejectedValue(new Error('route unavailable'))
+ const w=await openDraft()
+ expect(w.text()).toContain('旧安排未声明时刻是否可移')
+ const checkbox=w.get('.time-constraints input[type=checkbox]')
+ await checkbox.setValue(true);await flushPromises()
+ const body:any=vi.mocked(recomputeDay).mock.calls[0][2]
+ expect(body.time_constraints).toMatchObject({allow_start_shift:true,fixed_start_time:null,appointments:[]})
+ expect(body.locked_attraction_names).toEqual(['B'])
+ expect((w.get('.time-constraints input[type=checkbox]').element as HTMLInputElement).checked).toBe(false)
+ w.unmount()
+})
+
+it('requires review of the transport-first proposal before atomic confirmation',async()=>{
+ const w=await openDraft();const {default:JourneyComparison}=await import('@/components/JourneyComparison.vue')
+ const journey={origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'}
+ vi.mocked(adjustJourney).mockResolvedValue({adjustment_id:'proposal',preview_token:'token',notice:'需要核对',changes:['A移至第二天','午餐移除，核对在途用餐'],impacts:[],days_detail:[],unassigned_attractions:[{id:'a',name:'A'}],intercity_total:0})
+ w.findComponent(JourneyComparison).vm.$emit('adjust',journey,'basis');await flushPromises()
+ expect(adjustJourney).toHaveBeenCalledWith('draft-test',{journey,ticket_basis:'basis'})
+ expect(w.get('.travel-preview').text()).toContain('A移至第二天')
+ const save=w.findAll('button').find(b=>b.text()==='确认以上影响并保存交通')!
+ expect(save.attributes('disabled')).toBeDefined()
+ await w.get('.travel-preview input[type="checkbox"]').setValue(true)
+ await save.trigger('click');await flushPromises()
+ expect(vi.mocked(adjustJourney).mock.calls[1]).toEqual(['draft-test',{journey,ticket_basis:'basis',adjustment_id:'proposal',preview_token:'token',acknowledge_adjustments:true}])
+ expect(changeJourney).not.toHaveBeenCalled();w.unmount()
+})
+
+it('discards a late transport-first preview after local traffic input changes',async()=>{
+ let resolve:any;vi.mocked(adjustJourney).mockReturnValue(new Promise(r=>resolve=r))
+ const w=await openDraft();const {default:JourneyComparison}=await import('@/components/JourneyComparison.vue')
+ const {default:JourneyEditor}=await import('@/components/JourneyEditor.vue')
+ w.findComponent(JourneyComparison).vm.$emit('adjust',{origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'});await flushPromises()
+ w.findAllComponents(JourneyEditor).at(-1)!.vm.$emit('update:modelValue',{origin_city:'南京',return_city:'南京',destination_timezone:'Asia/Shanghai'});await flushPromises()
+ resolve({adjustment_id:'late',impacts:[],changes:[]});await flushPromises()
+ expect(w.find('.travel-preview').exists()).toBe(false);expect(w.text()).toContain('旧预览未采用');w.unmount()
+})
+
+it('keeps pending attractions visible and blocks finalization until they are placed or explicitly dropped',async()=>{
+ const value:any=draft();value.unassigned_attractions=[{id:'pending',name:'远处景点',reason:'交通后未分配'}]
+ vi.mocked(getDraft).mockResolvedValue(value)
+ vi.mocked(adjustJourney).mockResolvedValue({adjustment_id:'drop',preview_token:'drop-token',impacts:[],changes:['明确不再安排远处景点'],days_detail:[],unassigned_attractions:[],intercity_total:0})
+ const w=await openDraft()
+ expect(w.get('[aria-label="待安排景点"]').text()).toContain('远处景点')
+ expect(w.findAll('button').find(b=>b.text()==='定稿并保存')!.attributes('disabled')).toBeDefined()
+ await w.findAll('button').find(b=>b.text()==='不再安排，预览')!.trigger('click');await flushPromises()
+ expect(adjustJourney).toHaveBeenCalledWith('draft-test',{journey:null,ticket_basis:undefined,discard_ids:['pending']})
+ expect(w.get('.travel-preview').text()).toContain('明确不再安排远处景点');w.unmount()
 })

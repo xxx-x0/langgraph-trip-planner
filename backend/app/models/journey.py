@@ -84,12 +84,20 @@ class JourneyLeg(BaseModel):
         return self
 
 
+class JourneyPlanning(BaseModel):
+    arrival_policy: Literal['travel_day', 'time_window', 'unreserved'] = 'travel_day'
+    departure_policy: Literal['travel_day', 'time_window', 'unreserved'] = 'travel_day'
+    ready_at: str | None = None
+    leave_by: str | None = None
+
+
 class Journey(BaseModel):
     origin_city: str = Field(min_length=1, max_length=80)
     return_city: str = Field(min_length=1, max_length=80)
     destination_timezone: str = 'Asia/Shanghai'
     outbound: JourneyLeg | None = None
     inbound: JourneyLeg | None = None
+    planning: JourneyPlanning | None = None
 
     @model_validator(mode='after')
     def valid_journey(self):

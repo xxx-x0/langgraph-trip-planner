@@ -1,0 +1,128 @@
+{
+  "query": {
+    "mode": "train",
+    "direction": "outbound",
+    "from_place": "南京",
+    "to_place": "苏州",
+    "date": "2027-04-12",
+    "passengers": 2,
+    "priority": "price"
+  },
+  "candidates": [
+    {
+      "id": "SYN_T13_A",
+      "mode": "train",
+      "service": "SYN_T13_A",
+      "from_station": "南京南",
+      "to_station": "苏州站",
+      "departure": "2027-04-12T12:00",
+      "arrival": "2027-04-12T13:00",
+      "seat": "二等座",
+      "fare_per_person": 120,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "SYN_T13_B",
+      "mode": "train",
+      "service": "SYN_T13_B",
+      "from_station": "南京南",
+      "to_station": "苏州站",
+      "departure": "2027-04-12T12:00",
+      "arrival": "2027-04-12T13:00",
+      "seat": "二等座",
+      "fare_per_person": 180,
+      "availability": "available",
+      "source": "12306"
+    }
+  ],
+  "context": {
+    "kind": "draft",
+    "draft_id": "eval_T13",
+    "request": {
+      "city": "苏州",
+      "start_date": "2027-04-12",
+      "end_date": "2027-04-15",
+      "travel_days": 4,
+      "transportation": "公共交通",
+      "accommodation": "经济型酒店",
+      "companions": {
+        "count": 2,
+        "type": "friends"
+      },
+      "journey": {
+        "origin_city": "南京",
+        "return_city": "南京",
+        "outbound": {
+          "mode": "train",
+          "departure_station": "南京南",
+          "arrival_station": "苏州站",
+          "departure_time": "2027-04-12T12:00",
+          "arrival_time": "2027-04-12T13:00",
+          "passengers": 2,
+          "ticket_total": null,
+          "price_source": "unknown",
+          "transfer_before_minutes": 0,
+          "station_buffer_minutes": 0,
+          "transfer_after_minutes": 0,
+          "baggage_minutes": 0,
+          "lodging_buffer_minutes": 0
+        }
+      }
+    },
+    "days_detail": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "saved_state": {
+    "request": {
+      "city": "苏州",
+      "start_date": "2027-04-12",
+      "end_date": "2027-04-15",
+      "travel_days": 4,
+      "transportation": "公共交通",
+      "accommodation": "经济型酒店",
+      "companions": {
+        "count": 2,
+        "type": "friends"
+      },
+      "journey": {
+        "origin_city": "南京",
+        "return_city": "南京",
+        "outbound": {
+          "mode": "train",
+          "departure_station": "南京南",
+          "arrival_station": "苏州站",
+          "departure_time": "2027-04-12T12:00",
+          "arrival_time": "2027-04-12T13:00",
+          "passengers": 2,
+          "ticket_total": null,
+          "price_source": "unknown",
+          "transfer_before_minutes": 0,
+          "station_buffer_minutes": 0,
+          "transfer_after_minutes": 0,
+          "baggage_minutes": 0,
+          "lodging_buffer_minutes": 0
+        }
+      }
+    },
+    "days_detail": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "fault": {
+    "kind": "invalid_model_id",
+    "barrier": "after_filter_before_validation",
+    "response": {
+      "ids": [
+        "SYN_X"
+      ]
+    }
+  }
+}

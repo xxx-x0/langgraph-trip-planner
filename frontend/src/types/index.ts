@@ -125,7 +125,16 @@ export interface RouteSegment {
   detail: string
 }
 
+export interface DayTimeConstraints {
+  allow_start_shift: boolean
+  earliest_start_time?: string | null
+  fixed_start_time?: string | null
+  appointments: Array<{kind: 'attraction' | 'meal'; ref_name: string; start_time: string}>
+}
+
 export interface DayPlan {
+  route_comparison?: Record<string, unknown>
+  time_constraints?: DayTimeConstraints | null
   rest_periods?: Array<{id:string;date:string;start_time:string;end_time:string;label:string}>
   travel_window?: Record<string, any>
   pending_confirmations?: string[]
@@ -148,6 +157,7 @@ export interface DayPlan {
   overnight_stay?: boolean
   transport_mode?: string
   locked_attraction_names?: string[]
+  removed_attraction_names?: string[]
 }
 
 export interface TimelineOrderItem {
@@ -167,6 +177,7 @@ export interface WeatherInfo {
 }
 
 export interface TripPlan {
+  rest_periods?: Array<{id:string;date:string;start_time:string;end_time:string;label:string}>
   journey?: Journey | null
   narrative_source?: string | null
   city: string
@@ -312,4 +323,5 @@ export interface JourneyLeg {
  price_note:string;quoted_at:string|null;ticket_total:number|null;extras_total:number|null;currency:string
  transfer_before_minutes:number;station_buffer_minutes:number;baggage_minutes:number;transfer_after_minutes:number;lodging_buffer_minutes:number
 }
-export interface Journey {origin_city:string;return_city:string;destination_timezone:string;outbound?:JourneyLeg|null;inbound?:JourneyLeg|null}
+export interface JourneyPlanning {arrival_policy:'travel_day'|'time_window'|'unreserved';departure_policy:'travel_day'|'time_window'|'unreserved';ready_at?:string|null;leave_by?:string|null}
+export interface Journey {origin_city:string;return_city:string;destination_timezone:string;outbound?:JourneyLeg|null;inbound?:JourneyLeg|null;planning?:JourneyPlanning|null}

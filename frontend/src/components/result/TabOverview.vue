@@ -5,9 +5,9 @@
       <div class="day-cards">
         <button v-for="(day, index) in tripPlan.days" :key="day.date || index" class="day-card" @click="$emit('openDay', index)">
           <span class="day-card-top"><span class="day-index">DAY {{ String(index + 1).padStart(2, '0') }}</span><span>{{ day.date?.slice(5).replace('-', ' / ') }}</span></span>
-          <strong>{{ day.attractions?.map(a => a.name).join(' · ') || '当天尚未安排景点' }}</strong>
-          <span class="day-facts">{{ day.attractions?.length || 0 }} 个景点 · {{ day.meals?.length || 0 }} 次用餐<span v-if="day.overnight_stay === false"> · 离开日</span></span>
-          <span class="day-stay">{{ day.hotel?.name || day.accommodation || '住宿待确认' }}</span>
+          <strong>{{ day.attractions?.map(a => a.name).join(' · ') || (day.travel_window?.day_role === 'travel' ? '本日留给交通与抵离' : '当天尚未安排景点') }}</strong>
+          <span class="day-facts">{{ day.attractions?.length || 0 }} 个景点 · {{ day.meals?.length || 0 }} 次用餐<span v-if="day.travel_window?.day_role === 'travel'"> · 交通日</span><span v-else-if="day.overnight_stay === false"> · 不计新增住宿</span></span>
+          <span class="day-stay">{{ day.hotel?.name || (day.travel_window?.day_role === 'travel' ? '在途用餐与住宿待核对' : day.accommodation || '住宿待确认') }}</span>
           <span class="day-card-bottom">查看当天时间轴 <span aria-hidden="true">↗</span></span>
         </button>
       </div>

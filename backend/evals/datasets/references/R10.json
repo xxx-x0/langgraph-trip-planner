@@ -1,0 +1,2788 @@
+{
+  "expected_outcome": "adjusted",
+  "expected_http": 200,
+  "hard_constraints": {
+    "start_minutes": 600,
+    "end_latest": 1320,
+    "locked_attraction": {
+      "name": "留园",
+      "zero_based_index": 1
+    },
+    "places": {
+      "虎丘山风景区": {
+        "kind": "attraction",
+        "duration": 150
+      },
+      "留园": {
+        "kind": "attraction",
+        "duration": 90
+      },
+      "七里山塘景区": {
+        "kind": "attraction",
+        "duration": 90
+      },
+      "花筑·苏州山塘御苑精品民宿": {
+        "kind": "hotel",
+        "duration": 30
+      },
+      "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)": {
+        "kind": "meal",
+        "duration": 60,
+        "slot": "lunch"
+      },
+      "凝翠园饭店": {
+        "kind": "meal",
+        "duration": 60,
+        "slot": "dinner"
+      }
+    },
+    "opening_windows": {
+      "虎丘山风景区": [
+        [
+          450,
+          1080
+        ]
+      ],
+      "留园": [
+        [
+          450,
+          1050
+        ]
+      ],
+      "七里山塘景区": [
+        [
+          480,
+          1260
+        ]
+      ],
+      "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)": [
+        [
+          660,
+          1380
+        ]
+      ],
+      "凝翠园饭店": [
+        [
+          600,
+          870
+        ],
+        [
+          960,
+          1260
+        ]
+      ]
+    },
+    "last_entry_deadlines": {
+      "虎丘山风景区": 1050,
+      "留园": 1020
+    },
+    "lunch_start_range": [
+      690,
+      870
+    ],
+    "dinner_start_range": [
+      1050,
+      1290
+    ],
+    "opening_notes": "October seasonal hours selected from old text; dinner uses intersection of overlapping listed hours, no claim of new POI opening verification"
+  },
+  "expected_order": null,
+  "intent_kind": "route_improvement",
+  "baseline_traffic_minutes": 180,
+  "historical_baseline_minutes_archive_only": 168,
+  "required_route_improvement": true,
+  "acceptable_permutations": [
+    "R10-p04",
+    "R10-p09"
+  ],
+  "permutations": [
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "虎丘山风景区",
+        "留园",
+        "七里山塘景区",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "凝翠园饭店",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 157,
+      "traffic_seconds": 9554,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "虎丘山风景区",
+          "start": 600,
+          "end": 648,
+          "duration": 48,
+          "edge_id": "c46aa7396be18eee"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 648,
+          "end": 798,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "留园",
+          "start": 798,
+          "end": 835,
+          "duration": 37,
+          "edge_id": "2efda47a172ce510"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 835,
+          "end": 925,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "七里山塘景区",
+          "start": 925,
+          "end": 941,
+          "duration": 16,
+          "edge_id": "865d9b0dd6e7b85a"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 941,
+          "end": 1031,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 1031,
+          "end": 1047,
+          "duration": 16,
+          "edge_id": "ce769fe83e3d3c6a"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 1047,
+          "end": 1107,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "凝翠园饭店",
+          "start": 1107,
+          "end": 1125,
+          "duration": 18,
+          "edge_id": "2f4d3bd7052f45c4"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1125,
+          "end": 1185,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1185,
+          "end": 1207,
+          "duration": 22,
+          "edge_id": "0828909642be49ed"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1207,
+          "end": 1237,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1237,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "meal_slot_missed",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)"
+        }
+      ],
+      "permutation_id": "R10-p00",
+      "delta_minutes": 23,
+      "delta_seconds": 1362
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "虎丘山风景区",
+        "留园",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "七里山塘景区",
+        "凝翠园饭店",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 174,
+      "traffic_seconds": 10523,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "虎丘山风景区",
+          "start": 600,
+          "end": 648,
+          "duration": 48,
+          "edge_id": "c46aa7396be18eee"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 648,
+          "end": 798,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "留园",
+          "start": 798,
+          "end": 835,
+          "duration": 37,
+          "edge_id": "2efda47a172ce510"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 835,
+          "end": 925,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 925,
+          "end": 952,
+          "duration": 27,
+          "edge_id": "c052d1ed4218d187"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 952,
+          "end": 1012,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "七里山塘景区",
+          "start": 1012,
+          "end": 1028,
+          "duration": 16,
+          "edge_id": "7a8ca341ec454673"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 1028,
+          "end": 1118,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "凝翠园饭店",
+          "start": 1118,
+          "end": 1142,
+          "duration": 24,
+          "edge_id": "27f6b397db6f7105"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1142,
+          "end": 1202,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1202,
+          "end": 1224,
+          "duration": 22,
+          "edge_id": "0828909642be49ed"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1224,
+          "end": 1254,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1254,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "meal_slot_missed",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)"
+        }
+      ],
+      "permutation_id": "R10-p01",
+      "delta_minutes": 6,
+      "delta_seconds": 393
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "虎丘山风景区",
+        "留园",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "凝翠园饭店",
+        "七里山塘景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 161,
+      "traffic_seconds": 9820,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "虎丘山风景区",
+          "start": 600,
+          "end": 648,
+          "duration": 48,
+          "edge_id": "c46aa7396be18eee"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 648,
+          "end": 798,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "留园",
+          "start": 798,
+          "end": 835,
+          "duration": 37,
+          "edge_id": "2efda47a172ce510"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 835,
+          "end": 925,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 925,
+          "end": 952,
+          "duration": 27,
+          "edge_id": "c052d1ed4218d187"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 952,
+          "end": 1012,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "凝翠园饭店",
+          "start": 1012,
+          "end": 1030,
+          "duration": 18,
+          "edge_id": "2f4d3bd7052f45c4"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "七里山塘景区",
+          "start": 1110,
+          "end": 1137,
+          "duration": 27,
+          "edge_id": "47d72403dc39fd81"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 1137,
+          "end": 1227,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1227,
+          "end": 1231,
+          "duration": 4,
+          "edge_id": "2c0e65864606301e"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1231,
+          "end": 1261,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1261,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "meal_slot_missed",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)"
+        }
+      ],
+      "permutation_id": "R10-p02",
+      "delta_minutes": 19,
+      "delta_seconds": 1096
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "虎丘山风景区",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "留园",
+        "七里山塘景区",
+        "凝翠园饭店",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 180,
+      "traffic_seconds": 10916,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "虎丘山风景区",
+          "start": 600,
+          "end": 648,
+          "duration": 48,
+          "edge_id": "c46aa7396be18eee"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 648,
+          "end": 798,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 798,
+          "end": 841,
+          "duration": 43,
+          "edge_id": "4ce3f95fd540606c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 841,
+          "end": 901,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "留园",
+          "start": 901,
+          "end": 928,
+          "duration": 27,
+          "edge_id": "2530dfaeaa206612"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 928,
+          "end": 1018,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "七里山塘景区",
+          "start": 1018,
+          "end": 1034,
+          "duration": 16,
+          "edge_id": "865d9b0dd6e7b85a"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 1034,
+          "end": 1124,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "凝翠园饭店",
+          "start": 1124,
+          "end": 1148,
+          "duration": 24,
+          "edge_id": "27f6b397db6f7105"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1148,
+          "end": 1208,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1208,
+          "end": 1230,
+          "duration": 22,
+          "edge_id": "0828909642be49ed"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1230,
+          "end": 1260,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1260,
+      "feasible": true,
+      "violations": [],
+      "permutation_id": "R10-p03",
+      "delta_minutes": 0,
+      "delta_seconds": 0
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "虎丘山风景区",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "留园",
+        "凝翠园饭店",
+        "七里山塘景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 162,
+      "traffic_seconds": 9877,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "虎丘山风景区",
+          "start": 600,
+          "end": 648,
+          "duration": 48,
+          "edge_id": "c46aa7396be18eee"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 648,
+          "end": 798,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 798,
+          "end": 841,
+          "duration": 43,
+          "edge_id": "4ce3f95fd540606c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 841,
+          "end": 901,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "留园",
+          "start": 901,
+          "end": 928,
+          "duration": 27,
+          "edge_id": "2530dfaeaa206612"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 928,
+          "end": 1018,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "凝翠园饭店",
+          "start": 1018,
+          "end": 1031,
+          "duration": 13,
+          "edge_id": "8fc63723cb5df973"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "七里山塘景区",
+          "start": 1110,
+          "end": 1137,
+          "duration": 27,
+          "edge_id": "47d72403dc39fd81"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 1137,
+          "end": 1227,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1227,
+          "end": 1231,
+          "duration": 4,
+          "edge_id": "2c0e65864606301e"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1231,
+          "end": 1261,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1261,
+      "feasible": true,
+      "violations": [],
+      "permutation_id": "R10-p04",
+      "delta_minutes": 18,
+      "delta_seconds": 1039
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "虎丘山风景区",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "凝翠园饭店",
+        "留园",
+        "七里山塘景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 142,
+      "traffic_seconds": 8731,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "虎丘山风景区",
+          "start": 600,
+          "end": 648,
+          "duration": 48,
+          "edge_id": "c46aa7396be18eee"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 648,
+          "end": 798,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 798,
+          "end": 841,
+          "duration": 43,
+          "edge_id": "4ce3f95fd540606c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 841,
+          "end": 901,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "凝翠园饭店",
+          "start": 901,
+          "end": 919,
+          "duration": 18,
+          "edge_id": "2f4d3bd7052f45c4"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "留园",
+          "start": 1110,
+          "end": 1123,
+          "duration": 13,
+          "edge_id": "ec5c2d84c36b385b"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 1123,
+          "end": 1213,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "七里山塘景区",
+          "start": 1213,
+          "end": 1229,
+          "duration": 16,
+          "edge_id": "865d9b0dd6e7b85a"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 1229,
+          "end": 1319,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1319,
+          "end": 1323,
+          "duration": 4,
+          "edge_id": "2c0e65864606301e"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1323,
+          "end": 1353,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1353,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "留园",
+          "arrival": 1123
+        },
+        {
+          "code": "after_last_entry",
+          "name": "留园"
+        },
+        {
+          "code": "outside_opening_window",
+          "name": "七里山塘景区",
+          "arrival": 1229
+        },
+        {
+          "code": "day_ends_after_2200"
+        }
+      ],
+      "permutation_id": "R10-p05",
+      "delta_minutes": 38,
+      "delta_seconds": 2185
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "七里山塘景区",
+        "留园",
+        "虎丘山风景区",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "凝翠园饭店",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 139,
+      "traffic_seconds": 8519,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "七里山塘景区",
+          "start": 600,
+          "end": 604,
+          "duration": 4,
+          "edge_id": "6177aa9202b4e0ef"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 604,
+          "end": 694,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "留园",
+          "start": 694,
+          "end": 710,
+          "duration": 16,
+          "edge_id": "2c888c47c3f28f5d"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 710,
+          "end": 800,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "虎丘山风景区",
+          "start": 800,
+          "end": 836,
+          "duration": 36,
+          "edge_id": "4a1f88f608c80e16"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 836,
+          "end": 986,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 986,
+          "end": 1029,
+          "duration": 43,
+          "edge_id": "4ce3f95fd540606c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 1029,
+          "end": 1089,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "凝翠园饭店",
+          "start": 1089,
+          "end": 1107,
+          "duration": 18,
+          "edge_id": "2f4d3bd7052f45c4"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1107,
+          "end": 1167,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1167,
+          "end": 1189,
+          "duration": 22,
+          "edge_id": "0828909642be49ed"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1189,
+          "end": 1219,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1219,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "meal_slot_missed",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)"
+        }
+      ],
+      "permutation_id": "R10-p06",
+      "delta_minutes": 41,
+      "delta_seconds": 2397
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "七里山塘景区",
+        "留园",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "虎丘山风景区",
+        "凝翠园饭店",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 150,
+      "traffic_seconds": 9112,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "七里山塘景区",
+          "start": 600,
+          "end": 604,
+          "duration": 4,
+          "edge_id": "6177aa9202b4e0ef"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 604,
+          "end": 694,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "留园",
+          "start": 694,
+          "end": 710,
+          "duration": 16,
+          "edge_id": "2c888c47c3f28f5d"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 710,
+          "end": 800,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 800,
+          "end": 827,
+          "duration": 27,
+          "edge_id": "c052d1ed4218d187"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 827,
+          "end": 887,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "虎丘山风景区",
+          "start": 887,
+          "end": 935,
+          "duration": 48,
+          "edge_id": "c5fa1117fa803002"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 935,
+          "end": 1085,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "凝翠园饭店",
+          "start": 1085,
+          "end": 1118,
+          "duration": 33,
+          "edge_id": "af3c51b8ff56a323"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1118,
+          "end": 1178,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1178,
+          "end": 1200,
+          "duration": 22,
+          "edge_id": "0828909642be49ed"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1200,
+          "end": 1230,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1230,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "虎丘山风景区",
+          "arrival": 935
+        }
+      ],
+      "permutation_id": "R10-p07",
+      "delta_minutes": 30,
+      "delta_seconds": 1804
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "七里山塘景区",
+        "留园",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "凝翠园饭店",
+        "虎丘山风景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 147,
+      "traffic_seconds": 8989,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "七里山塘景区",
+          "start": 600,
+          "end": 604,
+          "duration": 4,
+          "edge_id": "6177aa9202b4e0ef"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 604,
+          "end": 694,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "留园",
+          "start": 694,
+          "end": 710,
+          "duration": 16,
+          "edge_id": "2c888c47c3f28f5d"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 710,
+          "end": 800,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 800,
+          "end": 827,
+          "duration": 27,
+          "edge_id": "c052d1ed4218d187"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 827,
+          "end": 887,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "凝翠园饭店",
+          "start": 887,
+          "end": 905,
+          "duration": 18,
+          "edge_id": "2f4d3bd7052f45c4"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "虎丘山风景区",
+          "start": 1110,
+          "end": 1144,
+          "duration": 34,
+          "edge_id": "ca8a880d5036bfb7"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 1144,
+          "end": 1294,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1294,
+          "end": 1342,
+          "duration": 48,
+          "edge_id": "8174beac483e8c8a"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1342,
+          "end": 1372,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1372,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "虎丘山风景区",
+          "arrival": 1144
+        },
+        {
+          "code": "after_last_entry",
+          "name": "虎丘山风景区"
+        },
+        {
+          "code": "day_ends_after_2200"
+        }
+      ],
+      "permutation_id": "R10-p08",
+      "delta_minutes": 33,
+      "delta_seconds": 1927
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "七里山塘景区",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "留园",
+        "虎丘山风景区",
+        "凝翠园饭店",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 138,
+      "traffic_seconds": 8408,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "七里山塘景区",
+          "start": 600,
+          "end": 604,
+          "duration": 4,
+          "edge_id": "6177aa9202b4e0ef"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 604,
+          "end": 694,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 694,
+          "end": 710,
+          "duration": 16,
+          "edge_id": "ce769fe83e3d3c6a"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 710,
+          "end": 770,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "留园",
+          "start": 770,
+          "end": 797,
+          "duration": 27,
+          "edge_id": "2530dfaeaa206612"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 797,
+          "end": 887,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "虎丘山风景区",
+          "start": 887,
+          "end": 923,
+          "duration": 36,
+          "edge_id": "4a1f88f608c80e16"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 923,
+          "end": 1073,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "凝翠园饭店",
+          "start": 1073,
+          "end": 1106,
+          "duration": 33,
+          "edge_id": "af3c51b8ff56a323"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1106,
+          "end": 1166,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1166,
+          "end": 1188,
+          "duration": 22,
+          "edge_id": "0828909642be49ed"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1188,
+          "end": 1218,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1218,
+      "feasible": true,
+      "violations": [],
+      "permutation_id": "R10-p09",
+      "delta_minutes": 42,
+      "delta_seconds": 2508
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "七里山塘景区",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "留园",
+        "凝翠园饭店",
+        "虎丘山风景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 142,
+      "traffic_seconds": 8653,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "七里山塘景区",
+          "start": 600,
+          "end": 604,
+          "duration": 4,
+          "edge_id": "6177aa9202b4e0ef"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 604,
+          "end": 694,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 694,
+          "end": 710,
+          "duration": 16,
+          "edge_id": "ce769fe83e3d3c6a"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 710,
+          "end": 770,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "留园",
+          "start": 770,
+          "end": 797,
+          "duration": 27,
+          "edge_id": "2530dfaeaa206612"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 797,
+          "end": 887,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "凝翠园饭店",
+          "start": 887,
+          "end": 900,
+          "duration": 13,
+          "edge_id": "8fc63723cb5df973"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "虎丘山风景区",
+          "start": 1110,
+          "end": 1144,
+          "duration": 34,
+          "edge_id": "ca8a880d5036bfb7"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 1144,
+          "end": 1294,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1294,
+          "end": 1342,
+          "duration": 48,
+          "edge_id": "8174beac483e8c8a"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1342,
+          "end": 1372,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1372,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "虎丘山风景区",
+          "arrival": 1144
+        },
+        {
+          "code": "after_last_entry",
+          "name": "虎丘山风景区"
+        },
+        {
+          "code": "day_ends_after_2200"
+        }
+      ],
+      "permutation_id": "R10-p10",
+      "delta_minutes": 38,
+      "delta_seconds": 2263
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "七里山塘景区",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "凝翠园饭店",
+        "留园",
+        "虎丘山风景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 135,
+      "traffic_seconds": 8323,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "七里山塘景区",
+          "start": 600,
+          "end": 604,
+          "duration": 4,
+          "edge_id": "6177aa9202b4e0ef"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 604,
+          "end": 694,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 694,
+          "end": 710,
+          "duration": 16,
+          "edge_id": "ce769fe83e3d3c6a"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 710,
+          "end": 770,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "凝翠园饭店",
+          "start": 770,
+          "end": 788,
+          "duration": 18,
+          "edge_id": "2f4d3bd7052f45c4"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "留园",
+          "start": 1110,
+          "end": 1123,
+          "duration": 13,
+          "edge_id": "ec5c2d84c36b385b"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 1123,
+          "end": 1213,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "虎丘山风景区",
+          "start": 1213,
+          "end": 1249,
+          "duration": 36,
+          "edge_id": "4a1f88f608c80e16"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 1249,
+          "end": 1399,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1399,
+          "end": 1447,
+          "duration": 48,
+          "edge_id": "8174beac483e8c8a"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1447,
+          "end": 1477,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1477,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "留园",
+          "arrival": 1123
+        },
+        {
+          "code": "after_last_entry",
+          "name": "留园"
+        },
+        {
+          "code": "outside_opening_window",
+          "name": "虎丘山风景区",
+          "arrival": 1249
+        },
+        {
+          "code": "after_last_entry",
+          "name": "虎丘山风景区"
+        },
+        {
+          "code": "day_ends_after_2200"
+        }
+      ],
+      "permutation_id": "R10-p11",
+      "delta_minutes": 45,
+      "delta_seconds": 2593
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "虎丘山风景区",
+        "留园",
+        "七里山塘景区",
+        "凝翠园饭店",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 158,
+      "traffic_seconds": 9617,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 600,
+          "end": 611,
+          "duration": 11,
+          "edge_id": "23c88d14792b6a6c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 690,
+          "end": 750,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "虎丘山风景区",
+          "start": 750,
+          "end": 798,
+          "duration": 48,
+          "edge_id": "c5fa1117fa803002"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 798,
+          "end": 948,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "留园",
+          "start": 948,
+          "end": 985,
+          "duration": 37,
+          "edge_id": "2efda47a172ce510"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 985,
+          "end": 1075,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "七里山塘景区",
+          "start": 1075,
+          "end": 1091,
+          "duration": 16,
+          "edge_id": "865d9b0dd6e7b85a"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 1091,
+          "end": 1181,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "凝翠园饭店",
+          "start": 1181,
+          "end": 1205,
+          "duration": 24,
+          "edge_id": "27f6b397db6f7105"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1205,
+          "end": 1265,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1265,
+          "end": 1287,
+          "duration": 22,
+          "edge_id": "0828909642be49ed"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1287,
+          "end": 1317,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1317,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "留园",
+          "arrival": 985
+        },
+        {
+          "code": "outside_opening_window",
+          "name": "凝翠园饭店",
+          "arrival": 1205
+        }
+      ],
+      "permutation_id": "R10-p12",
+      "delta_minutes": 22,
+      "delta_seconds": 1299
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "虎丘山风景区",
+        "留园",
+        "凝翠园饭店",
+        "七里山塘景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 140,
+      "traffic_seconds": 8578,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 600,
+          "end": 611,
+          "duration": 11,
+          "edge_id": "23c88d14792b6a6c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 690,
+          "end": 750,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "虎丘山风景区",
+          "start": 750,
+          "end": 798,
+          "duration": 48,
+          "edge_id": "c5fa1117fa803002"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 798,
+          "end": 948,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "留园",
+          "start": 948,
+          "end": 985,
+          "duration": 37,
+          "edge_id": "2efda47a172ce510"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 985,
+          "end": 1075,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "凝翠园饭店",
+          "start": 1075,
+          "end": 1088,
+          "duration": 13,
+          "edge_id": "8fc63723cb5df973"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1088,
+          "end": 1148,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "七里山塘景区",
+          "start": 1148,
+          "end": 1175,
+          "duration": 27,
+          "edge_id": "47d72403dc39fd81"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 1175,
+          "end": 1265,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1265,
+          "end": 1269,
+          "duration": 4,
+          "edge_id": "2c0e65864606301e"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1269,
+          "end": 1299,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1299,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "留园",
+          "arrival": 985
+        },
+        {
+          "code": "outside_opening_window",
+          "name": "七里山塘景区",
+          "arrival": 1175
+        }
+      ],
+      "permutation_id": "R10-p13",
+      "delta_minutes": 40,
+      "delta_seconds": 2338
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "虎丘山风景区",
+        "凝翠园饭店",
+        "留园",
+        "七里山塘景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 125,
+      "traffic_seconds": 7714,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 600,
+          "end": 611,
+          "duration": 11,
+          "edge_id": "23c88d14792b6a6c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 690,
+          "end": 750,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "虎丘山风景区",
+          "start": 750,
+          "end": 798,
+          "duration": 48,
+          "edge_id": "c5fa1117fa803002"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 798,
+          "end": 948,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "凝翠园饭店",
+          "start": 948,
+          "end": 981,
+          "duration": 33,
+          "edge_id": "af3c51b8ff56a323"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "留园",
+          "start": 1110,
+          "end": 1123,
+          "duration": 13,
+          "edge_id": "ec5c2d84c36b385b"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 1123,
+          "end": 1213,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "七里山塘景区",
+          "start": 1213,
+          "end": 1229,
+          "duration": 16,
+          "edge_id": "865d9b0dd6e7b85a"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 1229,
+          "end": 1319,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1319,
+          "end": 1323,
+          "duration": 4,
+          "edge_id": "2c0e65864606301e"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1323,
+          "end": 1353,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1353,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "留园",
+          "arrival": 1123
+        },
+        {
+          "code": "after_last_entry",
+          "name": "留园"
+        },
+        {
+          "code": "outside_opening_window",
+          "name": "七里山塘景区",
+          "arrival": 1229
+        },
+        {
+          "code": "day_ends_after_2200"
+        }
+      ],
+      "permutation_id": "R10-p14",
+      "delta_minutes": 55,
+      "delta_seconds": 3202
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "七里山塘景区",
+        "留园",
+        "虎丘山风景区",
+        "凝翠园饭店",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 134,
+      "traffic_seconds": 8226,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 600,
+          "end": 611,
+          "duration": 11,
+          "edge_id": "23c88d14792b6a6c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 690,
+          "end": 750,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "七里山塘景区",
+          "start": 750,
+          "end": 766,
+          "duration": 16,
+          "edge_id": "7a8ca341ec454673"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 766,
+          "end": 856,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "留园",
+          "start": 856,
+          "end": 872,
+          "duration": 16,
+          "edge_id": "2c888c47c3f28f5d"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 872,
+          "end": 962,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "虎丘山风景区",
+          "start": 962,
+          "end": 998,
+          "duration": 36,
+          "edge_id": "4a1f88f608c80e16"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 998,
+          "end": 1148,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "凝翠园饭店",
+          "start": 1148,
+          "end": 1181,
+          "duration": 33,
+          "edge_id": "af3c51b8ff56a323"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1181,
+          "end": 1241,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1241,
+          "end": 1263,
+          "duration": 22,
+          "edge_id": "0828909642be49ed"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1263,
+          "end": 1293,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1293,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "虎丘山风景区",
+          "arrival": 998
+        }
+      ],
+      "permutation_id": "R10-p15",
+      "delta_minutes": 46,
+      "delta_seconds": 2690
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "七里山塘景区",
+        "留园",
+        "凝翠园饭店",
+        "虎丘山风景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 138,
+      "traffic_seconds": 8471,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 600,
+          "end": 611,
+          "duration": 11,
+          "edge_id": "23c88d14792b6a6c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 690,
+          "end": 750,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "七里山塘景区",
+          "start": 750,
+          "end": 766,
+          "duration": 16,
+          "edge_id": "7a8ca341ec454673"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 766,
+          "end": 856,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "留园",
+          "start": 856,
+          "end": 872,
+          "duration": 16,
+          "edge_id": "2c888c47c3f28f5d"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 872,
+          "end": 962,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "凝翠园饭店",
+          "start": 962,
+          "end": 975,
+          "duration": 13,
+          "edge_id": "8fc63723cb5df973"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "虎丘山风景区",
+          "start": 1110,
+          "end": 1144,
+          "duration": 34,
+          "edge_id": "ca8a880d5036bfb7"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 1144,
+          "end": 1294,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1294,
+          "end": 1342,
+          "duration": 48,
+          "edge_id": "8174beac483e8c8a"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1342,
+          "end": 1372,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1372,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "虎丘山风景区",
+          "arrival": 1144
+        },
+        {
+          "code": "after_last_entry",
+          "name": "虎丘山风景区"
+        },
+        {
+          "code": "day_ends_after_2200"
+        }
+      ],
+      "permutation_id": "R10-p16",
+      "delta_minutes": 42,
+      "delta_seconds": 2445
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "七里山塘景区",
+        "凝翠园饭店",
+        "留园",
+        "虎丘山风景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 148,
+      "traffic_seconds": 9110,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 600,
+          "end": 611,
+          "duration": 11,
+          "edge_id": "23c88d14792b6a6c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 690,
+          "end": 750,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "七里山塘景区",
+          "start": 750,
+          "end": 766,
+          "duration": 16,
+          "edge_id": "7a8ca341ec454673"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 766,
+          "end": 856,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "凝翠园饭店",
+          "start": 856,
+          "end": 880,
+          "duration": 24,
+          "edge_id": "27f6b397db6f7105"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "留园",
+          "start": 1110,
+          "end": 1123,
+          "duration": 13,
+          "edge_id": "ec5c2d84c36b385b"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 1123,
+          "end": 1213,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "虎丘山风景区",
+          "start": 1213,
+          "end": 1249,
+          "duration": 36,
+          "edge_id": "4a1f88f608c80e16"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 1249,
+          "end": 1399,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1399,
+          "end": 1447,
+          "duration": 48,
+          "edge_id": "8174beac483e8c8a"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1447,
+          "end": 1477,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1477,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "留园",
+          "arrival": 1123
+        },
+        {
+          "code": "after_last_entry",
+          "name": "留园"
+        },
+        {
+          "code": "outside_opening_window",
+          "name": "虎丘山风景区",
+          "arrival": 1249
+        },
+        {
+          "code": "after_last_entry",
+          "name": "虎丘山风景区"
+        },
+        {
+          "code": "day_ends_after_2200"
+        }
+      ],
+      "permutation_id": "R10-p17",
+      "delta_minutes": 32,
+      "delta_seconds": 1806
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "凝翠园饭店",
+        "虎丘山风景区",
+        "留园",
+        "七里山塘景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 120,
+      "traffic_seconds": 7394,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 600,
+          "end": 611,
+          "duration": 11,
+          "edge_id": "23c88d14792b6a6c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 690,
+          "end": 750,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "凝翠园饭店",
+          "start": 750,
+          "end": 768,
+          "duration": 18,
+          "edge_id": "2f4d3bd7052f45c4"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "虎丘山风景区",
+          "start": 1110,
+          "end": 1144,
+          "duration": 34,
+          "edge_id": "ca8a880d5036bfb7"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 1144,
+          "end": 1294,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "留园",
+          "start": 1294,
+          "end": 1331,
+          "duration": 37,
+          "edge_id": "2efda47a172ce510"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 1331,
+          "end": 1421,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "七里山塘景区",
+          "start": 1421,
+          "end": 1437,
+          "duration": 16,
+          "edge_id": "865d9b0dd6e7b85a"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 1437,
+          "end": 1527,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1527,
+          "end": 1531,
+          "duration": 4,
+          "edge_id": "2c0e65864606301e"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1531,
+          "end": 1561,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1561,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "虎丘山风景区",
+          "arrival": 1144
+        },
+        {
+          "code": "after_last_entry",
+          "name": "虎丘山风景区"
+        },
+        {
+          "code": "outside_opening_window",
+          "name": "留园",
+          "arrival": 1331
+        },
+        {
+          "code": "after_last_entry",
+          "name": "留园"
+        },
+        {
+          "code": "outside_opening_window",
+          "name": "七里山塘景区",
+          "arrival": 1437
+        },
+        {
+          "code": "day_ends_after_2200"
+        }
+      ],
+      "permutation_id": "R10-p18",
+      "delta_minutes": 60,
+      "delta_seconds": 3522
+    },
+    {
+      "sequence": [
+        "花筑·苏州山塘御苑精品民宿",
+        "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "凝翠园饭店",
+        "七里山塘景区",
+        "留园",
+        "虎丘山风景区",
+        "花筑·苏州山塘御苑精品民宿"
+      ],
+      "traffic_minutes": 156,
+      "traffic_seconds": 9623,
+      "timeline": [
+        {
+          "kind": "travel",
+          "from": "花筑·苏州山塘御苑精品民宿",
+          "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 600,
+          "end": 611,
+          "duration": 11,
+          "edge_id": "23c88d14792b6a6c"
+        },
+        {
+          "kind": "meal",
+          "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "start": 690,
+          "end": 750,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+          "to": "凝翠园饭店",
+          "start": 750,
+          "end": 768,
+          "duration": 18,
+          "edge_id": "2f4d3bd7052f45c4"
+        },
+        {
+          "kind": "meal",
+          "name": "凝翠园饭店",
+          "start": 1050,
+          "end": 1110,
+          "duration": 60
+        },
+        {
+          "kind": "travel",
+          "from": "凝翠园饭店",
+          "to": "七里山塘景区",
+          "start": 1110,
+          "end": 1137,
+          "duration": 27,
+          "edge_id": "47d72403dc39fd81"
+        },
+        {
+          "kind": "attraction",
+          "name": "七里山塘景区",
+          "start": 1137,
+          "end": 1227,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "七里山塘景区",
+          "to": "留园",
+          "start": 1227,
+          "end": 1243,
+          "duration": 16,
+          "edge_id": "2c888c47c3f28f5d"
+        },
+        {
+          "kind": "attraction",
+          "name": "留园",
+          "start": 1243,
+          "end": 1333,
+          "duration": 90
+        },
+        {
+          "kind": "travel",
+          "from": "留园",
+          "to": "虎丘山风景区",
+          "start": 1333,
+          "end": 1369,
+          "duration": 36,
+          "edge_id": "4a1f88f608c80e16"
+        },
+        {
+          "kind": "attraction",
+          "name": "虎丘山风景区",
+          "start": 1369,
+          "end": 1519,
+          "duration": 150
+        },
+        {
+          "kind": "travel",
+          "from": "虎丘山风景区",
+          "to": "花筑·苏州山塘御苑精品民宿",
+          "start": 1519,
+          "end": 1567,
+          "duration": 48,
+          "edge_id": "8174beac483e8c8a"
+        },
+        {
+          "kind": "hotel",
+          "name": "花筑·苏州山塘御苑精品民宿",
+          "start": 1567,
+          "end": 1597,
+          "duration": 30
+        }
+      ],
+      "end_minutes": 1597,
+      "feasible": false,
+      "violations": [
+        {
+          "code": "outside_opening_window",
+          "name": "留园",
+          "arrival": 1243
+        },
+        {
+          "code": "after_last_entry",
+          "name": "留园"
+        },
+        {
+          "code": "outside_opening_window",
+          "name": "虎丘山风景区",
+          "arrival": 1369
+        },
+        {
+          "code": "after_last_entry",
+          "name": "虎丘山风景区"
+        },
+        {
+          "code": "day_ends_after_2200"
+        }
+      ],
+      "permutation_id": "R10-p19",
+      "delta_minutes": 24,
+      "delta_seconds": 1293
+    }
+  ],
+  "frozen_baseline": {
+    "sequence": [
+      "花筑·苏州山塘御苑精品民宿",
+      "虎丘山风景区",
+      "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+      "留园",
+      "七里山塘景区",
+      "凝翠园饭店",
+      "花筑·苏州山塘御苑精品民宿"
+    ],
+    "traffic_minutes": 180,
+    "traffic_seconds": 10916,
+    "timeline": [
+      {
+        "kind": "travel",
+        "from": "花筑·苏州山塘御苑精品民宿",
+        "to": "虎丘山风景区",
+        "start": 600,
+        "end": 648,
+        "duration": 48,
+        "edge_id": "c46aa7396be18eee"
+      },
+      {
+        "kind": "attraction",
+        "name": "虎丘山风景区",
+        "start": 648,
+        "end": 798,
+        "duration": 150
+      },
+      {
+        "kind": "travel",
+        "from": "虎丘山风景区",
+        "to": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "start": 798,
+        "end": 841,
+        "duration": 43,
+        "edge_id": "4ce3f95fd540606c"
+      },
+      {
+        "kind": "meal",
+        "name": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "start": 841,
+        "end": 901,
+        "duration": 60
+      },
+      {
+        "kind": "travel",
+        "from": "山塘河宴·周公蟹·松鼠桂鱼(山塘街店)",
+        "to": "留园",
+        "start": 901,
+        "end": 928,
+        "duration": 27,
+        "edge_id": "2530dfaeaa206612"
+      },
+      {
+        "kind": "attraction",
+        "name": "留园",
+        "start": 928,
+        "end": 1018,
+        "duration": 90
+      },
+      {
+        "kind": "travel",
+        "from": "留园",
+        "to": "七里山塘景区",
+        "start": 1018,
+        "end": 1034,
+        "duration": 16,
+        "edge_id": "865d9b0dd6e7b85a"
+      },
+      {
+        "kind": "attraction",
+        "name": "七里山塘景区",
+        "start": 1034,
+        "end": 1124,
+        "duration": 90
+      },
+      {
+        "kind": "travel",
+        "from": "七里山塘景区",
+        "to": "凝翠园饭店",
+        "start": 1124,
+        "end": 1148,
+        "duration": 24,
+        "edge_id": "27f6b397db6f7105"
+      },
+      {
+        "kind": "meal",
+        "name": "凝翠园饭店",
+        "start": 1148,
+        "end": 1208,
+        "duration": 60
+      },
+      {
+        "kind": "travel",
+        "from": "凝翠园饭店",
+        "to": "花筑·苏州山塘御苑精品民宿",
+        "start": 1208,
+        "end": 1230,
+        "duration": 22,
+        "edge_id": "0828909642be49ed"
+      },
+      {
+        "kind": "hotel",
+        "name": "花筑·苏州山塘御苑精品民宿",
+        "start": 1230,
+        "end": 1260,
+        "duration": 30
+      }
+    ],
+    "end_minutes": 1260,
+    "feasible": true,
+    "violations": [],
+    "permutation_id": "R10-p03",
+    "delta_minutes": 0,
+    "delta_seconds": 0
+  },
+  "max_recovery": 1,
+  "method": "enumerate all 20 lock-preserving attraction/meal interleavings; independent interval checker; no production scheduler imports",
+  "source_limitations": [
+    "Historic 2026-10-15 places/hours/durations combined with 2026-10-24 AMap route responses",
+    "AMap tool has no departure date/time argument, so these are frozen query-time facts, not reconstructed historical traffic",
+    "Both baseline and alternatives use the same fresh matrix; never compare new alternative against old baseline to claim improvement",
+    "Meal restaurant pool is explicitly the current two restaurants; other restaurants/modes/new points require new version",
+    "No true model evaluation or human quality acceptance performed"
+  ]
+}

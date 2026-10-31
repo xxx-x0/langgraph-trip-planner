@@ -1,0 +1,293 @@
+{
+  "request": {
+    "city": "苏州",
+    "start_date": "2027-04-12",
+    "end_date": "2027-04-15",
+    "travel_days": 4,
+    "transportation": "公共交通",
+    "accommodation": "经济型酒店",
+    "companions": {
+      "count": 2,
+      "type": "friends"
+    }
+  },
+  "day_detail": {
+    "day_index": 0,
+    "date": "2027-04-12",
+    "day_start_time": "09:00",
+    "attractions": [
+      {
+        "name": "SYN_R05_A",
+        "address": "人工测试地点",
+        "description": "",
+        "visit_duration": 60,
+        "ticket_price": null,
+        "open_hours": "08:00-21:00",
+        "location": {
+          "longitude": 120.5,
+          "latitude": 31.305
+        }
+      },
+      {
+        "name": "SYN_R05_B",
+        "address": "人工测试地点",
+        "description": "",
+        "visit_duration": 60,
+        "ticket_price": null,
+        "open_hours": "08:00-21:00",
+        "location": {
+          "longitude": 120.51,
+          "latitude": 31.305
+        }
+      },
+      {
+        "name": "SYN_R05_C",
+        "address": "人工测试地点",
+        "description": "",
+        "visit_duration": 60,
+        "ticket_price": null,
+        "open_hours": "08:00-21:00",
+        "location": {
+          "longitude": 120.52,
+          "latitude": 31.305
+        }
+      }
+    ],
+    "meals": [
+      {
+        "name": "SYN_R05_L",
+        "type": "lunch",
+        "category": "main",
+        "address": "人工餐厅",
+        "location": {
+          "longitude": 120.55,
+          "latitude": 31.305
+        },
+        "avg_cost": 40,
+        "estimated_cost": 40,
+        "source": "nearby",
+        "poi_id": "SYN_R05_L",
+        "open_hours": "10:00-22:00",
+        "schedule_mode": "auto",
+        "preferred_slot": "lunch"
+      }
+    ],
+    "hotel": {
+      "name": "SYN_R05_H",
+      "address": "人工酒店",
+      "location": {
+        "longitude": 120.5,
+        "latitude": 31.305
+      },
+      "estimated_cost": 0,
+      "quote": null
+    },
+    "locked_attraction_names": [],
+    "removed_attraction_names": [],
+    "timeline_order": [
+      {
+        "kind": "hotel",
+        "ref_name": "SYN_R05_H",
+        "phase": "start"
+      },
+      {
+        "kind": "attraction",
+        "ref_name": "SYN_R05_A"
+      },
+      {
+        "kind": "meal",
+        "ref_name": "SYN_R05_L"
+      },
+      {
+        "kind": "attraction",
+        "ref_name": "SYN_R05_B"
+      },
+      {
+        "kind": "attraction",
+        "ref_name": "SYN_R05_C"
+      },
+      {
+        "kind": "hotel",
+        "ref_name": "SYN_R05_H",
+        "phase": "end"
+      }
+    ],
+    "timeline_schedule": [
+      {
+        "kind": "travel",
+        "ref_name": "SYN_R05_H → SYN_R05_A",
+        "start_minutes": 540,
+        "end_minutes": 545,
+        "duration": 5,
+        "start_time": "09:00",
+        "end_time": "09:05"
+      },
+      {
+        "kind": "attraction",
+        "ref_name": "SYN_R05_A",
+        "start_minutes": 545,
+        "end_minutes": 605,
+        "duration": 60,
+        "start_time": "09:05",
+        "end_time": "10:05"
+      },
+      {
+        "kind": "travel",
+        "ref_name": "SYN_R05_A → SYN_R05_L",
+        "start_minutes": 605,
+        "end_minutes": 610,
+        "duration": 5,
+        "start_time": "10:05",
+        "end_time": "10:10"
+      },
+      {
+        "kind": "meal",
+        "ref_name": "SYN_R05_L",
+        "start_minutes": 690,
+        "end_minutes": 750,
+        "duration": 60,
+        "start_time": "11:30",
+        "end_time": "12:30"
+      },
+      {
+        "kind": "travel",
+        "ref_name": "SYN_R05_L → SYN_R05_B",
+        "start_minutes": 750,
+        "end_minutes": 755,
+        "duration": 5,
+        "start_time": "12:30",
+        "end_time": "12:35"
+      },
+      {
+        "kind": "attraction",
+        "ref_name": "SYN_R05_B",
+        "start_minutes": 755,
+        "end_minutes": 815,
+        "duration": 60,
+        "start_time": "12:35",
+        "end_time": "13:35"
+      },
+      {
+        "kind": "travel",
+        "ref_name": "SYN_R05_B → SYN_R05_C",
+        "start_minutes": 815,
+        "end_minutes": 820,
+        "duration": 5,
+        "start_time": "13:35",
+        "end_time": "13:40"
+      },
+      {
+        "kind": "attraction",
+        "ref_name": "SYN_R05_C",
+        "start_minutes": 820,
+        "end_minutes": 880,
+        "duration": 60,
+        "start_time": "13:40",
+        "end_time": "14:40"
+      },
+      {
+        "kind": "travel",
+        "ref_name": "SYN_R05_C → SYN_R05_H",
+        "start_minutes": 880,
+        "end_minutes": 885,
+        "duration": 5,
+        "start_time": "14:40",
+        "end_time": "14:45"
+      },
+      {
+        "kind": "hotel",
+        "ref_name": "SYN_R05_H",
+        "start_minutes": 885,
+        "end_minutes": 915,
+        "duration": 30,
+        "start_time": "14:45",
+        "end_time": "15:15"
+      }
+    ],
+    "route_segments": [
+      {
+        "from_name": "SYN_R05_H",
+        "to_name": "SYN_R05_A",
+        "mode": "步行",
+        "duration": "5分钟",
+        "distance": "300米",
+        "is_estimated": false
+      },
+      {
+        "from_name": "SYN_R05_A",
+        "to_name": "SYN_R05_L",
+        "mode": "步行",
+        "duration": "5分钟",
+        "distance": "300米",
+        "is_estimated": false
+      },
+      {
+        "from_name": "SYN_R05_L",
+        "to_name": "SYN_R05_B",
+        "mode": "步行",
+        "duration": "5分钟",
+        "distance": "300米",
+        "is_estimated": false
+      },
+      {
+        "from_name": "SYN_R05_B",
+        "to_name": "SYN_R05_C",
+        "mode": "步行",
+        "duration": "5分钟",
+        "distance": "300米",
+        "is_estimated": false
+      },
+      {
+        "from_name": "SYN_R05_C",
+        "to_name": "SYN_R05_H",
+        "mode": "步行",
+        "duration": "5分钟",
+        "distance": "300米",
+        "is_estimated": false
+      }
+    ],
+    "rest_periods": [],
+    "is_assembled": true,
+    "companion_count": 2,
+    "meal_adjustments": [],
+    "description": "人工夹具"
+  },
+  "dining_candidates": [
+    {
+      "name": "SYN_R05_L",
+      "type": "lunch",
+      "category": "main",
+      "address": "人工餐厅",
+      "location": {
+        "longitude": 120.55,
+        "latitude": 31.305
+      },
+      "avg_cost": 40,
+      "estimated_cost": 40,
+      "source": "nearby",
+      "poi_id": "SYN_R05_L",
+      "open_hours": "10:00-22:00",
+      "schedule_mode": "auto",
+      "preferred_slot": "lunch"
+    },
+    {
+      "name": "SYN_R05_D",
+      "type": "dinner",
+      "category": "main",
+      "address": "人工餐厅",
+      "location": {
+        "longitude": 120.56,
+        "latitude": 31.305
+      },
+      "avg_cost": 55,
+      "estimated_cost": 55,
+      "source": "nearby",
+      "poi_id": "SYN_R05_D",
+      "open_hours": "10:00-22:00",
+      "schedule_mode": "auto",
+      "preferred_slot": "dinner"
+    }
+  ],
+  "hint": "顺路调整一下，不新增用餐",
+  "fault": null
+}

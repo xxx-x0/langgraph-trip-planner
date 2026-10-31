@@ -349,7 +349,7 @@ MACRO_PLANNER_PROMPT = """你是旅行宏观编排专家。你的唯一任务是
 **严格约束：**
 1. 不要输出任何坐标、路线、餐饮细节
 2. 每天的attraction_names必须来自聚类分组中的真实景点名称
-3. 每天安排2-3个景点
+3. 按目的地可用时间安排景点；交通日允许0个，不强行每天排满
 4. hotel_name从酒店搜索结果中选择一个合适的酒店名称
 5. **必须严格按照用户要求的旅行天数生成days数组**，不能减少天数。如果景点不够，某些天可以安排2个景点或适当放松
 6. **total_days必须等于用户要求的旅行天数**
@@ -518,6 +518,10 @@ async def generate_plan_node(state: TripPlannerState) -> Dict[str, Any]:
 7. **返回的JSON必须严格合法**：属性名用双引号，不要有尾随逗号，不要有注释
 8. **JSON必须完整输出**，不要因为长度限制而截断，overall_suggestions和budget字段必须包含
 """
+    from ....services.journey_planning import dates, capacity
+    if request.journey:
+        prompt += '\n**目的地可用时间（已扣交通或本次暂定预留）:**\n'+'\n'.join(f'{day}：最多{capacity(request,day)}分钟；为0时景点必须为空' for day in dates(request))
+
     if request.free_text_input:
         prompt += f"\n**额外要求:** {request.free_text_input}"
 
@@ -624,11 +628,15 @@ async def macro_planner_node(state: TripPlannerState) -> Dict[str, Any]:
 **要求:**
 1. 严格按照聚类分组安排每日景点，同一组的景点必须在同一天
 2. 每天的attraction_names必须来自聚类分组中的真实景点名称
-3. 每天安排2-3个景点
+3. 按目的地可用时间安排景点；交通日允许0个，不强行每天排满
 4. hotel_name **必须从"候选酒店"列表中挑选一个真实酒店名称**（优先选第 1 个，已按距离/星级排序）。**同一城市的多天行程默认每天选同一家酒店**（不需要每天换酒店），除非聚类明显远离同一商圈。
 5. 不要输出任何坐标、路线、餐饮细节，仅输出骨架
 6. **每天的date字段必须严格等于用户要求的日期**：第{request.start_date}天到第{request.end_date}天，不要编造日期
-7. **必须生成{request.travel_days}天的行程骨架，不能减少天数**。如果聚类景点不够分配，可以某些天安排2个景点或适当放松，但days数组长度必须等于{request.travel_days}"""
+7. **必须生成{request.travel_days}天的行程骨架，不能减少天数**。没有可用时间或没有景点的日期保留空数组，不得编造景点，days数组长度必须等于{request.travel_days}"""
+
+    from ....services.journey_planning import dates, capacity
+    if request.journey:
+        prompt += '\n**目的地可用时间（已扣交通或本次暂定预留）:**\n'+'\n'.join(f'{day}：最多{capacity(request,day)}分钟；为0时景点必须为空' for day in dates(request))
 
     if request.free_text_input:
         from .search import analyze_free_text
@@ -1441,7 +1449,7 @@ async def reduce_assemble_node(state: TripPlannerState) -> Dict[str, Any]:
 
 # Compatibility imports for callers of the former module-local helpers.
 from ..assemble.narrative import (
-    refresh_trip_descriptions,
+    refresh_trip_descriptions, _confirmed_overall_suggestions,
     _generate_weather_summary_fallback,
 )
 

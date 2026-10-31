@@ -3,6 +3,7 @@ import {reactive,nextTick} from 'vue'
 import {it,expect,vi} from 'vitest'
 import App from './App.vue'
 const state=vi.hoisted(()=>({route:null as any}))
+vi.mock('@/services/quality',()=>({qualityGet:vi.fn().mockResolvedValue({data:{enabled:false}})}))
 vi.mock('vue-router',()=>({useRoute:()=>state.route}))
 it('keeps the active workspace tied to saved and multicity editor routes and switches component themes',async()=>{
  state.route=reactive({path:'/draft/one',query:{multi:'mc_a'}})

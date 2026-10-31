@@ -1,0 +1,3424 @@
+{
+  "query": {
+    "mode": "train",
+    "direction": "inbound",
+    "from_place": "杭州",
+    "to_place": "南京",
+    "date": "2026-11-01",
+    "passengers": 1,
+    "priority": "balanced"
+  },
+  "candidates": [
+    {
+      "id": "rail_0_K528",
+      "mode": "train",
+      "service": "K528",
+      "from_station": "杭州南",
+      "to_station": "南京",
+      "departure": "2026-11-01T01:55",
+      "arrival": "2026-11-01T07:40",
+      "seat": "硬座",
+      "fare_per_person": 69.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_1_K348",
+      "mode": "train",
+      "service": "K348",
+      "from_station": "杭州",
+      "to_station": "南京",
+      "departure": "2026-11-01T01:55",
+      "arrival": "2026-11-01T07:09",
+      "seat": "硬座",
+      "fare_per_person": 62.5,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_3_G1862",
+      "mode": "train",
+      "service": "G1862",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T07:00",
+      "arrival": "2026-11-01T08:30",
+      "seat": "二等座",
+      "fare_per_person": 108.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_4_G3272",
+      "mode": "train",
+      "service": "G3272",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T07:05",
+      "arrival": "2026-11-01T10:38",
+      "seat": "二等座",
+      "fare_per_person": 233.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_6_G1866",
+      "mode": "train",
+      "service": "G1866",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T07:27",
+      "arrival": "2026-11-01T10:27",
+      "seat": "二等座",
+      "fare_per_person": 231.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_8_G7492",
+      "mode": "train",
+      "service": "G7492",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T07:31",
+      "arrival": "2026-11-01T11:09",
+      "seat": "二等座",
+      "fare_per_person": 232.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_9_G3110",
+      "mode": "train",
+      "service": "G3110",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T07:40",
+      "arrival": "2026-11-01T09:08",
+      "seat": "二等座",
+      "fare_per_person": 114.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_11_G2668",
+      "mode": "train",
+      "service": "G2668",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T07:57",
+      "arrival": "2026-11-01T09:21",
+      "seat": "二等座",
+      "fare_per_person": 115.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_12_D2222",
+      "mode": "train",
+      "service": "D2222",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T08:08",
+      "arrival": "2026-11-01T09:41",
+      "seat": "二等座",
+      "fare_per_person": 114.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_14_G1224",
+      "mode": "train",
+      "service": "G1224",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T08:29",
+      "arrival": "2026-11-01T10:00",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_17_G2624",
+      "mode": "train",
+      "service": "G2624",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T08:42",
+      "arrival": "2026-11-01T10:11",
+      "seat": "二等座",
+      "fare_per_person": 115.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_18_G3006",
+      "mode": "train",
+      "service": "G3006",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T08:47",
+      "arrival": "2026-11-01T10:16",
+      "seat": "二等座",
+      "fare_per_person": 117.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_16_G756",
+      "mode": "train",
+      "service": "G756",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T08:57",
+      "arrival": "2026-11-01T10:21",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_20_G590",
+      "mode": "train",
+      "service": "G590",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T09:13",
+      "arrival": "2026-11-01T10:42",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_22_G8322",
+      "mode": "train",
+      "service": "G8322",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T09:32",
+      "arrival": "2026-11-01T12:56",
+      "seat": "二等座",
+      "fare_per_person": 249.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_24_G7572",
+      "mode": "train",
+      "service": "G7572",
+      "from_station": "杭州南",
+      "to_station": "南京南",
+      "departure": "2026-11-01T09:45",
+      "arrival": "2026-11-01T13:11",
+      "seat": "二等座",
+      "fare_per_person": 243.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_26_G818",
+      "mode": "train",
+      "service": "G818",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T09:48",
+      "arrival": "2026-11-01T11:03",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_27_G1228",
+      "mode": "train",
+      "service": "G1228",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T10:02",
+      "arrival": "2026-11-01T12:49",
+      "seat": "二等座",
+      "fare_per_person": 220.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_28_G8387",
+      "mode": "train",
+      "service": "G8387",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T10:08",
+      "arrival": "2026-11-01T14:45",
+      "seat": "二等座",
+      "fare_per_person": 361.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_30_D2246",
+      "mode": "train",
+      "service": "D2246",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T10:20",
+      "arrival": "2026-11-01T11:47",
+      "seat": "二等座",
+      "fare_per_person": 103.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_32_G820",
+      "mode": "train",
+      "service": "G820",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T10:32",
+      "arrival": "2026-11-01T12:12",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_33_G1492",
+      "mode": "train",
+      "service": "G1492",
+      "from_station": "杭州南",
+      "to_station": "南京南",
+      "departure": "2026-11-01T10:51",
+      "arrival": "2026-11-01T12:36",
+      "seat": "二等座",
+      "fare_per_person": 136.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_34_G1492",
+      "mode": "train",
+      "service": "G1492",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T11:04",
+      "arrival": "2026-11-01T12:36",
+      "seat": "二等座",
+      "fare_per_person": 127.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_36_G7576",
+      "mode": "train",
+      "service": "G7576",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T11:04",
+      "arrival": "2026-11-01T14:11",
+      "seat": "二等座",
+      "fare_per_person": 241.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_38_G822",
+      "mode": "train",
+      "service": "G822",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T11:24",
+      "arrival": "2026-11-01T12:26",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_40_G812",
+      "mode": "train",
+      "service": "G812",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T11:34",
+      "arrival": "2026-11-01T12:57",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_41_G824",
+      "mode": "train",
+      "service": "G824",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T11:39",
+      "arrival": "2026-11-01T13:13",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_43_G1652",
+      "mode": "train",
+      "service": "G1652",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T12:03",
+      "arrival": "2026-11-01T13:39",
+      "seat": "二等座",
+      "fare_per_person": 120.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_45_G7486",
+      "mode": "train",
+      "service": "G7486",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T12:08",
+      "arrival": "2026-11-01T13:24",
+      "seat": "二等座",
+      "fare_per_person": 127.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_46_G834",
+      "mode": "train",
+      "service": "G834",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T12:23",
+      "arrival": "2026-11-01T14:14",
+      "seat": "二等座",
+      "fare_per_person": 140.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_48_G40",
+      "mode": "train",
+      "service": "G40",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T13:00",
+      "arrival": "2026-11-01T14:09",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_49_D204",
+      "mode": "train",
+      "service": "D204",
+      "from_station": "杭州南",
+      "to_station": "南京",
+      "departure": "2026-11-01T13:05",
+      "arrival": "2026-11-01T18:36",
+      "seat": "二等卧",
+      "fare_per_person": 134.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_51_D3236",
+      "mode": "train",
+      "service": "D3236",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T13:20",
+      "arrival": "2026-11-01T14:44",
+      "seat": "二等座",
+      "fare_per_person": 114.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_53_Z176",
+      "mode": "train",
+      "service": "Z176",
+      "from_station": "杭州",
+      "to_station": "南京",
+      "departure": "2026-11-01T13:35",
+      "arrival": "2026-11-01T18:24",
+      "seat": "硬卧",
+      "fare_per_person": 123.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_54_D2196",
+      "mode": "train",
+      "service": "D2196",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T13:49",
+      "arrival": "2026-11-01T15:12",
+      "seat": "二等座",
+      "fare_per_person": 95.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_56_G44",
+      "mode": "train",
+      "service": "G44",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T13:58",
+      "arrival": "2026-11-01T16:03",
+      "seat": "二等座",
+      "fare_per_person": 249.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_57_G2808",
+      "mode": "train",
+      "service": "G2808",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T14:04",
+      "arrival": "2026-11-01T15:19",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_59_G1654",
+      "mode": "train",
+      "service": "G1654",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T14:24",
+      "arrival": "2026-11-01T15:53",
+      "seat": "二等座",
+      "fare_per_person": 127.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_61_G850",
+      "mode": "train",
+      "service": "G850",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T14:41",
+      "arrival": "2026-11-01T16:04",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_62_G1502",
+      "mode": "train",
+      "service": "G1502",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T14:46",
+      "arrival": "2026-11-01T16:09",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_64_G876",
+      "mode": "train",
+      "service": "G876",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T15:17",
+      "arrival": "2026-11-01T16:42",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_65_G7478",
+      "mode": "train",
+      "service": "G7478",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T15:22",
+      "arrival": "2026-11-01T16:30",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_67_G7376",
+      "mode": "train",
+      "service": "G7376",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T15:37",
+      "arrival": "2026-11-01T18:26",
+      "seat": "一等座",
+      "fare_per_person": 387.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_69_G3106",
+      "mode": "train",
+      "service": "G3106",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T15:48",
+      "arrival": "2026-11-01T17:17",
+      "seat": "一等座",
+      "fare_per_person": 198.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_70_G7690",
+      "mode": "train",
+      "service": "G7690",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T15:53",
+      "arrival": "2026-11-01T17:22",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_72_G3342",
+      "mode": "train",
+      "service": "G3342",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T16:16",
+      "arrival": "2026-11-01T17:57",
+      "seat": "二等座",
+      "fare_per_person": 132.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_73_G1482",
+      "mode": "train",
+      "service": "G1482",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T16:18",
+      "arrival": "2026-11-01T17:33",
+      "seat": "二等座",
+      "fare_per_person": 127.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_75_G7696",
+      "mode": "train",
+      "service": "G7696",
+      "from_station": "杭州南",
+      "to_station": "南京南",
+      "departure": "2026-11-01T16:34",
+      "arrival": "2026-11-01T18:13",
+      "seat": "二等座",
+      "fare_per_person": 137.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_76_G7696",
+      "mode": "train",
+      "service": "G7696",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T16:48",
+      "arrival": "2026-11-01T18:13",
+      "seat": "二等座",
+      "fare_per_person": 127.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_78_G48",
+      "mode": "train",
+      "service": "G48",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T16:54",
+      "arrival": "2026-11-01T18:03",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_81_D3296",
+      "mode": "train",
+      "service": "D3296",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T16:59",
+      "arrival": "2026-11-01T18:18",
+      "seat": "二等座",
+      "fare_per_person": 114.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_82_G7652",
+      "mode": "train",
+      "service": "G7652",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T17:04",
+      "arrival": "2026-11-01T18:26",
+      "seat": "二等座",
+      "fare_per_person": 127.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_83_D18",
+      "mode": "train",
+      "service": "D18",
+      "from_station": "杭州",
+      "to_station": "南京",
+      "departure": "2026-11-01T17:10",
+      "arrival": "2026-11-01T21:32",
+      "seat": "二等卧",
+      "fare_per_person": 164.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_85_G1666",
+      "mode": "train",
+      "service": "G1666",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T17:23",
+      "arrival": "2026-11-01T18:46",
+      "seat": "二等座",
+      "fare_per_person": 127.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_86_G230",
+      "mode": "train",
+      "service": "G230",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T17:34",
+      "arrival": "2026-11-01T18:34",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_88_Z282",
+      "mode": "train",
+      "service": "Z282",
+      "from_station": "杭州",
+      "to_station": "南京",
+      "departure": "2026-11-01T17:40",
+      "arrival": "2026-11-01T22:44",
+      "seat": "软卧",
+      "fare_per_person": 186.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_90_G7310",
+      "mode": "train",
+      "service": "G7310",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T17:47",
+      "arrival": "2026-11-01T21:09",
+      "seat": "一等座",
+      "fare_per_person": 373.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_91_G1098",
+      "mode": "train",
+      "service": "G1098",
+      "from_station": "杭州南",
+      "to_station": "南京南",
+      "departure": "2026-11-01T17:52",
+      "arrival": "2026-11-01T19:34",
+      "seat": "二等座",
+      "fare_per_person": 150.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_95_G46",
+      "mode": "train",
+      "service": "G46",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T18:00",
+      "arrival": "2026-11-01T19:01",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_96_G1510",
+      "mode": "train",
+      "service": "G1510",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T18:01",
+      "arrival": "2026-11-01T20:51",
+      "seat": "二等座",
+      "fare_per_person": 223.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_92_G1098",
+      "mode": "train",
+      "service": "G1098",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T18:05",
+      "arrival": "2026-11-01T19:34",
+      "seat": "二等座",
+      "fare_per_person": 141.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_98_G7626",
+      "mode": "train",
+      "service": "G7626",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T18:15",
+      "arrival": "2026-11-01T19:48",
+      "seat": "二等座",
+      "fare_per_person": 120.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_99_G1380",
+      "mode": "train",
+      "service": "G1380",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T18:27",
+      "arrival": "2026-11-01T19:53",
+      "seat": "二等座",
+      "fare_per_person": 120.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_101_G3380",
+      "mode": "train",
+      "service": "G3380",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T18:38",
+      "arrival": "2026-11-01T22:15",
+      "seat": "二等座",
+      "fare_per_person": 265.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_102_G1662",
+      "mode": "train",
+      "service": "G1662",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T18:53",
+      "arrival": "2026-11-01T20:37",
+      "seat": "二等座",
+      "fare_per_person": 120.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_104_G7588",
+      "mode": "train",
+      "service": "G7588",
+      "from_station": "杭州东",
+      "to_station": "南京",
+      "departure": "2026-11-01T19:05",
+      "arrival": "2026-11-01T22:04",
+      "seat": "二等座",
+      "fare_per_person": 228.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_106_G7566",
+      "mode": "train",
+      "service": "G7566",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T19:09",
+      "arrival": "2026-11-01T21:42",
+      "seat": "二等座",
+      "fare_per_person": 223.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_107_G7642",
+      "mode": "train",
+      "service": "G7642",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T19:20",
+      "arrival": "2026-11-01T20:44",
+      "seat": "二等座",
+      "fare_per_person": 120.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_109_K5834",
+      "mode": "train",
+      "service": "K5834",
+      "from_station": "杭州南",
+      "to_station": "南京",
+      "departure": "2026-11-01T19:42",
+      "arrival": "2026-11-02T02:23",
+      "seat": "硬座",
+      "fare_per_person": 69.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_110_G7582",
+      "mode": "train",
+      "service": "G7582",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T19:46",
+      "arrival": "2026-11-01T21:12",
+      "seat": "二等座",
+      "fare_per_person": 111.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_112_G7666",
+      "mode": "train",
+      "service": "G7666",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T19:57",
+      "arrival": "2026-11-01T21:20",
+      "seat": "二等座",
+      "fare_per_person": 127.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_114_D2282",
+      "mode": "train",
+      "service": "D2282",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T20:02",
+      "arrival": "2026-11-01T23:19",
+      "seat": "一等座",
+      "fare_per_person": 279.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_115_G3024",
+      "mode": "train",
+      "service": "G3024",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T20:05",
+      "arrival": "2026-11-01T21:35",
+      "seat": "二等座",
+      "fare_per_person": 122.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_117_G3060",
+      "mode": "train",
+      "service": "G3060",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T20:10",
+      "arrival": "2026-11-01T22:20",
+      "seat": "二等座",
+      "fare_per_person": 228.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_118_K552",
+      "mode": "train",
+      "service": "K552",
+      "from_station": "杭州",
+      "to_station": "南京",
+      "departure": "2026-11-01T20:12",
+      "arrival": "2026-11-02T02:06",
+      "seat": "硬座",
+      "fare_per_person": 62.5,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_120_G3072",
+      "mode": "train",
+      "service": "G3072",
+      "from_station": "杭州西",
+      "to_station": "南京南",
+      "departure": "2026-11-01T20:29",
+      "arrival": "2026-11-01T21:46",
+      "seat": "二等座",
+      "fare_per_person": 122.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_122_G1656",
+      "mode": "train",
+      "service": "G1656",
+      "from_station": "杭州南",
+      "to_station": "南京南",
+      "departure": "2026-11-01T20:53",
+      "arrival": "2026-11-01T22:36",
+      "seat": "二等座",
+      "fare_per_person": 117.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_124_D3240",
+      "mode": "train",
+      "service": "D3240",
+      "from_station": "杭州南",
+      "to_station": "南京南",
+      "departure": "2026-11-01T21:01",
+      "arrival": "2026-11-01T22:44",
+      "seat": "二等座",
+      "fare_per_person": 106.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_126_G206",
+      "mode": "train",
+      "service": "G206",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T21:16",
+      "arrival": "2026-11-01T23:12",
+      "seat": "二等座",
+      "fare_per_person": 223.0,
+      "availability": "available",
+      "source": "12306"
+    },
+    {
+      "id": "rail_127_G236",
+      "mode": "train",
+      "service": "G236",
+      "from_station": "杭州东",
+      "to_station": "南京南",
+      "departure": "2026-11-01T22:25",
+      "arrival": "2026-11-01T23:32",
+      "seat": "二等座",
+      "fare_per_person": 92.0,
+      "availability": "available",
+      "source": "12306"
+    }
+  ],
+  "context": {
+    "kind": "multi",
+    "draft_id": "mc_eval_T18",
+    "revision": 1,
+    "from_stop": "b",
+    "to_stop": "destination"
+  },
+  "saved_state": {
+    "id": "mc_eval_T18",
+    "kind": "multi_city_v1",
+    "revision": 1,
+    "status": "draft",
+    "plan": {
+      "start_date": "2026-10-26",
+      "end_date": "2026-11-01",
+      "origin": {
+        "id": "origin-city",
+        "name": "上海",
+        "adcode": null,
+        "location": null,
+        "timezone": "Asia/Shanghai"
+      },
+      "destination": {
+        "id": "end-city",
+        "name": "南京",
+        "adcode": null,
+        "location": null,
+        "timezone": "Asia/Shanghai"
+      },
+      "companions": {
+        "count": 1,
+        "type": "solo"
+      },
+      "hotel_occupancy": {
+        "room_count": 1,
+        "adults_per_room": 1,
+        "children_ages": []
+      },
+      "budget": 5000,
+      "pace": "slow",
+      "transportation": "公共交通",
+      "accommodation": "经济型酒店",
+      "stops": [
+        {
+          "id": "a",
+          "city": {
+            "id": "city-a",
+            "name": "苏州",
+            "adcode": null,
+            "location": null,
+            "timezone": "Asia/Shanghai"
+          },
+          "start_date": "2026-10-26",
+          "end_date": "2026-10-29",
+          "must_visit": true,
+          "lodgings": [],
+          "rest_periods": [
+            {
+              "id": "befeee10d05d48f18f8142e1447dc4e1",
+              "date": "2026-10-26",
+              "start_time": "14:00",
+              "end_time": "15:00",
+              "label": "换城后歇一歇"
+            },
+            {
+              "id": "9048b218d31945beb22b626d18043753",
+              "date": "2026-10-28",
+              "start_time": "14:00",
+              "end_time": "17:00",
+              "label": "连续出行后，留一段休息"
+            }
+          ]
+        },
+        {
+          "id": "b",
+          "city": {
+            "id": "city-b",
+            "name": "杭州",
+            "adcode": null,
+            "location": null,
+            "timezone": "Asia/Shanghai"
+          },
+          "start_date": "2026-10-29",
+          "end_date": "2026-11-01",
+          "must_visit": true,
+          "lodgings": [],
+          "rest_periods": [
+            {
+              "id": "f26940cae58d44edbce941fcb34b7f63",
+              "date": "2026-10-29",
+              "start_time": "16:00",
+              "end_time": "17:00",
+              "label": "换城后先吃午饭，再歇一歇"
+            },
+            {
+              "id": "c64a2de6075c40d5bb986f9be1ebf191",
+              "date": "2026-10-31",
+              "start_time": "14:00",
+              "end_time": "17:00",
+              "label": "连续出行后，留一段休息"
+            }
+          ]
+        }
+      ],
+      "transfers": [
+        {
+          "from_stop": "origin",
+          "to_stop": "a",
+          "leg": {
+            "mode": "train",
+            "service_number": "G7006",
+            "departure_station": "上海",
+            "arrival_station": "苏州",
+            "departure_time": "2026-10-26T09:00",
+            "arrival_time": "2026-10-26T09:25",
+            "departure_timezone": "Asia/Shanghai",
+            "arrival_timezone": "Asia/Shanghai",
+            "passengers": 1,
+            "booking_status": "planned",
+            "price_source": "unknown",
+            "price_note": "",
+            "quoted_at": null,
+            "ticket_total": null,
+            "currency": "CNY",
+            "extras_total": null,
+            "extra_costs": null,
+            "connections": null,
+            "seat_class": "二等座",
+            "baggage_policy": "",
+            "refund_policy": "",
+            "quote_expires_at": null,
+            "transfer_before_minutes": 60,
+            "station_buffer_minutes": 60,
+            "baggage_minutes": 30,
+            "transfer_after_minutes": 60,
+            "lodging_buffer_minutes": 30
+          }
+        },
+        {
+          "from_stop": "a",
+          "to_stop": "b",
+          "leg": {
+            "mode": "train",
+            "service_number": "G7389",
+            "departure_station": "苏州",
+            "arrival_station": "杭州东",
+            "departure_time": "2026-10-29T09:08",
+            "arrival_time": "2026-10-29T10:33",
+            "departure_timezone": "Asia/Shanghai",
+            "arrival_timezone": "Asia/Shanghai",
+            "passengers": 1,
+            "booking_status": "planned",
+            "price_source": "unknown",
+            "price_note": "",
+            "quoted_at": null,
+            "ticket_total": null,
+            "currency": "CNY",
+            "extras_total": null,
+            "extra_costs": null,
+            "connections": null,
+            "seat_class": "二等座",
+            "baggage_policy": "",
+            "refund_policy": "",
+            "quote_expires_at": null,
+            "transfer_before_minutes": 60,
+            "station_buffer_minutes": 60,
+            "baggage_minutes": 30,
+            "transfer_after_minutes": 60,
+            "lodging_buffer_minutes": 30
+          }
+        },
+        {
+          "from_stop": "b",
+          "to_stop": "destination",
+          "leg": {
+            "mode": "train",
+            "service_number": "G3024",
+            "departure_station": "杭州西",
+            "arrival_station": "南京南",
+            "departure_time": "2026-11-01T20:05",
+            "arrival_time": "2026-11-01T21:35",
+            "departure_timezone": "Asia/Shanghai",
+            "arrival_timezone": "Asia/Shanghai",
+            "passengers": 1,
+            "booking_status": "planned",
+            "price_source": "unknown",
+            "price_note": "",
+            "quoted_at": null,
+            "ticket_total": null,
+            "currency": "CNY",
+            "extras_total": null,
+            "extra_costs": null,
+            "connections": null,
+            "seat_class": "二等座",
+            "baggage_policy": "",
+            "refund_policy": "",
+            "quote_expires_at": null,
+            "transfer_before_minutes": 60,
+            "station_buffer_minutes": 60,
+            "baggage_minutes": 30,
+            "transfer_after_minutes": 60,
+            "lodging_buffer_minutes": 30
+          }
+        }
+      ],
+      "title": "EVAL T18 historical projection"
+    },
+    "snapshots": {
+      "a": {
+        "request": {
+          "city": "苏州",
+          "start_date": "2026-10-26",
+          "end_date": "2026-10-29",
+          "travel_days": 4,
+          "transportation": "公共交通",
+          "accommodation": "经济型酒店",
+          "companions": {
+            "count": 1,
+            "type": "solo"
+          },
+          "hotel_occupancy": {
+            "adults_per_room": 1,
+            "children_ages": [],
+            "room_count": 1
+          },
+          "default_day_start_time": "08:00",
+          "journey": {
+            "destination_timezone": "Asia/Shanghai",
+            "inbound": {
+              "arrival_station": "杭州东",
+              "arrival_time": "2026-10-29T10:33",
+              "arrival_timezone": "Asia/Shanghai",
+              "baggage_minutes": 30,
+              "baggage_policy": "",
+              "booking_status": "planned",
+              "connections": null,
+              "currency": "CNY",
+              "departure_station": "苏州",
+              "departure_time": "2026-10-29T09:08",
+              "departure_timezone": "Asia/Shanghai",
+              "extra_costs": null,
+              "extras_total": null,
+              "lodging_buffer_minutes": 30,
+              "mode": "train",
+              "passengers": 1,
+              "price_note": "用户文字导入（12306公开网页，2026-10-19人工核对）；记录时间为导入时间，请再次核价",
+              "price_source": "user_quote",
+              "quote_expires_at": null,
+              "quoted_at": "2026-10-19T16:07",
+              "refund_policy": "",
+              "seat_class": "二等座",
+              "service_number": "G7389",
+              "station_buffer_minutes": 60,
+              "ticket_total": 126.0,
+              "transfer_after_minutes": 60,
+              "transfer_before_minutes": 60
+            },
+            "origin_city": "上海",
+            "outbound": {
+              "arrival_station": "苏州",
+              "arrival_time": "2026-10-26T09:25",
+              "arrival_timezone": "Asia/Shanghai",
+              "baggage_minutes": 30,
+              "baggage_policy": "",
+              "booking_status": "planned",
+              "connections": null,
+              "currency": "CNY",
+              "departure_station": "上海",
+              "departure_time": "2026-10-26T09:00",
+              "departure_timezone": "Asia/Shanghai",
+              "extra_costs": null,
+              "extras_total": null,
+              "lodging_buffer_minutes": 30,
+              "mode": "train",
+              "passengers": 1,
+              "price_note": "用户文字导入（12306公开网页，2026-10-19人工核对）；记录时间为导入时间，请再次核价",
+              "price_source": "user_quote",
+              "quote_expires_at": null,
+              "quoted_at": "2026-10-19T16:07",
+              "refund_policy": "",
+              "seat_class": "二等座",
+              "service_number": "G7006",
+              "station_buffer_minutes": 60,
+              "ticket_total": 46.0,
+              "transfer_after_minutes": 60,
+              "transfer_before_minutes": 60
+            },
+            "return_city": "杭州"
+          },
+          "rest_periods": [
+            {
+              "date": "2026-10-26",
+              "end_time": "15:00",
+              "id": "befeee10d05d48f18f8142e1447dc4e1",
+              "label": "换城后歇一歇",
+              "start_time": "14:00"
+            },
+            {
+              "date": "2026-10-28",
+              "end_time": "17:00",
+              "id": "9048b218d31945beb22b626d18043753",
+              "label": "连续出行后，留一段休息",
+              "start_time": "14:00"
+            }
+          ]
+        },
+        "days_detail": [
+          {
+            "day_index": 0,
+            "date": "2026-10-26",
+            "day_start_time": "11:25",
+            "timeline_order": [
+              {
+                "kind": "hotel",
+                "phase": "start",
+                "ref_name": "苏州里物酒店(观前街平江路店)"
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "拙政园"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "姑苏小院·老灶(园外苑店)"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "文人苏式面馆蟹黄面"
+              },
+              {
+                "kind": "hotel",
+                "phase": "end",
+                "ref_name": "苏州里物酒店(观前街平江路店)"
+              }
+            ],
+            "locked_attraction_names": [],
+            "removed_attraction_names": [],
+            "is_assembled": true,
+            "overnight_stay": true,
+            "companion_count": 1,
+            "rest_periods": [
+              {
+                "date": "2026-10-26",
+                "end_time": "15:00",
+                "id": "befeee10d05d48f18f8142e1447dc4e1",
+                "label": "换城后歇一歇",
+                "start_time": "14:00"
+              }
+            ],
+            "travel_window": {
+              "end_minutes": 1440,
+              "intercity_cost": 46.0,
+              "legs": [
+                {
+                  "arrival_station": "苏州",
+                  "arrival_time": "2026-10-26T09:25",
+                  "arrival_timezone": "Asia/Shanghai",
+                  "baggage_minutes": 30,
+                  "baggage_policy": "",
+                  "booking_status": "planned",
+                  "connections": null,
+                  "currency": "CNY",
+                  "departure_station": "上海",
+                  "departure_time": "2026-10-26T09:00",
+                  "departure_timezone": "Asia/Shanghai",
+                  "direction": "outbound",
+                  "door_arrival": "2026-10-26T11:25+08:00",
+                  "door_departure": "2026-10-26T07:00+08:00",
+                  "door_to_door_minutes": 265,
+                  "duration_minutes": 25,
+                  "extra_costs": null,
+                  "extras_total": null,
+                  "label": "去程",
+                  "lodging_buffer_minutes": 30,
+                  "mode": "train",
+                  "passengers": 1,
+                  "price_note": "用户文字导入（12306公开网页，2026-10-19人工核对）；记录时间为导入时间，请再次核价",
+                  "price_source": "user_quote",
+                  "quote_expires_at": null,
+                  "quoted_at": "2026-10-19T16:07",
+                  "refund_policy": "",
+                  "seat_class": "二等座",
+                  "service_number": "G7006",
+                  "station_buffer_minutes": 60,
+                  "ticket_total": 46.0,
+                  "transfer_after_minutes": 60,
+                  "transfer_before_minutes": 60
+                }
+              ],
+              "notes": [
+                "去程暂定班次约束：10-26 11:25后可开始市内安排；含120分钟接驳、行李/候车及入住/退房缓冲（用户可编辑估计）"
+              ],
+              "overnight_stay": true,
+              "provisional": false,
+              "start_minutes": 685,
+              "unavailable": false,
+              "unknown_cost_items": [
+                "去程税费/行李/两端接驳等额外费用未知",
+                "去程为用户录入估算或报价，尚需核实实时价格及条件"
+              ]
+            },
+            "attractions": [
+              {
+                "name": "拙政园",
+                "address": "东北街178号",
+                "location": {
+                  "latitude": 31.324194,
+                  "longitude": 120.629211
+                },
+                "visit_duration": 60,
+                "category": "自然风光",
+                "rating": 4.8,
+                "poi_id": "B020001R2Q",
+                "ticket_price": null,
+                "open_hours": "3–10月:06:45–17:30(17:00 停止入园),11–2月:7:30–17:00(16:30 停止入园)；夜场18:30–21:00(周一闭园)(数据来源:江苏省文旅厅公共服务平台苏心游)",
+                "description": ""
+              }
+            ],
+            "meals": [
+              {
+                "type": "lunch",
+                "category": "main",
+                "name": "姑苏小院·老灶(园外苑店)",
+                "address": "东北街与百家巷交叉口168-1号(园外苑东门南90米)",
+                "location": {
+                  "latitude": 31.323652,
+                  "longitude": 120.63173
+                },
+                "cuisine": "特色/地方风味餐厅",
+                "rating": 4.6,
+                "avg_cost": 50,
+                "distance": null,
+                "poi_id": "B0IUGZQMOF",
+                "source": "nearby",
+                "estimated_cost": 50,
+                "open_hours": "10:30-21:00",
+                "schedule_mode": "auto",
+                "preferred_slot": "lunch"
+              },
+              {
+                "type": "dinner",
+                "category": "main",
+                "name": "文人苏式面馆蟹黄面",
+                "address": "园外苑",
+                "location": {
+                  "latitude": 31.324375,
+                  "longitude": 120.630725
+                },
+                "cuisine": null,
+                "rating": 3.8,
+                "avg_cost": null,
+                "distance": null,
+                "poi_id": "B0MUOX755D",
+                "source": "nearby",
+                "estimated_cost": 80,
+                "open_hours": null,
+                "schedule_mode": "auto",
+                "preferred_slot": "dinner"
+              }
+            ],
+            "hotel": {
+              "name": "苏州里物酒店(观前街平江路店)",
+              "address": "因果巷13号",
+              "location": {
+                "latitude": 31.313522338867188,
+                "longitude": 120.6245346069336
+              },
+              "estimated_cost": 0.0,
+              "price": 131.0,
+              "currency": "CNY",
+              "hotel_id": 2440961
+            },
+            "route_segments": [
+              {
+                "from_name": "苏州里物酒店(观前街平江路店)",
+                "to_name": "拙政园",
+                "distance": "1.9公里",
+                "duration": "25分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "拙政园",
+                "to_name": "姑苏小院·老灶(园外苑店)",
+                "distance": "419米",
+                "duration": "5分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "姑苏小院·老灶(园外苑店)",
+                "to_name": "文人苏式面馆蟹黄面",
+                "distance": "170米",
+                "duration": "2分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "文人苏式面馆蟹黄面",
+                "to_name": "苏州里物酒店(观前街平江路店)",
+                "distance": "1.8公里",
+                "duration": "24分钟",
+                "mode": "步行",
+                "is_estimated": false
+              }
+            ],
+            "timeline_schedule": [
+              {
+                "kind": "travel",
+                "ref_name": "苏州里物酒店(观前街平江路店) → 拙政园",
+                "start_minutes": 685,
+                "end_minutes": 710,
+                "start_time": "11:25",
+                "end_time": "11:50",
+                "duration": 25
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "拙政园",
+                "start_minutes": 710,
+                "end_minutes": 770,
+                "start_time": "11:50",
+                "end_time": "12:50",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "拙政园 → 姑苏小院·老灶(园外苑店)",
+                "start_minutes": 770,
+                "end_minutes": 775,
+                "start_time": "12:50",
+                "end_time": "12:55",
+                "duration": 5
+              },
+              {
+                "kind": "meal",
+                "ref_name": "姑苏小院·老灶(园外苑店)",
+                "start_minutes": 775,
+                "end_minutes": 835,
+                "start_time": "12:55",
+                "end_time": "13:55",
+                "duration": 60
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 835,
+                "end_minutes": 840,
+                "start_time": "13:55",
+                "end_time": "14:00",
+                "duration": 5
+              },
+              {
+                "kind": "rest",
+                "ref_name": "换城后歇一歇",
+                "start_minutes": 840,
+                "end_minutes": 900,
+                "start_time": "14:00",
+                "end_time": "15:00",
+                "duration": 60
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 900,
+                "end_minutes": 1048,
+                "start_time": "15:00",
+                "end_time": "17:28",
+                "duration": 148
+              },
+              {
+                "kind": "travel",
+                "ref_name": "姑苏小院·老灶(园外苑店) → 文人苏式面馆蟹黄面",
+                "start_minutes": 1048,
+                "end_minutes": 1050,
+                "start_time": "17:28",
+                "end_time": "17:30",
+                "duration": 2
+              },
+              {
+                "kind": "meal",
+                "ref_name": "文人苏式面馆蟹黄面",
+                "start_minutes": 1050,
+                "end_minutes": 1110,
+                "start_time": "17:30",
+                "end_time": "18:30",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "文人苏式面馆蟹黄面 → 苏州里物酒店(观前街平江路店)",
+                "start_minutes": 1110,
+                "end_minutes": 1134,
+                "start_time": "18:30",
+                "end_time": "18:54",
+                "duration": 24
+              },
+              {
+                "kind": "hotel",
+                "ref_name": "苏州里物酒店(观前街平江路店)",
+                "start_minutes": 1134,
+                "end_minutes": 1134,
+                "start_time": "18:54",
+                "end_time": "18:54",
+                "duration": 0
+              }
+            ],
+            "description": "",
+            "meal_adjustments": []
+          },
+          {
+            "day_index": 1,
+            "date": "2026-10-27",
+            "day_start_time": "08:00",
+            "timeline_order": [
+              {
+                "kind": "hotel",
+                "phase": "start",
+                "ref_name": "苏州里物酒店(观前街平江路店)"
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "留园"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "清之华兰州牛肉拉面(留园路店)"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "沙县小吃(留园店)"
+              },
+              {
+                "kind": "hotel",
+                "phase": "end",
+                "ref_name": "苏州里物酒店(观前街平江路店)"
+              }
+            ],
+            "locked_attraction_names": [],
+            "removed_attraction_names": [],
+            "is_assembled": true,
+            "overnight_stay": true,
+            "companion_count": 1,
+            "rest_periods": [],
+            "travel_window": {
+              "end_minutes": 1440,
+              "intercity_cost": 0,
+              "legs": [],
+              "notes": [],
+              "overnight_stay": true,
+              "provisional": false,
+              "start_minutes": 0,
+              "unavailable": false,
+              "unknown_cost_items": []
+            },
+            "attractions": [
+              {
+                "name": "留园",
+                "address": "阊门外留园路338号",
+                "location": {
+                  "latitude": 31.315369,
+                  "longitude": 120.59226
+                },
+                "visit_duration": 60,
+                "category": "自然风光",
+                "rating": 4.8,
+                "poi_id": "B02000IFFA",
+                "ticket_price": null,
+                "open_hours": "3–10月7:30–17:30(17:00 止入),11–2月7:30–17:00(16:30 止入)(数据来源:江苏省文旅厅公共服务平台苏心游)",
+                "description": ""
+              }
+            ],
+            "meals": [
+              {
+                "type": "lunch",
+                "category": "main",
+                "name": "清之华兰州牛肉拉面(留园路店)",
+                "address": "留园路426号留园别墅",
+                "location": {
+                  "latitude": 31.314566,
+                  "longitude": 120.591374
+                },
+                "cuisine": "快餐厅",
+                "rating": 3.8,
+                "avg_cost": 21,
+                "distance": null,
+                "poi_id": "B0GK1SXXGQ",
+                "source": "nearby",
+                "estimated_cost": 21,
+                "open_hours": "08:00-24:00",
+                "schedule_mode": "auto",
+                "preferred_slot": "lunch"
+              },
+              {
+                "type": "dinner",
+                "category": "main",
+                "name": "沙县小吃(留园店)",
+                "address": "留园路441号",
+                "location": {
+                  "latitude": 31.314535,
+                  "longitude": 120.591182
+                },
+                "cuisine": "特色/地方风味餐厅",
+                "rating": 3.4,
+                "avg_cost": 17,
+                "distance": null,
+                "poi_id": "B0FFFF6TNM",
+                "source": "nearby",
+                "estimated_cost": 17,
+                "open_hours": "08:00-22:00",
+                "schedule_mode": "auto",
+                "preferred_slot": "dinner"
+              }
+            ],
+            "hotel": {
+              "name": "苏州里物酒店(观前街平江路店)",
+              "address": "因果巷13号",
+              "location": {
+                "latitude": 31.313522338867188,
+                "longitude": 120.6245346069336
+              },
+              "estimated_cost": 0.0,
+              "price": 131.0,
+              "currency": "CNY",
+              "hotel_id": 2440961
+            },
+            "route_segments": [
+              {
+                "from_name": "苏州里物酒店(观前街平江路店)",
+                "to_name": "留园",
+                "distance": "1.7公里",
+                "duration": "50分钟",
+                "mode": "公交",
+                "is_estimated": false
+              },
+              {
+                "from_name": "留园",
+                "to_name": "清之华兰州牛肉拉面(留园路店)",
+                "distance": "218米",
+                "duration": "2分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "清之华兰州牛肉拉面(留园路店)",
+                "to_name": "沙县小吃(留园店)",
+                "distance": "36米",
+                "duration": "1分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "沙县小吃(留园店)",
+                "to_name": "苏州里物酒店(观前街平江路店)",
+                "distance": "538米",
+                "duration": "41分钟",
+                "mode": "公交",
+                "is_estimated": false
+              }
+            ],
+            "timeline_schedule": [
+              {
+                "kind": "travel",
+                "ref_name": "苏州里物酒店(观前街平江路店) → 留园",
+                "start_minutes": 480,
+                "end_minutes": 530,
+                "start_time": "08:00",
+                "end_time": "08:50",
+                "duration": 50
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "留园",
+                "start_minutes": 530,
+                "end_minutes": 590,
+                "start_time": "08:50",
+                "end_time": "09:50",
+                "duration": 60
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 590,
+                "end_minutes": 688,
+                "start_time": "09:50",
+                "end_time": "11:28",
+                "duration": 98
+              },
+              {
+                "kind": "travel",
+                "ref_name": "留园 → 清之华兰州牛肉拉面(留园路店)",
+                "start_minutes": 688,
+                "end_minutes": 690,
+                "start_time": "11:28",
+                "end_time": "11:30",
+                "duration": 2
+              },
+              {
+                "kind": "meal",
+                "ref_name": "清之华兰州牛肉拉面(留园路店)",
+                "start_minutes": 690,
+                "end_minutes": 750,
+                "start_time": "11:30",
+                "end_time": "12:30",
+                "duration": 60
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 750,
+                "end_minutes": 1049,
+                "start_time": "12:30",
+                "end_time": "17:29",
+                "duration": 299
+              },
+              {
+                "kind": "travel",
+                "ref_name": "清之华兰州牛肉拉面(留园路店) → 沙县小吃(留园店)",
+                "start_minutes": 1049,
+                "end_minutes": 1050,
+                "start_time": "17:29",
+                "end_time": "17:30",
+                "duration": 1
+              },
+              {
+                "kind": "meal",
+                "ref_name": "沙县小吃(留园店)",
+                "start_minutes": 1050,
+                "end_minutes": 1110,
+                "start_time": "17:30",
+                "end_time": "18:30",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "沙县小吃(留园店) → 苏州里物酒店(观前街平江路店)",
+                "start_minutes": 1110,
+                "end_minutes": 1151,
+                "start_time": "18:30",
+                "end_time": "19:11",
+                "duration": 41
+              },
+              {
+                "kind": "hotel",
+                "ref_name": "苏州里物酒店(观前街平江路店)",
+                "start_minutes": 1151,
+                "end_minutes": 1151,
+                "start_time": "19:11",
+                "end_time": "19:11",
+                "duration": 0
+              }
+            ],
+            "description": "",
+            "meal_adjustments": []
+          },
+          {
+            "day_index": 2,
+            "date": "2026-10-28",
+            "day_start_time": "08:00",
+            "timeline_order": [
+              {
+                "kind": "hotel",
+                "phase": "start",
+                "ref_name": "苏州里物酒店(观前街平江路店)"
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "西园戒幢律寺"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "西园寺素食-面馆"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "客到家川湘汇·苏帮菜"
+              },
+              {
+                "kind": "hotel",
+                "phase": "end",
+                "ref_name": "苏州里物酒店(观前街平江路店)"
+              }
+            ],
+            "locked_attraction_names": [],
+            "removed_attraction_names": [],
+            "is_assembled": true,
+            "overnight_stay": true,
+            "companion_count": 1,
+            "rest_periods": [
+              {
+                "date": "2026-10-28",
+                "end_time": "17:00",
+                "id": "9048b218d31945beb22b626d18043753",
+                "label": "连续出行后，留一段休息",
+                "start_time": "14:00"
+              }
+            ],
+            "travel_window": {
+              "end_minutes": 1440,
+              "intercity_cost": 0,
+              "legs": [],
+              "notes": [],
+              "overnight_stay": true,
+              "provisional": false,
+              "start_minutes": 0,
+              "unavailable": false,
+              "unknown_cost_items": []
+            },
+            "attractions": [
+              {
+                "name": "西园戒幢律寺",
+                "address": "西园弄18号",
+                "location": {
+                  "latitude": 31.314823,
+                  "longitude": 120.587334
+                },
+                "visit_duration": 60,
+                "category": "宗教",
+                "rating": 4.8,
+                "poi_id": "B02000IFB4",
+                "ticket_price": null,
+                "open_hours": "07:30-17:30",
+                "description": ""
+              }
+            ],
+            "meals": [
+              {
+                "type": "lunch",
+                "category": "main",
+                "name": "西园寺素食-面馆",
+                "address": "西园弄18号",
+                "location": {
+                  "latitude": 31.314389,
+                  "longitude": 120.587172
+                },
+                "cuisine": null,
+                "rating": 4.7,
+                "avg_cost": 16,
+                "distance": null,
+                "poi_id": "B0FFHRNP0L",
+                "source": "nearby",
+                "estimated_cost": 16,
+                "open_hours": "07:30-15:00",
+                "schedule_mode": "auto",
+                "preferred_slot": "lunch"
+              },
+              {
+                "type": "dinner",
+                "category": "main",
+                "name": "客到家川湘汇·苏帮菜",
+                "address": "枫桥路666号-32号",
+                "location": {
+                  "latitude": 31.311933,
+                  "longitude": 120.579876
+                },
+                "cuisine": null,
+                "rating": 4.6,
+                "avg_cost": 48,
+                "distance": null,
+                "poi_id": "B0J01UW9I3",
+                "source": "nearby",
+                "estimated_cost": 48,
+                "open_hours": "09:30-05:00",
+                "schedule_mode": "auto",
+                "preferred_slot": "dinner"
+              }
+            ],
+            "hotel": {
+              "name": "苏州里物酒店(观前街平江路店)",
+              "address": "因果巷13号",
+              "location": {
+                "latitude": 31.313522338867188,
+                "longitude": 120.6245346069336
+              },
+              "estimated_cost": 0.0,
+              "price": 131.0,
+              "currency": "CNY",
+              "hotel_id": 2440961
+            },
+            "route_segments": [
+              {
+                "from_name": "苏州里物酒店(观前街平江路店)",
+                "to_name": "西园戒幢律寺",
+                "distance": "2.8公里",
+                "duration": "56分钟",
+                "mode": "公交",
+                "is_estimated": false
+              },
+              {
+                "from_name": "西园戒幢律寺",
+                "to_name": "西园寺素食-面馆",
+                "distance": "117米",
+                "duration": "1分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "西园寺素食-面馆",
+                "to_name": "客到家川湘汇·苏帮菜",
+                "distance": "952米",
+                "duration": "12分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "客到家川湘汇·苏帮菜",
+                "to_name": "苏州里物酒店(观前街平江路店)",
+                "distance": "2.8公里",
+                "duration": "57分钟",
+                "mode": "公交",
+                "is_estimated": false
+              }
+            ],
+            "timeline_schedule": [
+              {
+                "kind": "travel",
+                "ref_name": "苏州里物酒店(观前街平江路店) → 西园戒幢律寺",
+                "start_minutes": 480,
+                "end_minutes": 536,
+                "start_time": "08:00",
+                "end_time": "08:56",
+                "duration": 56
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "西园戒幢律寺",
+                "start_minutes": 536,
+                "end_minutes": 596,
+                "start_time": "08:56",
+                "end_time": "09:56",
+                "duration": 60
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 596,
+                "end_minutes": 689,
+                "start_time": "09:56",
+                "end_time": "11:29",
+                "duration": 93
+              },
+              {
+                "kind": "travel",
+                "ref_name": "西园戒幢律寺 → 西园寺素食-面馆",
+                "start_minutes": 689,
+                "end_minutes": 690,
+                "start_time": "11:29",
+                "end_time": "11:30",
+                "duration": 1
+              },
+              {
+                "kind": "meal",
+                "ref_name": "西园寺素食-面馆",
+                "start_minutes": 690,
+                "end_minutes": 750,
+                "start_time": "11:30",
+                "end_time": "12:30",
+                "duration": 60
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 750,
+                "end_minutes": 840,
+                "start_time": "12:30",
+                "end_time": "14:00",
+                "duration": 90
+              },
+              {
+                "kind": "rest",
+                "ref_name": "连续出行后，留一段休息",
+                "start_minutes": 840,
+                "end_minutes": 1020,
+                "start_time": "14:00",
+                "end_time": "17:00",
+                "duration": 180
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 1020,
+                "end_minutes": 1038,
+                "start_time": "17:00",
+                "end_time": "17:18",
+                "duration": 18
+              },
+              {
+                "kind": "travel",
+                "ref_name": "西园寺素食-面馆 → 客到家川湘汇·苏帮菜",
+                "start_minutes": 1038,
+                "end_minutes": 1050,
+                "start_time": "17:18",
+                "end_time": "17:30",
+                "duration": 12
+              },
+              {
+                "kind": "meal",
+                "ref_name": "客到家川湘汇·苏帮菜",
+                "start_minutes": 1050,
+                "end_minutes": 1110,
+                "start_time": "17:30",
+                "end_time": "18:30",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "客到家川湘汇·苏帮菜 → 苏州里物酒店(观前街平江路店)",
+                "start_minutes": 1110,
+                "end_minutes": 1167,
+                "start_time": "18:30",
+                "end_time": "19:27",
+                "duration": 57
+              },
+              {
+                "kind": "hotel",
+                "ref_name": "苏州里物酒店(观前街平江路店)",
+                "start_minutes": 1167,
+                "end_minutes": 1167,
+                "start_time": "19:27",
+                "end_time": "19:27",
+                "duration": 0
+              }
+            ],
+            "description": "",
+            "meal_adjustments": []
+          },
+          {
+            "day_index": 3,
+            "date": "2026-10-29",
+            "day_start_time": "06:00",
+            "timeline_order": [
+              {
+                "kind": "hotel",
+                "phase": "start",
+                "ref_name": "苏州里物酒店(观前街平江路店)"
+              },
+              {
+                "kind": "hotel",
+                "phase": "end",
+                "ref_name": "苏州里物酒店(观前街平江路店)"
+              }
+            ],
+            "locked_attraction_names": [],
+            "removed_attraction_names": [],
+            "is_assembled": true,
+            "overnight_stay": false,
+            "companion_count": 1,
+            "rest_periods": [],
+            "travel_window": {
+              "end_minutes": 398,
+              "intercity_cost": 126.0,
+              "legs": [
+                {
+                  "arrival_station": "杭州东",
+                  "arrival_time": "2026-10-29T10:33",
+                  "arrival_timezone": "Asia/Shanghai",
+                  "baggage_minutes": 30,
+                  "baggage_policy": "",
+                  "booking_status": "planned",
+                  "connections": null,
+                  "currency": "CNY",
+                  "departure_station": "苏州",
+                  "departure_time": "2026-10-29T09:08",
+                  "departure_timezone": "Asia/Shanghai",
+                  "direction": "inbound",
+                  "door_arrival": "2026-10-29T12:03+08:00",
+                  "door_departure": "2026-10-29T06:38+08:00",
+                  "door_to_door_minutes": 325,
+                  "duration_minutes": 85,
+                  "extra_costs": null,
+                  "extras_total": null,
+                  "label": "返程",
+                  "lodging_buffer_minutes": 30,
+                  "mode": "train",
+                  "passengers": 1,
+                  "price_note": "用户文字导入（12306公开网页，2026-10-19人工核对）；记录时间为导入时间，请再次核价",
+                  "price_source": "user_quote",
+                  "quote_expires_at": null,
+                  "quoted_at": "2026-10-19T16:07",
+                  "refund_policy": "",
+                  "seat_class": "二等座",
+                  "service_number": "G7389",
+                  "station_buffer_minutes": 60,
+                  "ticket_total": 126.0,
+                  "transfer_after_minutes": 60,
+                  "transfer_before_minutes": 60
+                }
+              ],
+              "notes": [
+                "返程暂定班次约束：10-29 06:38前须结束市内安排；含150分钟接驳、行李/候车及入住/退房缓冲（用户可编辑估计）"
+              ],
+              "overnight_stay": false,
+              "provisional": false,
+              "start_minutes": 0,
+              "unavailable": false,
+              "unknown_cost_items": [
+                "返程税费/行李/两端接驳等额外费用未知",
+                "返程为用户录入估算或报价，尚需核实实时价格及条件"
+              ]
+            },
+            "attractions": [],
+            "meals": [],
+            "hotel": {
+              "name": "苏州里物酒店(观前街平江路店)",
+              "address": "因果巷13号",
+              "location": {
+                "latitude": 31.313522338867188,
+                "longitude": 120.6245346069336
+              },
+              "estimated_cost": 0.0,
+              "price": 131.0,
+              "currency": "CNY",
+              "hotel_id": 2440961
+            },
+            "route_segments": [],
+            "timeline_schedule": [
+              {
+                "kind": "hotel",
+                "ref_name": "苏州里物酒店(观前街平江路店)",
+                "start_minutes": 360,
+                "end_minutes": 360,
+                "start_time": "06:00",
+                "end_time": "06:00",
+                "duration": 0
+              }
+            ],
+            "description": "",
+            "meal_adjustments": []
+          }
+        ],
+        "draft_id": "eval_T18_a"
+      },
+      "b": {
+        "request": {
+          "city": "杭州",
+          "start_date": "2026-10-29",
+          "end_date": "2026-11-01",
+          "travel_days": 4,
+          "transportation": "公共交通",
+          "accommodation": "经济型酒店",
+          "companions": {
+            "count": 1,
+            "type": "solo"
+          },
+          "hotel_occupancy": {
+            "adults_per_room": 1,
+            "children_ages": [],
+            "room_count": 1
+          },
+          "default_day_start_time": "08:00",
+          "journey": {
+            "destination_timezone": "Asia/Shanghai",
+            "inbound": {
+              "arrival_station": "南京南",
+              "arrival_time": "2026-11-01T21:35",
+              "arrival_timezone": "Asia/Shanghai",
+              "baggage_minutes": 30,
+              "baggage_policy": "",
+              "booking_status": "planned",
+              "connections": null,
+              "currency": "CNY",
+              "departure_station": "杭州西",
+              "departure_time": "2026-11-01T20:05",
+              "departure_timezone": "Asia/Shanghai",
+              "extra_costs": null,
+              "extras_total": null,
+              "lodging_buffer_minutes": 30,
+              "mode": "train",
+              "passengers": 1,
+              "price_note": "用户文字导入（12306公开网页，2026-10-19人工核对）；记录时间为导入时间，请再次核价",
+              "price_source": "user_quote",
+              "quote_expires_at": null,
+              "quoted_at": "2026-10-19T16:07",
+              "refund_policy": "",
+              "seat_class": "二等座",
+              "service_number": "G3024",
+              "station_buffer_minutes": 60,
+              "ticket_total": 122.0,
+              "transfer_after_minutes": 60,
+              "transfer_before_minutes": 60
+            },
+            "origin_city": "苏州",
+            "outbound": {
+              "arrival_station": "杭州东",
+              "arrival_time": "2026-10-29T10:33",
+              "arrival_timezone": "Asia/Shanghai",
+              "baggage_minutes": 30,
+              "baggage_policy": "",
+              "booking_status": "planned",
+              "connections": null,
+              "currency": "CNY",
+              "departure_station": "苏州",
+              "departure_time": "2026-10-29T09:08",
+              "departure_timezone": "Asia/Shanghai",
+              "extra_costs": null,
+              "extras_total": null,
+              "lodging_buffer_minutes": 30,
+              "mode": "train",
+              "passengers": 1,
+              "price_note": "用户文字导入（12306公开网页，2026-10-19人工核对）；记录时间为导入时间，请再次核价",
+              "price_source": "user_quote",
+              "quote_expires_at": null,
+              "quoted_at": "2026-10-19T16:07",
+              "refund_policy": "",
+              "seat_class": "二等座",
+              "service_number": "G7389",
+              "station_buffer_minutes": 60,
+              "ticket_total": 126.0,
+              "transfer_after_minutes": 60,
+              "transfer_before_minutes": 60
+            },
+            "return_city": "南京"
+          },
+          "rest_periods": [
+            {
+              "date": "2026-10-29",
+              "end_time": "17:00",
+              "id": "f26940cae58d44edbce941fcb34b7f63",
+              "label": "换城后先吃午饭，再歇一歇",
+              "start_time": "16:00"
+            },
+            {
+              "date": "2026-10-31",
+              "end_time": "17:00",
+              "id": "c64a2de6075c40d5bb986f9be1ebf191",
+              "label": "连续出行后，留一段休息",
+              "start_time": "14:00"
+            }
+          ]
+        },
+        "days_detail": [
+          {
+            "day_index": 0,
+            "date": "2026-10-29",
+            "day_start_time": "12:33",
+            "timeline_order": [
+              {
+                "kind": "hotel",
+                "phase": "start",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "满陇客"
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "杭州西湖风景名胜区"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "玉琴饭店(满觉陇路店)"
+              },
+              {
+                "kind": "hotel",
+                "phase": "end",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店"
+              }
+            ],
+            "locked_attraction_names": [],
+            "removed_attraction_names": [],
+            "is_assembled": true,
+            "overnight_stay": true,
+            "companion_count": 1,
+            "rest_periods": [
+              {
+                "date": "2026-10-29",
+                "end_time": "17:00",
+                "id": "f26940cae58d44edbce941fcb34b7f63",
+                "label": "换城后先吃午饭，再歇一歇",
+                "start_time": "16:00"
+              }
+            ],
+            "travel_window": {
+              "end_minutes": 1440,
+              "intercity_cost": 126.0,
+              "legs": [
+                {
+                  "arrival_station": "杭州东",
+                  "arrival_time": "2026-10-29T10:33",
+                  "arrival_timezone": "Asia/Shanghai",
+                  "baggage_minutes": 30,
+                  "baggage_policy": "",
+                  "booking_status": "planned",
+                  "connections": null,
+                  "currency": "CNY",
+                  "departure_station": "苏州",
+                  "departure_time": "2026-10-29T09:08",
+                  "departure_timezone": "Asia/Shanghai",
+                  "direction": "outbound",
+                  "door_arrival": "2026-10-29T12:33+08:00",
+                  "door_departure": "2026-10-29T07:08+08:00",
+                  "door_to_door_minutes": 325,
+                  "duration_minutes": 85,
+                  "extra_costs": null,
+                  "extras_total": null,
+                  "label": "去程",
+                  "lodging_buffer_minutes": 30,
+                  "mode": "train",
+                  "passengers": 1,
+                  "price_note": "用户文字导入（12306公开网页，2026-10-19人工核对）；记录时间为导入时间，请再次核价",
+                  "price_source": "user_quote",
+                  "quote_expires_at": null,
+                  "quoted_at": "2026-10-19T16:07",
+                  "refund_policy": "",
+                  "seat_class": "二等座",
+                  "service_number": "G7389",
+                  "station_buffer_minutes": 60,
+                  "ticket_total": 126.0,
+                  "transfer_after_minutes": 60,
+                  "transfer_before_minutes": 60
+                }
+              ],
+              "notes": [
+                "去程暂定班次约束：10-29 12:33后可开始市内安排；含120分钟接驳、行李/候车及入住/退房缓冲（用户可编辑估计）"
+              ],
+              "overnight_stay": true,
+              "provisional": false,
+              "start_minutes": 753,
+              "unavailable": false,
+              "unknown_cost_items": [
+                "去程税费/行李/两端接驳等额外费用未知",
+                "去程为用户录入估算或报价，尚需核实实时价格及条件"
+              ]
+            },
+            "attractions": [
+              {
+                "name": "杭州西湖风景名胜区",
+                "address": "西湖街道龙井路1号",
+                "location": {
+                  "latitude": 30.222692,
+                  "longitude": 120.121358
+                },
+                "visit_duration": 60,
+                "category": "自然风光",
+                "rating": 4.9,
+                "poi_id": "B023B13L9M",
+                "ticket_price": null,
+                "open_hours": "24小时营业",
+                "description": ""
+              }
+            ],
+            "meals": [
+              {
+                "type": "lunch",
+                "category": "main",
+                "name": "满陇客",
+                "address": "满觉陇168号",
+                "location": {
+                  "latitude": 30.218382,
+                  "longitude": 120.123987
+                },
+                "cuisine": null,
+                "rating": 4.0,
+                "avg_cost": 27,
+                "distance": null,
+                "poi_id": "B0KABDYN2W",
+                "source": "nearby",
+                "estimated_cost": 27,
+                "open_hours": "07:00-20:00",
+                "schedule_mode": "manual",
+                "preferred_slot": "lunch"
+              },
+              {
+                "type": "dinner",
+                "category": "main",
+                "name": "玉琴饭店(满觉陇路店)",
+                "address": "翁家山133号",
+                "location": {
+                  "latitude": 30.219063,
+                  "longitude": 120.11645
+                },
+                "cuisine": null,
+                "rating": 4.0,
+                "avg_cost": 55,
+                "distance": null,
+                "poi_id": "B0FFG7HYYW",
+                "source": "nearby",
+                "estimated_cost": 55,
+                "open_hours": "06:00-21:00",
+                "schedule_mode": "manual",
+                "preferred_slot": "dinner"
+              }
+            ],
+            "hotel": {
+              "name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+              "address": "菩提寺路15号兴合大厦3楼",
+              "location": {
+                "latitude": 30.256562,
+                "longitude": 120.164763
+              },
+              "estimated_cost": 0.0,
+              "price": 302.0,
+              "currency": "CNY",
+              "hotel_id": 1152880
+            },
+            "route_segments": [
+              {
+                "from_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "to_name": "满陇客",
+                "distance": "1.5公里",
+                "duration": "79分钟",
+                "mode": "公交",
+                "is_estimated": false
+              },
+              {
+                "from_name": "满陇客",
+                "to_name": "杭州西湖风景名胜区",
+                "distance": "1.1公里",
+                "duration": "14分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "杭州西湖风景名胜区",
+                "to_name": "玉琴饭店(满觉陇路店)",
+                "distance": "777米",
+                "duration": "10分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "玉琴饭店(满觉陇路店)",
+                "to_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "distance": "559米",
+                "duration": "69分钟",
+                "mode": "公交",
+                "is_estimated": false
+              }
+            ],
+            "timeline_schedule": [
+              {
+                "kind": "travel",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店 → 满陇客",
+                "start_minutes": 753,
+                "end_minutes": 832,
+                "start_time": "12:33",
+                "end_time": "13:52",
+                "duration": 79
+              },
+              {
+                "kind": "meal",
+                "ref_name": "满陇客",
+                "start_minutes": 832,
+                "end_minutes": 892,
+                "start_time": "13:52",
+                "end_time": "14:52",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "满陇客 → 杭州西湖风景名胜区",
+                "start_minutes": 892,
+                "end_minutes": 906,
+                "start_time": "14:52",
+                "end_time": "15:06",
+                "duration": 14
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 906,
+                "end_minutes": 960,
+                "start_time": "15:06",
+                "end_time": "16:00",
+                "duration": 54
+              },
+              {
+                "kind": "rest",
+                "ref_name": "换城后先吃午饭，再歇一歇",
+                "start_minutes": 960,
+                "end_minutes": 1020,
+                "start_time": "16:00",
+                "end_time": "17:00",
+                "duration": 60
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "杭州西湖风景名胜区",
+                "start_minutes": 1020,
+                "end_minutes": 1080,
+                "start_time": "17:00",
+                "end_time": "18:00",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "杭州西湖风景名胜区 → 玉琴饭店(满觉陇路店)",
+                "start_minutes": 1080,
+                "end_minutes": 1090,
+                "start_time": "18:00",
+                "end_time": "18:10",
+                "duration": 10
+              },
+              {
+                "kind": "meal",
+                "ref_name": "玉琴饭店(满觉陇路店)",
+                "start_minutes": 1090,
+                "end_minutes": 1150,
+                "start_time": "18:10",
+                "end_time": "19:10",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "玉琴饭店(满觉陇路店) → 杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "start_minutes": 1150,
+                "end_minutes": 1219,
+                "start_time": "19:10",
+                "end_time": "20:19",
+                "duration": 69
+              },
+              {
+                "kind": "hotel",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "start_minutes": 1219,
+                "end_minutes": 1219,
+                "start_time": "20:19",
+                "end_time": "20:19",
+                "duration": 0
+              }
+            ],
+            "description": "",
+            "meal_adjustments": []
+          },
+          {
+            "day_index": 1,
+            "date": "2026-10-30",
+            "day_start_time": "08:00",
+            "timeline_order": [
+              {
+                "kind": "hotel",
+                "phase": "start",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店"
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "雷峰塔景区"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "同兴春·杭州面馆拌川(西湖店)"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "西湖味道美食汇"
+              },
+              {
+                "kind": "hotel",
+                "phase": "end",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店"
+              }
+            ],
+            "locked_attraction_names": [],
+            "removed_attraction_names": [],
+            "is_assembled": true,
+            "overnight_stay": true,
+            "companion_count": 1,
+            "rest_periods": [],
+            "travel_window": {
+              "end_minutes": 1440,
+              "intercity_cost": 0,
+              "legs": [],
+              "notes": [],
+              "overnight_stay": true,
+              "provisional": false,
+              "start_minutes": 0,
+              "unavailable": false,
+              "unknown_cost_items": []
+            },
+            "attractions": [
+              {
+                "name": "雷峰塔景区",
+                "address": "南山路15号",
+                "location": {
+                  "latitude": 30.230934,
+                  "longitude": 120.148849
+                },
+                "visit_duration": 60,
+                "category": "自然风光",
+                "rating": 4.8,
+                "poi_id": "B023B09LKR",
+                "ticket_price": null,
+                "open_hours": "08:00-19:00 08:00-20:00 08:00-17:30",
+                "description": ""
+              }
+            ],
+            "meals": [
+              {
+                "type": "lunch",
+                "category": "main",
+                "name": "同兴春·杭州面馆拌川(西湖店)",
+                "address": "西湖街道南山路15号(距西湖10米雷峰塔10米)",
+                "location": {
+                  "latitude": 30.230398,
+                  "longitude": 120.148004
+                },
+                "cuisine": null,
+                "rating": 4.5,
+                "avg_cost": 58,
+                "distance": null,
+                "poi_id": "B0MB65NSZD",
+                "source": "nearby",
+                "estimated_cost": 58,
+                "open_hours": "10:00-21:30",
+                "schedule_mode": "auto",
+                "preferred_slot": "lunch"
+              },
+              {
+                "type": "dinner",
+                "category": "main",
+                "name": "西湖味道美食汇",
+                "address": "南山路15号雷峰塔风景区西停车场旁",
+                "location": {
+                  "latitude": 30.230384,
+                  "longitude": 120.147839
+                },
+                "cuisine": null,
+                "rating": 3.9,
+                "avg_cost": 32,
+                "distance": null,
+                "poi_id": "B0FFHUVTV3",
+                "source": "nearby",
+                "estimated_cost": 32,
+                "open_hours": "10:00-19:00",
+                "schedule_mode": "auto",
+                "preferred_slot": "dinner"
+              }
+            ],
+            "hotel": {
+              "name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+              "address": "菩提寺路15号兴合大厦3楼",
+              "location": {
+                "latitude": 30.256562,
+                "longitude": 120.164763
+              },
+              "estimated_cost": 0.0,
+              "price": 302.0,
+              "currency": "CNY",
+              "hotel_id": 1152880
+            },
+            "route_segments": [
+              {
+                "from_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "to_name": "雷峰塔景区",
+                "distance": "900米",
+                "duration": "45分钟",
+                "mode": "公交",
+                "is_estimated": false
+              },
+              {
+                "from_name": "雷峰塔景区",
+                "to_name": "同兴春·杭州面馆拌川(西湖店)",
+                "distance": "250米",
+                "duration": "3分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "同兴春·杭州面馆拌川(西湖店)",
+                "to_name": "西湖味道美食汇",
+                "distance": "11米",
+                "duration": "1分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "西湖味道美食汇",
+                "to_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "distance": "505米",
+                "duration": "44分钟",
+                "mode": "公交",
+                "is_estimated": false
+              }
+            ],
+            "timeline_schedule": [
+              {
+                "kind": "travel",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店 → 雷峰塔景区",
+                "start_minutes": 480,
+                "end_minutes": 525,
+                "start_time": "08:00",
+                "end_time": "08:45",
+                "duration": 45
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "雷峰塔景区",
+                "start_minutes": 525,
+                "end_minutes": 585,
+                "start_time": "08:45",
+                "end_time": "09:45",
+                "duration": 60
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 585,
+                "end_minutes": 687,
+                "start_time": "09:45",
+                "end_time": "11:27",
+                "duration": 102
+              },
+              {
+                "kind": "travel",
+                "ref_name": "雷峰塔景区 → 同兴春·杭州面馆拌川(西湖店)",
+                "start_minutes": 687,
+                "end_minutes": 690,
+                "start_time": "11:27",
+                "end_time": "11:30",
+                "duration": 3
+              },
+              {
+                "kind": "meal",
+                "ref_name": "同兴春·杭州面馆拌川(西湖店)",
+                "start_minutes": 690,
+                "end_minutes": 750,
+                "start_time": "11:30",
+                "end_time": "12:30",
+                "duration": 60
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 750,
+                "end_minutes": 1049,
+                "start_time": "12:30",
+                "end_time": "17:29",
+                "duration": 299
+              },
+              {
+                "kind": "travel",
+                "ref_name": "同兴春·杭州面馆拌川(西湖店) → 西湖味道美食汇",
+                "start_minutes": 1049,
+                "end_minutes": 1050,
+                "start_time": "17:29",
+                "end_time": "17:30",
+                "duration": 1
+              },
+              {
+                "kind": "meal",
+                "ref_name": "西湖味道美食汇",
+                "start_minutes": 1050,
+                "end_minutes": 1110,
+                "start_time": "17:30",
+                "end_time": "18:30",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "西湖味道美食汇 → 杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "start_minutes": 1110,
+                "end_minutes": 1154,
+                "start_time": "18:30",
+                "end_time": "19:14",
+                "duration": 44
+              },
+              {
+                "kind": "hotel",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "start_minutes": 1154,
+                "end_minutes": 1154,
+                "start_time": "19:14",
+                "end_time": "19:14",
+                "duration": 0
+              }
+            ],
+            "description": "",
+            "meal_adjustments": []
+          },
+          {
+            "day_index": 2,
+            "date": "2026-10-31",
+            "day_start_time": "10:00",
+            "timeline_order": [
+              {
+                "kind": "hotel",
+                "phase": "start",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店"
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "湖滨步行街"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "王繁星面馆(杭州湖滨in77店)"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "牛叠叠·围炉现烤牛肉饭(杭州首店)"
+              },
+              {
+                "kind": "hotel",
+                "phase": "end",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店"
+              }
+            ],
+            "locked_attraction_names": [],
+            "removed_attraction_names": [],
+            "is_assembled": true,
+            "overnight_stay": true,
+            "companion_count": 1,
+            "rest_periods": [
+              {
+                "date": "2026-10-31",
+                "end_time": "17:00",
+                "id": "c64a2de6075c40d5bb986f9be1ebf191",
+                "label": "连续出行后，留一段休息",
+                "start_time": "14:00"
+              }
+            ],
+            "travel_window": {
+              "end_minutes": 1440,
+              "intercity_cost": 0,
+              "legs": [],
+              "notes": [],
+              "overnight_stay": true,
+              "provisional": false,
+              "start_minutes": 0,
+              "unavailable": false,
+              "unknown_cost_items": []
+            },
+            "attractions": [
+              {
+                "name": "湖滨步行街",
+                "address": "凤起路539-4号(龙翔桥地铁站C口步行120米)",
+                "location": {
+                  "latitude": 30.254158,
+                  "longitude": 120.162923
+                },
+                "visit_duration": 60,
+                "category": "购物",
+                "rating": 4.8,
+                "poi_id": "B0FFL9RQ5O",
+                "ticket_price": null,
+                "open_hours": "10:00-22:00",
+                "description": ""
+              }
+            ],
+            "meals": [
+              {
+                "type": "lunch",
+                "category": "main",
+                "name": "王繁星面馆(杭州湖滨in77店)",
+                "address": "延安路245号杭州湖滨银泰in77-B区B1",
+                "location": {
+                  "latitude": 30.25457,
+                  "longitude": 120.163391
+                },
+                "cuisine": null,
+                "rating": 4.5,
+                "avg_cost": 36,
+                "distance": null,
+                "poi_id": "B0L6OCG3CF",
+                "source": "nearby",
+                "estimated_cost": 36,
+                "open_hours": "周一至周日 11:00-22:00 2026-02-16至2026-02-16 周一 11:00-13:00",
+                "schedule_mode": "auto",
+                "preferred_slot": "lunch"
+              },
+              {
+                "type": "dinner",
+                "category": "main",
+                "name": "牛叠叠·围炉现烤牛肉饭(杭州首店)",
+                "address": "湖滨银泰in77B区B1层1001号",
+                "location": {
+                  "latitude": 30.254575,
+                  "longitude": 120.163375
+                },
+                "cuisine": null,
+                "rating": 4.4,
+                "avg_cost": 43,
+                "distance": null,
+                "poi_id": "B0M64RJWJL",
+                "source": "nearby",
+                "estimated_cost": 43,
+                "open_hours": "11:00-21:30",
+                "schedule_mode": "auto",
+                "preferred_slot": "dinner"
+              }
+            ],
+            "hotel": {
+              "name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+              "address": "菩提寺路15号兴合大厦3楼",
+              "location": {
+                "latitude": 30.256562,
+                "longitude": 120.164763
+              },
+              "estimated_cost": 0.0,
+              "price": 302.0,
+              "currency": "CNY",
+              "hotel_id": 1152880
+            },
+            "route_segments": [
+              {
+                "from_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "to_name": "湖滨步行街",
+                "distance": "470米",
+                "duration": "6分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "湖滨步行街",
+                "to_name": "王繁星面馆(杭州湖滨in77店)",
+                "distance": "92米",
+                "duration": "1分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "王繁星面馆(杭州湖滨in77店)",
+                "to_name": "牛叠叠·围炉现烤牛肉饭(杭州首店)",
+                "distance": "1米",
+                "duration": "1分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "牛叠叠·围炉现烤牛肉饭(杭州首店)",
+                "to_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "distance": "370米",
+                "duration": "4分钟",
+                "mode": "步行",
+                "is_estimated": false
+              }
+            ],
+            "timeline_schedule": [
+              {
+                "kind": "travel",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店 → 湖滨步行街",
+                "start_minutes": 600,
+                "end_minutes": 606,
+                "start_time": "10:00",
+                "end_time": "10:06",
+                "duration": 6
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "湖滨步行街",
+                "start_minutes": 606,
+                "end_minutes": 666,
+                "start_time": "10:06",
+                "end_time": "11:06",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "湖滨步行街 → 王繁星面馆(杭州湖滨in77店)",
+                "start_minutes": 666,
+                "end_minutes": 667,
+                "start_time": "11:06",
+                "end_time": "11:07",
+                "duration": 1
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 667,
+                "end_minutes": 690,
+                "start_time": "11:07",
+                "end_time": "11:30",
+                "duration": 23
+              },
+              {
+                "kind": "meal",
+                "ref_name": "王繁星面馆(杭州湖滨in77店)",
+                "start_minutes": 690,
+                "end_minutes": 750,
+                "start_time": "11:30",
+                "end_time": "12:30",
+                "duration": 60
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 750,
+                "end_minutes": 840,
+                "start_time": "12:30",
+                "end_time": "14:00",
+                "duration": 90
+              },
+              {
+                "kind": "rest",
+                "ref_name": "连续出行后，留一段休息",
+                "start_minutes": 840,
+                "end_minutes": 1020,
+                "start_time": "14:00",
+                "end_time": "17:00",
+                "duration": 180
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 1020,
+                "end_minutes": 1049,
+                "start_time": "17:00",
+                "end_time": "17:29",
+                "duration": 29
+              },
+              {
+                "kind": "travel",
+                "ref_name": "王繁星面馆(杭州湖滨in77店) → 牛叠叠·围炉现烤牛肉饭(杭州首店)",
+                "start_minutes": 1049,
+                "end_minutes": 1050,
+                "start_time": "17:29",
+                "end_time": "17:30",
+                "duration": 1
+              },
+              {
+                "kind": "meal",
+                "ref_name": "牛叠叠·围炉现烤牛肉饭(杭州首店)",
+                "start_minutes": 1050,
+                "end_minutes": 1110,
+                "start_time": "17:30",
+                "end_time": "18:30",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "牛叠叠·围炉现烤牛肉饭(杭州首店) → 杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "start_minutes": 1110,
+                "end_minutes": 1114,
+                "start_time": "18:30",
+                "end_time": "18:34",
+                "duration": 4
+              },
+              {
+                "kind": "hotel",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "start_minutes": 1114,
+                "end_minutes": 1114,
+                "start_time": "18:34",
+                "end_time": "18:34",
+                "duration": 0
+              }
+            ],
+            "description": "",
+            "meal_adjustments": []
+          },
+          {
+            "day_index": 3,
+            "date": "2026-11-01",
+            "day_start_time": "08:00",
+            "timeline_order": [
+              {
+                "kind": "hotel",
+                "phase": "start",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店"
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "钱江世纪公园"
+              },
+              {
+                "kind": "meal",
+                "ref_name": "肯德基(萧山钱江世纪公园店)"
+              },
+              {
+                "kind": "hotel",
+                "phase": "end",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店"
+              }
+            ],
+            "locked_attraction_names": [],
+            "removed_attraction_names": [],
+            "is_assembled": true,
+            "overnight_stay": false,
+            "companion_count": 1,
+            "rest_periods": [],
+            "travel_window": {
+              "end_minutes": 1055,
+              "intercity_cost": 0,
+              "legs": [
+                {
+                  "arrival_station": "南京南",
+                  "arrival_time": "2026-11-01T21:35",
+                  "arrival_timezone": "Asia/Shanghai",
+                  "baggage_minutes": 30,
+                  "baggage_policy": "",
+                  "booking_status": "planned",
+                  "connections": null,
+                  "currency": "CNY",
+                  "departure_station": "杭州西",
+                  "departure_time": "2026-11-01T20:05",
+                  "departure_timezone": "Asia/Shanghai",
+                  "direction": "inbound",
+                  "door_arrival": "2026-11-01T23:05+08:00",
+                  "door_departure": "2026-11-01T17:35+08:00",
+                  "door_to_door_minutes": 330,
+                  "duration_minutes": 90,
+                  "extra_costs": null,
+                  "extras_total": null,
+                  "label": "返程",
+                  "lodging_buffer_minutes": 30,
+                  "mode": "train",
+                  "passengers": 1,
+                  "price_note": "用户文字导入（12306公开网页，2026-10-19人工核对）；记录时间为导入时间，请再次核价",
+                  "price_source": "user_quote",
+                  "quote_expires_at": null,
+                  "quoted_at": "2026-10-19T16:07",
+                  "refund_policy": "",
+                  "seat_class": "二等座",
+                  "service_number": "G3024",
+                  "station_buffer_minutes": 60,
+                  "ticket_total": 122.0,
+                  "transfer_after_minutes": 60,
+                  "transfer_before_minutes": 60
+                }
+              ],
+              "notes": [
+                "返程暂定班次约束：11-01 17:35前须结束市内安排；含150分钟接驳、行李/候车及入住/退房缓冲（用户可编辑估计）"
+              ],
+              "overnight_stay": false,
+              "provisional": false,
+              "start_minutes": 0,
+              "unavailable": false,
+              "unknown_cost_items": []
+            },
+            "attractions": [
+              {
+                "name": "钱江世纪公园",
+                "address": "秋韵路a7-2号",
+                "location": {
+                  "latitude": 30.244685,
+                  "longitude": 120.237194
+                },
+                "visit_duration": 60,
+                "category": "自然风光",
+                "rating": 4.7,
+                "poi_id": "B0FFHJTKKP",
+                "ticket_price": null,
+                "open_hours": "24小时营业",
+                "description": ""
+              }
+            ],
+            "meals": [
+              {
+                "type": "lunch",
+                "category": "main",
+                "name": "肯德基(萧山钱江世纪公园店)",
+                "address": "钱江世纪公园A区10幢3号商铺",
+                "location": {
+                  "latitude": 30.242962,
+                  "longitude": 120.239533
+                },
+                "cuisine": "肯德基",
+                "rating": 4.5,
+                "avg_cost": 34,
+                "distance": null,
+                "poi_id": "B0L1YRF2HA",
+                "source": "nearby",
+                "estimated_cost": 34,
+                "open_hours": "10:00-23:30",
+                "schedule_mode": "auto",
+                "preferred_slot": "lunch"
+              }
+            ],
+            "hotel": {
+              "name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+              "address": "菩提寺路15号兴合大厦3楼",
+              "location": {
+                "latitude": 30.256562,
+                "longitude": 120.164763
+              },
+              "estimated_cost": 0.0,
+              "price": 302.0,
+              "currency": "CNY",
+              "hotel_id": 1152880
+            },
+            "route_segments": [
+              {
+                "from_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "to_name": "钱江世纪公园",
+                "distance": "1.4公里",
+                "duration": "51分钟",
+                "mode": "公交",
+                "is_estimated": false
+              },
+              {
+                "from_name": "钱江世纪公园",
+                "to_name": "肯德基(萧山钱江世纪公园店)",
+                "distance": "316米",
+                "duration": "4分钟",
+                "mode": "步行",
+                "is_estimated": false
+              },
+              {
+                "from_name": "肯德基(萧山钱江世纪公园店)",
+                "to_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "distance": "1.1公里",
+                "duration": "45分钟",
+                "mode": "公交",
+                "is_estimated": false
+              }
+            ],
+            "timeline_schedule": [
+              {
+                "kind": "travel",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店 → 钱江世纪公园",
+                "start_minutes": 480,
+                "end_minutes": 531,
+                "start_time": "08:00",
+                "end_time": "08:51",
+                "duration": 51
+              },
+              {
+                "kind": "attraction",
+                "ref_name": "钱江世纪公园",
+                "start_minutes": 531,
+                "end_minutes": 591,
+                "start_time": "08:51",
+                "end_time": "09:51",
+                "duration": 60
+              },
+              {
+                "kind": "free_time",
+                "ref_name": "这段时间尚未安排",
+                "start_minutes": 591,
+                "end_minutes": 686,
+                "start_time": "09:51",
+                "end_time": "11:26",
+                "duration": 95
+              },
+              {
+                "kind": "travel",
+                "ref_name": "钱江世纪公园 → 肯德基(萧山钱江世纪公园店)",
+                "start_minutes": 686,
+                "end_minutes": 690,
+                "start_time": "11:26",
+                "end_time": "11:30",
+                "duration": 4
+              },
+              {
+                "kind": "meal",
+                "ref_name": "肯德基(萧山钱江世纪公园店)",
+                "start_minutes": 690,
+                "end_minutes": 750,
+                "start_time": "11:30",
+                "end_time": "12:30",
+                "duration": 60
+              },
+              {
+                "kind": "travel",
+                "ref_name": "肯德基(萧山钱江世纪公园店) → 杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "start_minutes": 750,
+                "end_minutes": 795,
+                "start_time": "12:30",
+                "end_time": "13:15",
+                "duration": 45
+              },
+              {
+                "kind": "hotel",
+                "ref_name": "杭州西湖风景区龙翔桥地铁站和颐至尊酒店",
+                "start_minutes": 795,
+                "end_minutes": 795,
+                "start_time": "13:15",
+                "end_time": "13:15",
+                "duration": 0
+              }
+            ],
+            "description": "",
+            "meal_adjustments": []
+          }
+        ],
+        "draft_id": "eval_T18_b"
+      }
+    }
+  },
+  "fault": null
+}

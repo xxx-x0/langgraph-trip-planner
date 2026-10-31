@@ -27,6 +27,18 @@ def travel_window(request, day):
         leg = getattr(j,key)
         if not leg:
             notes.append(f'{label}未填写，可用时间暂定')
+            planning = j.planning
+            if planning:
+                policy = planning.arrival_policy if key == 'outbound' else planning.departure_policy
+                boundary = (planning.ready_at if key == 'outbound' else planning.leave_by) if policy == 'time_window' else None
+                if policy == 'travel_day':
+                    boundary = ((date.fromisoformat(request.start_date)+timedelta(days=1)).isoformat() if key == 'outbound' else request.end_date)+'T00:00'
+                if boundary:
+                    relative = round((local_instant(boundary,j.destination_timezone)-midnight).total_seconds()/60)
+                    if key == 'outbound': lower=max(0,min(1440,relative))
+                    else: upper=max(0,min(1440,relative))
+                    if day == cost_date or boundary[:10] == day:
+                        notes.append(f'{label}按本次交通时间预留：'+('目的地活动从'+boundary.replace('T',' ')+'后开始' if key=='outbound' else '目的地活动须在'+boundary.replace('T',' ')+'前结束')+'；不是实际班次，已含本次暂定接驳预留')
             if day == cost_date: unknown.append(f'{label}票价及接驳/行李等费用未知')
             continue
         dep=local_instant(leg.departure_time,leg.departure_timezone)
@@ -62,7 +74,10 @@ def travel_window(request, day):
                 unknown.append(f'{label}报价已过期，金额仅保留作参考，请重新核价')
             if leg.price_source!='paid': unknown.append(f'{label}为用户录入估算或报价，尚需核实实时价格及条件')
     stay_start, stay_end=stay_dates(request)
+    usable=max(0,min(1320,upper)-max(480,lower))
+    if usable == 0: notes.append('本日留给交通或抵离办理，未安排目的地游玩；在途用餐及住宿仍需核对')
     return dict(start_minutes=lower,end_minutes=max(lower,upper),unavailable=lower>=upper,
+                day_role='travel' if not usable else 'partial' if usable<840 else 'full',usable_minutes=usable,
                 provisional=not(j.outbound and j.inbound), notes=notes,legs=legs,
                 intercity_cost=round(cost,2),unknown_cost_items=unknown,
                 overnight_stay=stay_start<=day<stay_end)
@@ -84,5 +99,6 @@ def conflicts(detail):
     from .rest_schedule import rest_conflicts
     window=detail.travel_window
     lo,hi=window.get('start_minutes',0),window.get('end_minutes',1440)
-    return rest_conflicts(detail) + [f"{x['ref_name']}（{x['start_time']}—{x['end_time']}）" for x in detail.timeline_schedule
+    from .schedule_constraints import time_conflicts
+    return time_conflicts(detail) + rest_conflicts(detail) + [f"{x['ref_name']}（{x['start_time']}—{x['end_time']}）" for x in detail.timeline_schedule
             if x['kind'] in {'attraction','meal','hotel','travel','rest'} and (window.get('unavailable') or x['start_minutes']<lo or x['end_minutes']>hi)]

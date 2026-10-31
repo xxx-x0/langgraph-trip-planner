@@ -1,0 +1,65 @@
+{
+  "expected_outcome": "conflict",
+  "expected_http": 409,
+  "eligible_ids": [
+    "SYN_T17_B"
+  ],
+  "candidate_checks": [
+    {
+      "candidate_id": "SYN_T17_A",
+      "eligible": false,
+      "reasons": [
+        "arrival_conflict"
+      ],
+      "margins": [
+        0,
+        -60
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "SYN_T17_B",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        15,
+        0
+      ],
+      "tight": true
+    },
+    {
+      "candidate_id": "SYN_T17_C",
+      "eligible": false,
+      "reasons": [
+        "departure_conflict"
+      ],
+      "margins": [
+        -30,
+        45
+      ],
+      "tight": false
+    }
+  ],
+  "bounds": {
+    "start_date": "2027-04-12",
+    "end_date": "2027-04-16",
+    "departure_after": "2027-04-14T18:00",
+    "arrival_before": "2027-04-14T19:00"
+  },
+  "buffer_fields": {
+    "transfer_before_minutes": 30,
+    "station_buffer_minutes": 30,
+    "transfer_after_minutes": 60,
+    "baggage_minutes": 0,
+    "lodging_buffer_minutes": 0
+  },
+  "acceptable_first": [],
+  "rank_key": null,
+  "preferred_pairs": [],
+  "expected_ticket_total": null,
+  "checkpoint_statuses": {
+    "old_recommendation": 409,
+    "old_basis_preview": 409
+  },
+  "method": "Independent date/interval arithmetic; candidate preference specification; no production evaluator called"
+}

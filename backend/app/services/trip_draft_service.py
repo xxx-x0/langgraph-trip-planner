@@ -85,12 +85,29 @@ async def create_draft(
     hotels_by_day: List[Any],
     dining_pool: List[DiningPoolDay] | List[dict],
     weather_info: List[WeatherInfo] | List[dict],
+    explicit_assignments: bool = False,
 ) -> str:
     draft_id = uuid.uuid4().hex
     travel_days = request.travel_days
     days_detail_init = [None] * travel_days
 
     request_data = request.model_dump(mode='json')
+    if request.journey and request.journey.planning:
+        from .journey_planning import reserve_clusters, pending_item, dates
+        from ..models.schemas import DaySkeleton
+        original=[dict(a) for group in clusters_data for a in group]
+        clusters_data=reserve_clusters(request,clusters_data,explicit=explicit_assignments)
+        assigned={a['name'] for group in clusters_data for a in group}
+        catalog={a['name']:a for a in original}
+        for selected in selected_attractions:
+            value=selected.model_dump(mode='json') if hasattr(selected,'model_dump') else selected
+            loc=value.get('location') or {}
+            catalog.setdefault(value['name'],dict(value,longitude=loc.get('longitude'),latitude=loc.get('latitude')))
+        request_data['_transport_unassigned']=[pending_item(a) for name,a in catalog.items() if name not in assigned]
+        old_days=macro_plan.days
+        macro_plan=macro_plan.model_copy(update={'days':[DaySkeleton(day_index=i,date=d,
+            attraction_names=[a['name'] for a in clusters_data[i]],hotel_name=old_days[i].hotel_name if i<len(old_days) else '')
+            for i,d in enumerate(dates(request))], 'total_days':travel_days})
     creation = _creation.get()
     if creation:
         request_data.update(_creation_request_id=creation[0], _creation_fingerprint=creation[1])
@@ -265,14 +282,22 @@ async def patch_dining_pool(draft_id, day_index, pool, *, expected_day, expected
         await session.commit()
 
 
-async def replace_journey(draft_id, request, expected_request, expected_days, *, details=None):
+async def replace_journey(draft_id, request, expected_request, expected_days, *, details=None, planning_update=None, expected_snapshot=None):
     async with async_session() as session:
         await session.execute(text('BEGIN IMMEDIATE'))
         record = await session.get(TripDraft, draft_id)
         if record is None or record.status == 'finalized' or record.request_json != expected_request or record.days_detail_json != expected_days:
             raise DraftChangedDuringFinalize('草稿已变化，本次交通修改未保存，请重新预览')
+        if expected_snapshot and any(getattr(record,key)!=value for key,value in expected_snapshot.items()):
+            raise DraftChangedDuringFinalize('交通调整依据已变化，请重新预览；本次未保存')
         data=json.loads(record.request_json)
         data['journey']=request.journey.model_dump(mode='json') if request.journey else None
+        if planning_update:
+            data['rest_periods']=[r.model_dump(mode='json') for r in request.rest_periods]
+            data['_transport_unassigned']=planning_update['unassigned']
+            data['_transport_discarded']=planning_update['discarded']
+            record.clusters_data_json=json.dumps(planning_update['clusters'],ensure_ascii=False)
+            record.macro_plan_json=planning_update['macro'].model_dump_json()
         if details is not None:
             record.days_detail_json=json.dumps([d.model_dump(mode='json') if d else None for d in details],ensure_ascii=False)
         record.request_json=json.dumps(data,ensure_ascii=False)

@@ -11,7 +11,7 @@ export const flightCities: Record<string, string> = {
   济南:'tna',福州:'foc',贵阳:'kwe',南宁:'nng',南昌:'khn',合肥:'hfe',太原:'tyn',
   兰州:'lhw',乌鲁木齐:'urc',银川:'inc',西宁:'xnn',拉萨:'lxa',长春:'cgq',呼和浩特:'het',
 }
-export interface TicketQuery {mode:'train'|'flight';direction:'outbound'|'inbound';from:string;to:string;date:string;passengers:number;adultPassengers?:number}
+export interface TicketQuery {mode:'train'|'flight';direction:'outbound'|'inbound';from:string;to:string;date:string;passengers:number;adultPassengers?:number;fromScope?:'auto'|'exact'|'city';toScope?:'auto'|'exact'|'city'}
 export function validDate(date:string):boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date+'T00:00:00Z')) && new Date(date+'T00:00:00Z').toISOString().slice(0,10)===date
 }

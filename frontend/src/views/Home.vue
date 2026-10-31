@@ -63,7 +63,7 @@
             <a-col :xs="12" :md="6">
               <a-form-item name="start_date" :rules="[{ required: true, message: '请选择开始日期' }]">
                 <template #label>
-                  <span class="form-label">开始日期</span>
+                  <span class="form-label">出行开始日期（含去程）</span>
                 </template>
                 <a-date-picker
                   v-model:value="formData.start_date"
@@ -76,7 +76,7 @@
             <a-col :xs="12" :md="6">
               <a-form-item name="end_date" :rules="[{ required: true, message: '请选择结束日期' }]">
                 <template #label>
-                  <span class="form-label">结束日期</span>
+                  <span class="form-label">出行结束日期（含返程）</span>
                 </template>
                 <a-date-picker
                   v-model:value="formData.end_date"
@@ -88,7 +88,7 @@
           </a-row>
 
           <div class="days-display">
-            <span class="days-label">旅行天数：</span>
+            <span class="days-label">整趟出行天数（含在途）：</span>
             <span class="days-value">{{ formData.travel_days }}</span>
             <span class="days-unit">天</span>
           </div>

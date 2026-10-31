@@ -1,0 +1,167 @@
+{
+  "schema_version": "trip-eval-v1",
+  "case_id": "R01",
+  "case_version": "1.0.1-draft",
+  "title": "明确交换顺序",
+  "target": "day_rearrangement",
+  "split": "dev",
+  "family": "synthetic-day-template-v1",
+  "execution_mode": "live_model_with_replay",
+  "tool_mode": "replay",
+  "data_origin": "synthetic",
+  "sources": [
+    {
+      "source_id": "R01-authored",
+      "origin": "synthetic",
+      "component": "entire_fixture",
+      "author": "codex",
+      "constructed_at": "2026-10-24",
+      "note": "Agent-authored artificial data; not human supplied or human annotated"
+    }
+  ],
+  "clock": "2027-04-01T12:00:00+08:00",
+  "random_seed": 20261024,
+  "input_path": "inputs/R01.json",
+  "reference_path": "references/R01.json",
+  "route_path": "routes/R01.json",
+  "input_sha256": "367dc302633d9eafd8f7558989114a24025d9c227fa1facef4f837199cc52514",
+  "reference_sha256": "f74801e5daa06f0aa879517b8eb2411638335b37c03613e4fa22210ed3e22904",
+  "route_sha256": "d06aa375057a10c6b6768050bf769023ed067b6c2d4164565419bf993c87db15",
+  "expected_assertions": [
+    {
+      "rule_id": "R-LOCK",
+      "layer": "model",
+      "applicable": false,
+      "reason": "no locked attraction",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-LOCK",
+      "layer": "system",
+      "applicable": false,
+      "reason": "no locked attraction",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-REMOVED",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-REMOVED",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-MANUAL",
+      "layer": "system",
+      "applicable": false,
+      "reason": "no manual meal",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-MEAL",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-MEAL",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-FACT",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-DURATION",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-REST",
+      "layer": "system",
+      "applicable": false,
+      "reason": "no fixed rest period",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-WINDOW",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-INTENT",
+      "layer": "model",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-INTENT",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-ROUTE",
+      "layer": "system",
+      "applicable": false,
+      "reason": "no required route improvement in this scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "R-DISCLOSE",
+      "layer": "system",
+      "applicable": true,
+      "reason": "required by frozen scenario",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "S-PERSIST",
+      "layer": "system",
+      "applicable": true,
+      "reason": "operation evidence required",
+      "evaluator_version": "rules-v1.1"
+    },
+    {
+      "rule_id": "S-TRACE",
+      "layer": "observability",
+      "applicable": true,
+      "reason": "operation evidence required",
+      "evaluator_version": "rules-v1.1"
+    }
+  ],
+  "annotation": {
+    "status": "pending_human",
+    "author_kind": "agent_draft",
+    "reviewer": null,
+    "reviewed_at": null,
+    "confirmed_reference_sha256": null,
+    "pending_items": [
+      "scenario_and_reference_review"
+    ],
+    "rationale": "Agent-authored or independently calculated draft; no human confirmation has been received"
+  },
+  "limitations": [
+    "Not executed against a live model in P2",
+    "Scenario holdout only; shared synthetic templates and source-family leakage require review before any unseen-quality claim",
+    "Artificial values are not supplier observations"
+  ]
+}

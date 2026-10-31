@@ -157,7 +157,8 @@ async def test_sync_finalize_and_history_keep_transport_budget_once(case):
     with patch('app.agents.langgraph_agent.finalize.pipeline.compute_day_route',new=AsyncMock(return_value=[])):
         final=await client.post(base+'/finalize')
     events=[json.loads(line[6:]) for line in final.text.splitlines() if line.startswith('data: ')]
-    complete=next(e for e in events if e['type']=='complete')
+    complete=next((e for e in events if e['type']=='complete'), None)
+    assert complete, final.text
     assert complete['trip_plan']['budget']['total_intercity']==240
     history=(await client.get('/api/trips/'+str(complete['trip_id']))).json()['data']['plan']
     assert history['journey']['outbound']['ticket_total']==100 and history['budget']['total_intercity']==240

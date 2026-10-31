@@ -30,7 +30,7 @@ def ticket(id, dep='18:00', arr='19:00', mode='train', day='2026-10-26'):
 ])
 def test_incomplete_context_is_a_validation_error(context):
     with pytest.raises(ValidationError):
-        TicketRankingRequest.model_validate(dict(query=dict(mode='train',from_place='杭州',to_place='南京',date='2026-10-26',passengers=2),candidates=[ticket('a')],context=context))
+        TicketRankingRequest.model_validate(dict(query=dict(priority='balanced',mode='train',from_place='杭州',to_place='南京',date='2026-10-26',passengers=2),candidates=[ticket('a')],context=context))
 
 
 @pytest_asyncio.fixture
@@ -46,7 +46,7 @@ async def multi():
     schedule_day(d)
     snapshots={'h':dict(request=req.model_dump(mode='json'),days_detail=[None,None,None,d.model_dump(mode='json')],draft_id='fixture',editor_data={})}
     doc=await svc.create(plan,snapshots=snapshots)
-    return doc,dict(query=dict(mode='train',from_place='杭州',to_place='南京',date='2026-10-26',passengers=2),
+    return doc,dict(query=dict(priority='balanced',mode='train',from_place='杭州',to_place='南京',date='2026-10-26',passengers=2),
         candidates=[ticket('early','07:00','08:00'),ticket('late')],
         context=dict(kind='multi',draft_id=doc['id'],revision=1,from_stop='h',to_stop='destination'))
 
@@ -143,7 +143,7 @@ async def test_late_model_and_adoption_refuse_changed_multi_snapshot(multi):
 async def test_single_city_filters_saved_meals_and_refuses_changed_day(case):
     client,draft,url=case
     loaded=(await client.get('/api/trip/draft/'+draft)).json()
-    body=dict(query=dict(mode='train',direction='inbound',from_place='苏州',to_place='上海',date='2026-10-16',passengers=1),
+    body=dict(query=dict(priority='balanced',mode='train',direction='inbound',from_place='苏州',to_place='上海',date='2026-10-16',passengers=1),
         candidates=[{**ticket('early','07:00','08:00',day='2026-10-16'), 'from_station':'苏州','to_station':'上海'},
                     {**ticket('late','22:00','23:00',day='2026-10-16'), 'from_station':'苏州','to_station':'上海'}],
         context=dict(kind='draft',draft_id=draft,request=loaded['request'],days_detail=loaded['days_detail']))
@@ -182,7 +182,7 @@ async def test_single_city_arrival_margin_uses_synchronized_start_without_saving
 async def test_finalized_single_city_during_model_refuses_late_recommendation(case):
     client,draft,_=case
     loaded=(await client.get('/api/trip/draft/'+draft)).json()
-    body=dict(query=dict(mode='train',direction='inbound',from_place='苏州',to_place='上海',date='2026-10-16',passengers=1),
+    body=dict(query=dict(priority='balanced',mode='train',direction='inbound',from_place='苏州',to_place='上海',date='2026-10-16',passengers=1),
         candidates=[{**ticket('late','22:00','23:00',day='2026-10-16'),'from_station':'苏州','to_station':'上海'}],
         context=dict(kind='draft',draft_id=draft,request=loaded['request'],days_detail=loaded['days_detail']))
     before=await trip_draft_service.get_draft(draft)
@@ -203,7 +203,7 @@ async def test_single_city_http_recommend_preview_confirm_preserves_facts_and_un
     client,draft,_=case
     loaded=(await client.get('/api/trip/draft/'+draft)).json()
     before=await trip_draft_service.get_draft(draft)
-    body=dict(query=dict(mode='train',direction='inbound',from_place='苏州',to_place='上海',date='2026-10-16',passengers=1),
+    body=dict(query=dict(priority='balanced',mode='train',direction='inbound',from_place='苏州',to_place='上海',date='2026-10-16',passengers=1),
         candidates=[{**ticket('late','22:00','23:00',day='2026-10-16'),'from_station':'苏州','to_station':'上海'}],
         context=dict(kind='draft',draft_id=draft,request=loaded['request'],days_detail=loaded['days_detail']))
     with patch('app.services.ticket_assistant.get_llm',side_effect=RuntimeError('offline')):

@@ -1,0 +1,69 @@
+{
+  "expected_outcome": "adjusted",
+  "expected_http": 200,
+  "hard_constraints": {
+    "start_minutes": 540,
+    "end_latest": 1140,
+    "opening_windows": {
+      "SYN_R09_A": [
+        [
+          480,
+          1260
+        ]
+      ],
+      "SYN_R09_B": [
+        [
+          480,
+          1260
+        ]
+      ],
+      "SYN_R09_C": [
+        [
+          480,
+          1260
+        ]
+      ],
+      "SYN_R09_L": [
+        [
+          600,
+          1320
+        ]
+      ],
+      "SYN_R09_D": [
+        [
+          600,
+          1320
+        ]
+      ]
+    },
+    "last_entry_deadlines": {},
+    "lunch_start_range": [
+      690,
+      870
+    ],
+    "dinner_start_range": [
+      1050,
+      1290
+    ],
+    "rest_periods": [
+      {
+        "id": "SYN_R09_REST",
+        "date": "2027-04-12",
+        "start_time": "14:00",
+        "end_time": "15:00",
+        "label": "当前区域休息"
+      }
+    ]
+  },
+  "expected_order": [
+    "SYN_R09_B",
+    "SYN_R09_A",
+    "SYN_R09_C"
+  ],
+  "intent_kind": "exact_order",
+  "baseline_traffic_minutes": 20,
+  "required_route_improvement": false,
+  "acceptable_first": null,
+  "max_recovery": 1,
+  "method": "Explicit synthetic constraints and independent interval construction; human confirmation pending"
+}

@@ -87,7 +87,7 @@
 
             <!-- 住宿推荐 -->
             <div v-if="day.hotel" class="section-block section-block-yellow">
-              <div class="section-block-title">{{ day.overnight_stay === false ? '🏨 酒店位置参考（离开日）' : '🏨 住宿推荐' }}</div>
+              <div class="section-block-title">{{ day.overnight_stay === false ? '🏨 酒店位置参考（不计新增住宿）' : '🏨 住宿推荐' }}</div>
               <div class="section-block-content">
                 <HotelCard :hotel="day.hotel" />
               </div>

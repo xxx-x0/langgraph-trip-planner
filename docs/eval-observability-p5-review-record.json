@@ -1,0 +1,3092 @@
+{
+  "schema": "p5-human-review-draft-v2",
+  "prepared_by": "codex",
+  "prepared_on": "2026-10-25",
+  "status": "pending_human",
+  "experiment_id": "eval_38609cdd0f754738b89760d783aa31e8",
+  "plan_sha256": "023294111d734039fda538b6e5aec57657efb1311352bb00a154e0ffd1abd8b6",
+  "dataset_sha256": "da942ebb2adb9341314f23665f8c4b23c8a1a389afb03e6b5cfe107a17e40760",
+  "published_report_sha256": "7ea5757a025fe1fde468dd07473181876d20f238a67bb3a021aec391e9bff29d",
+  "formal_quality_status": "NOT_EVALUATED",
+  "changes_dataset": false,
+  "decisions": [
+    {
+      "decision_id": "D01",
+      "title": "窗口是否允许平移",
+      "case_ids": [
+        "T10",
+        "T11",
+        "T17"
+      ],
+      "status": "pending_review",
+      "human_decision": null,
+      "rationale": null,
+      "evidence_paths": [],
+      "reviewer": null,
+      "reviewed_at": null,
+      "routing": "product_and_objective",
+      "product_rule_ids": [
+        "PR01"
+      ],
+      "requires_user_product_decision": true
+    },
+    {
+      "decision_id": "D02",
+      "title": "日间偏好边界",
+      "case_ids": [
+        "T03"
+      ],
+      "status": "pending_review",
+      "human_decision": null,
+      "rationale": null,
+      "evidence_paths": [],
+      "reviewer": null,
+      "reviewed_at": null,
+      "routing": "preference_and_product",
+      "product_rule_ids": [
+        "PR03"
+      ],
+      "requires_user_product_decision": true
+    },
+    {
+      "decision_id": "D03",
+      "title": "提前拒绝时余量适用性",
+      "case_ids": [
+        "T12",
+        "T18"
+      ],
+      "status": "pending_review",
+      "human_decision": null,
+      "rationale": null,
+      "evidence_paths": [],
+      "reviewer": null,
+      "reviewed_at": null,
+      "routing": "objective_contract",
+      "product_rule_ids": [],
+      "requires_user_product_decision": false
+    },
+    {
+      "decision_id": "D04",
+      "title": "真实票务样本可接受首选",
+      "case_ids": [
+        "T18"
+      ],
+      "status": "pending_review",
+      "human_decision": null,
+      "rationale": null,
+      "evidence_paths": [],
+      "reviewer": null,
+      "reviewed_at": null,
+      "routing": "conditional_preference",
+      "product_rule_ids": [],
+      "requires_user_product_decision": false
+    },
+    {
+      "decision_id": "D05",
+      "title": "锁定下的提前意图",
+      "case_ids": [
+        "R02"
+      ],
+      "status": "pending_review",
+      "human_decision": null,
+      "rationale": null,
+      "evidence_paths": [],
+      "reviewer": null,
+      "reviewed_at": null,
+      "routing": "explicit_intent_and_objective",
+      "product_rule_ids": [],
+      "requires_user_product_decision": false
+    },
+    {
+      "decision_id": "D06",
+      "title": "路线改善参考的完整可行性",
+      "case_ids": [
+        "R10"
+      ],
+      "status": "pending_review",
+      "human_decision": null,
+      "rationale": null,
+      "evidence_paths": [],
+      "reviewer": null,
+      "reviewed_at": null,
+      "routing": "objective_and_task_goal",
+      "product_rule_ids": [],
+      "requires_user_product_decision": false
+    },
+    {
+      "decision_id": "D07",
+      "title": "来源家族与保留集",
+      "case_ids": [],
+      "status": "pending_review",
+      "human_decision": null,
+      "rationale": null,
+      "evidence_paths": [],
+      "reviewer": null,
+      "reviewed_at": null,
+      "routing": "evaluation_engineering",
+      "product_rule_ids": [],
+      "requires_user_product_decision": false
+    },
+    {
+      "decision_id": "D08",
+      "title": "可选 judge 校准口径",
+      "case_ids": [],
+      "status": "pending_review",
+      "human_decision": null,
+      "rationale": null,
+      "evidence_paths": [],
+      "reviewer": null,
+      "reviewed_at": null,
+      "routing": "optional_judge_protocol",
+      "product_rule_ids": [],
+      "requires_user_product_decision": false
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "T01",
+      "title": "低价优先",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T01.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T01.json",
+          "canonical_sha256": "12581a747aba3543eec529cb8a4911263760bbc226977aa9d50714b187184eda",
+          "file_sha256": "afa9c633ba4d8e1aa66ef3f9c4c186845cc20f4b248ad66ecf3a5a27c215a0b8"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T01.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T01.json",
+          "canonical_sha256": "05d6bc9bfd0b31444570beebf79b72ae1adccb3ea3e61ca483b531fa97b2682a",
+          "file_sha256": "b5ae941cdd378570fb063fe24457367b7a0b6569aaa346db46945c5a6233da1e"
+        }
+      },
+      "review_focus": "客观＋偏好：按本次明确价格目标比较，同价可并列；未知总价/附加费不补齐。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T01-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T01-1/observation.json",
+          "observation_sha256": "54c7f00654f71077bdf91896549478ac2474e59656e159a3580119d876e637c0"
+        },
+        {
+          "run_id": "current_live-T01-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T01-2/observation.json",
+          "observation_sha256": "62994487b88d3c4e1010bf3cd171fa9a9e35467c029da735a3261f600107ce25"
+        },
+        {
+          "run_id": "current_live-T01-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T01-3/observation.json",
+          "observation_sha256": "608a0bed388c760f3fbc12cf1984144357a209c99c540de027a32311dec7ffd5"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "pending_scenario_spec",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T02",
+      "title": "车程优先",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T02.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T02.json",
+          "canonical_sha256": "c8aecfd6c9c6f59c2bc0522b88f0c4e7768c6219028e7161c00d18062631a2a7",
+          "file_sha256": "cfb5e1697a38c014cbbff8a073e49e2db5f4f413dbb6e713cf80531b03bf2da5"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T02.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T02.json",
+          "canonical_sha256": "867345b654e57f1b677a31a4226b37e4717ee72ad69d13b3be8506ba08c7918f",
+          "file_sha256": "e51ba7440c8957a788d64cdfb4e95e1f6a8eaba63d029dc1b992380f63f64195"
+        }
+      },
+      "review_focus": "客观＋偏好：按本次车程目标核算，允许并列；不混用门到门时间。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T02-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T02-1/observation.json",
+          "observation_sha256": "9001bda29814b320dafc42bc2d326c7524d9200319c8178431b3670571231d39"
+        },
+        {
+          "run_id": "current_live-T02-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T02-2/observation.json",
+          "observation_sha256": "df9211cabeea55d5b3b9540c2f527b35f4aa23bad41bf96bd49d7d4f4b92d1bc"
+        },
+        {
+          "run_id": "current_live-T02-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T02-3/observation.json",
+          "observation_sha256": "9aae7c32870a10667888e0140540131bc75597cab22aa863eedcf5a36545209a"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "pending_scenario_spec",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T03",
+      "title": "日间优先",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T03.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T03.json",
+          "canonical_sha256": "489673b2ceb6f0afd51b26329dcd0ae15dee86bcb8936ce57f1cefbf1237ff7c",
+          "file_sha256": "1de02b7bab44eb64e83423282038dfbca09c000ca25bd29e504d7758d6f7baf1"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T03.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T03.json",
+          "canonical_sha256": "66f082a4acce436da7033bda3aa43374b3afc2b2ad892dca0bb641021abf6287",
+          "file_sha256": "4f441a27d0dc2f0b1f3fc936b7ef18ade9ae8d48230ea13535581e0545945903"
+        }
+      },
+      "review_focus": "偏好＋PR03：明确本次时段后定义首选/备选；旧B参考不扩展为通用日间标准。",
+      "decision_ids": [
+        "D02"
+      ],
+      "evidence": [
+        {
+          "run_id": "current_live-T03-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T03-1/observation.json",
+          "observation_sha256": "c5067fd572c17eef495ca25ebb445055717ab56329931972a461f35db7f07750"
+        },
+        {
+          "run_id": "current_live-T03-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T03-2/observation.json",
+          "observation_sha256": "d743f0a39ecf514657d74d0ac9dae4aa1c18ca21d6b68f1eab0f1ecb552af3dd"
+        },
+        {
+          "run_id": "current_live-T03-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T03-3/observation.json",
+          "observation_sha256": "34c84262233f2336b08759b51efe45b93bd472a72d48bebef66e8ade68919b83"
+        }
+      ],
+      "diagnostic_findings": [
+        "T-RANK:FAIL"
+      ],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [
+        "PR03"
+      ],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "pending_scenario_spec",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T04",
+      "title": "均衡并列首选",
+      "case_version": "1.0.1-draft",
+      "split": "holdout",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T04.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T04.json",
+          "canonical_sha256": "8ffa26c9a2a88d5424dd1bff6defd45d5eb0a61ca9b4a1ed807f7c4af3f9dac6",
+          "file_sha256": "bb69d8d6c7286086c56753d2dabff0f8e576a6975f61aece8f2c7ff9b22fff3f"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T04.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T04.json",
+          "canonical_sha256": "c7502f9b6e981c096e82e267d816a90174f92f4399c336800b771b325dba3660",
+          "file_sha256": "658b296bb8ac52ad76606ea035bb33dc9bc0485617da6a5e55c19c2f26407f48"
+        }
+      },
+      "review_focus": "偏好：明确目标关系，再核定多答案/偏序；不把均衡等同固定加权总分。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T04-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T04-1/observation.json",
+          "observation_sha256": "1d5c91d81ab3f8f7ab4ef2ea6d2d4ee5f223e17c781710a66d5043762a6aa5e8"
+        },
+        {
+          "run_id": "current_live-T04-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T04-2/observation.json",
+          "observation_sha256": "e37b97c44acaea94cb410436e52837fce96a67a9e540c12d56fefc8092b8b9eb"
+        },
+        {
+          "run_id": "current_live-T04-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T04-3/observation.json",
+          "observation_sha256": "29998e6e6c674f5314561f963efd4fa102a9708997df2abe74e58137d4265299"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "pending_scenario_spec",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T05",
+      "title": "未知价不当免费",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T05.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T05.json",
+          "canonical_sha256": "93fc739ce9e9ba5311e961b001a2bfea097fc85df9fb75727b8cc27bb90eab6a",
+          "file_sha256": "e37032372cacf9c93e235a4262407c0c429141b7fc17db2d0d7efec9488b1e65"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T05.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T05.json",
+          "canonical_sha256": "5870a69efdff65128fcad38bb949f7050d7945350a435a495273cf8302ddb789",
+          "file_sha256": "73c6fafb86d2c63268a2c77458cd80e533f45ffdff5e2791b28cbaf6d05e0c7e"
+        }
+      },
+      "review_focus": "客观＋偏好：未知价不为0；只按可比事实评价本次价格目标。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T05-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T05-1/observation.json",
+          "observation_sha256": "a8a05b777185cf55555ea7c6e1bbacb1981fcd170374f6d7fa89fe0c03b041b5"
+        },
+        {
+          "run_id": "current_live-T05-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T05-2/observation.json",
+          "observation_sha256": "0ca86ca88a34657d2e7a9719331f2f9f61c5a91f068d4732722db59f86c5eec0"
+        },
+        {
+          "run_id": "current_live-T05-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T05-3/observation.json",
+          "observation_sha256": "36300c620d3ae26cda942dee8171767238421378425918971ae2ca2d705cadbd"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "pending_scenario_spec",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T06",
+      "title": "无票与未知余票",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T06.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T06.json",
+          "canonical_sha256": "9ed593491e5297a4d2e0c0d94f27fa468c5c440458c91ff0c5e2bcaac7dd47a7",
+          "file_sha256": "a1992bf6273ee0666a9e2f0d7710f94f8150163eb8494b85a3972722dd079cab"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T06.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T06.json",
+          "canonical_sha256": "66c8d073756d5dd2020a3a5ffb0e942e5c799dbc970b17b52eb0479981545c00",
+          "file_sha256": "464c0b2713dc0839e0379b35033faea7928cf15f981c2c2cfe8b205853b9e99e"
+        }
+      },
+      "review_focus": "客观＋偏好：独立核对无票/未知与可行集合；首选依本次明确目标。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T06-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T06-1/observation.json",
+          "observation_sha256": "dfdfd18617a3f985e73080a706a76d44faa0f972790d7c8a5b13312c26c1e5c3"
+        },
+        {
+          "run_id": "current_live-T06-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T06-2/observation.json",
+          "observation_sha256": "5747d37200d3d836f9cf626eb17870af0d6c44e1c4d91056e48e44672bca896e"
+        },
+        {
+          "run_id": "current_live-T06-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T06-3/observation.json",
+          "observation_sha256": "63f4f081e0ab2a3b919a5a8ccca8a439874e1dd551581a36449a8bb62897832a"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "pending_scenario_spec",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T07",
+      "title": "全部无票",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "no_model",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T07.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T07.json",
+          "canonical_sha256": "87ba5f66718e0aad2c238378e3b58f300315eb0fd91a5aa5d8f14b921f5f5319",
+          "file_sha256": "e687b67f3c826fffb72d72d9fb2a2c0f2e1dfac7f6cf5a919bf2c221272b825c"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T07.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T07.json",
+          "canonical_sha256": "ba2f1a38672a4e873e23b03e42d7a8f3619517bddd233240d1346303f2f02f41",
+          "file_sha256": "8754cefabcdd7ae21ac272960424676c4c25ebf0840cd756bd4390a79926ae13"
+        }
+      },
+      "review_focus": "全部无票应空结果且不调用模型，不能将无推荐算模型失败。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T07-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T07-1/observation.json",
+          "observation_sha256": "1515c728c33c96964ae53c02eb2896fc7b9d04973c95b3eab4e424044597dc0c"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T08",
+      "title": "无上下文兼容",
+      "case_version": "1.0.1-draft",
+      "split": "holdout",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T08.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T08.json",
+          "canonical_sha256": "780a1f47b43dbd3a1607aeb8688fe6eec3343b673b2b128af4278f9ffb7c3c57",
+          "file_sha256": "097f91bd68cbe235ea0c6949724e7d3450b0b748b70877e0751868ed4371e962"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T08.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T08.json",
+          "canonical_sha256": "91ce51b79932449c225f8c956a83e23fec1be0ad55702ff147dcb8c4a8034a4c",
+          "file_sha256": "fc4e1e0eb6fbfdf5099ec8dfb39949f5d65f3c10eae6251f1e250a30d3de468e"
+        }
+      },
+      "review_focus": "无日程上下文只作票务排序，不声称已验证可容纳。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T08-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T08-1/observation.json",
+          "observation_sha256": "9436900719ea8701dd028da3eeda5bc6270b27ac16f84169fe14648347f6c558"
+        },
+        {
+          "run_id": "current_live-T08-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T08-2/observation.json",
+          "observation_sha256": "0534d12a9f3392e5a24aeb3e27d2391100cce2b13cb5cf593ea54c893d0dd313"
+        },
+        {
+          "run_id": "current_live-T08-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T08-3/observation.json",
+          "observation_sha256": "26a3aad916c9b84e5d6464a13810b7f507cfbb7211e17da013974151d2fcf306"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T09",
+      "title": "离城余量边界",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T09.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T09.json",
+          "canonical_sha256": "199f09e776c13af258f4f35630fb92c874fbdb7c7bc117ced5ad9216bf3333ee",
+          "file_sha256": "0b94fba2b9d57f869601b401a9b40ea84d6fc9bc34a6da10939f65cfe7b80304"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T09.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T09.json",
+          "canonical_sha256": "152021fc1ca6632fb5bb8a8f2c740f91d88202a91c1a0f04806908e43073a7db",
+          "file_sha256": "cf82fb7e2ce8c69e693d1b56df05e07aad73fc54dc6256d07cca43ecf307cf2f"
+        }
+      },
+      "review_focus": "逐项核算离城缓冲与 18:00 等号边界，余量不重复扣减。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T09-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T09-1/observation.json",
+          "observation_sha256": "078769d539fdb13269b9dadb6adedac4a10a4065b69bc43e2dcc61b66e17230c"
+        },
+        {
+          "run_id": "current_live-T09-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T09-2/observation.json",
+          "observation_sha256": "d29fb6d9256b17d4b0b17eadd7e56e482da6312e837c20b03488a1a85ca09f3d"
+        },
+        {
+          "run_id": "current_live-T09-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T09-3/observation.json",
+          "observation_sha256": "5d6bd85e6ece39218c5fced0e8d1a27afd9572e472f227ab4eb85974e0061030"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T10",
+      "title": "抵达缓冲边界",
+      "case_version": "1.0.1-draft",
+      "split": "holdout",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T10.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T10.json",
+          "canonical_sha256": "ea29e160fbdc6ef8846bc336da4becee757289e2ac233e13226180f32951fd92",
+          "file_sha256": "e81e7f2e5f85de9d7c9eef2da65800318e333cdfc3e7b988754beed0ea27c777"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T10.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T10.json",
+          "canonical_sha256": "4284a026f620cc460f4611b7eb7f066475cf858674f952ffa7f1e96e9099b65e",
+          "file_sha256": "3c3e27f929f787a9d99f4d0470fc77b9b1260fa25a88d7777db4b2b4ec76f21e"
+        }
+      },
+      "review_focus": "产品＋客观：PR01后工程复算B是否可行，不按个人车次偏好决定。",
+      "decision_ids": [
+        "D01"
+      ],
+      "evidence": [
+        {
+          "run_id": "current_live-T10-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T10-1/observation.json",
+          "observation_sha256": "089efa5036de774a171eae1569f1f2f33893e08e8c521c11d77b8809e5dfcc01"
+        },
+        {
+          "run_id": "current_live-T10-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T10-2/observation.json",
+          "observation_sha256": "38bedcde933675d475d86e7a4c5d2f81b43627deaf50db7a2a88dfcf1101abd7"
+        },
+        {
+          "run_id": "current_live-T10-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T10-3/observation.json",
+          "observation_sha256": "0ecef15cc0c1faf6bfd6631943952bf55f5a84cd8fb97080eef77c6828569102"
+        }
+      ],
+      "diagnostic_findings": [
+        "T-ELIG:FAIL",
+        "T-MARGIN:FAIL"
+      ],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [
+        "PR01"
+      ],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "computed_pending_independent_review",
+          "evidence_paths": [
+            "/Users/finn/.local/share/langgraph-trip-planner/eval-p5-next-step-20261025/evidence/objective-facts.json#cases.T10"
+          ],
+          "result": {
+            "engineering_only": true,
+            "conditional_schedule_witnesses_available": true,
+            "fixedness_contract_required": true,
+            "old_diagnostic_results_unchanged": true
+          }
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T11",
+      "title": "双城窗口",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T11.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T11.json",
+          "canonical_sha256": "9c73b756aa0cb6b3667b2b6bc36a27c5d296bbcd71b0844796a935f7bfa546c1",
+          "file_sha256": "be065cae69adbfaf9a420639a475b84bf0c1bab131f69838557d76e5e423877b"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T11.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T11.json",
+          "canonical_sha256": "7f6ae3aab78fab0d564253c00ac23a756716c4d934f1752fc0f774690ee0e8ae",
+          "file_sha256": "b908887e1f475980f5a982d99b307c04934f686b43fd24ce2f54459a965de607"
+        }
+      },
+      "review_focus": "产品＋客观：依PR01复核两侧窗口；排序另按明确意图判定。",
+      "decision_ids": [
+        "D01"
+      ],
+      "evidence": [
+        {
+          "run_id": "current_live-T11-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T11-1/observation.json",
+          "observation_sha256": "e5b18aa1df04b06785996c42d9e5d3f686aa94150d99719ef391fe6cb66fe500"
+        },
+        {
+          "run_id": "current_live-T11-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T11-2/observation.json",
+          "observation_sha256": "71ffc08bc07a1d8e80a82a9d12bd539f86c02e4831566d3a9e8743b4c49a7a40"
+        },
+        {
+          "run_id": "current_live-T11-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T11-3/observation.json",
+          "observation_sha256": "414e53bc57226f5e0a03624fa92e3cdab974b915ca0f530a5a96d5c44f66e836"
+        }
+      ],
+      "diagnostic_findings": [
+        "T-ELIG:FAIL",
+        "T-MARGIN:FAIL",
+        "T-RANK:FAIL"
+      ],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [
+        "PR01"
+      ],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "computed_pending_independent_review",
+          "evidence_paths": [
+            "/Users/finn/.local/share/langgraph-trip-planner/eval-p5-next-step-20261025/evidence/objective-facts.json#cases.T11"
+          ],
+          "result": {
+            "engineering_only": true,
+            "conditional_schedule_witnesses_available": true,
+            "fixedness_contract_required": true,
+            "old_diagnostic_results_unchanged": true
+          }
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T12",
+      "title": "跨出旅行日期",
+      "case_version": "1.0.1-draft",
+      "split": "holdout",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T12.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T12.json",
+          "canonical_sha256": "03d908a867017afbf97426b1d5daa70e33f8f48b58edd164e103039c9312e6a2",
+          "file_sha256": "9bfb5cc6a309be4683c9dbc84bbff483d35b824c4b196d4acf9e22393e54f57e"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T12.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T12.json",
+          "canonical_sha256": "922642fef880f90ca1a2bbf6bf4263ef2f185bb7114954a60717cffd6471bb98",
+          "file_sha256": "00bac976d6b2de54689e139a581d064f0aaf41aec49155de2161331edc40cef9"
+        }
+      },
+      "review_focus": "客观：工程按拒绝阶段核定余量适用性，null不填0；旧ERROR保留。",
+      "decision_ids": [
+        "D03"
+      ],
+      "evidence": [
+        {
+          "run_id": "current_live-T12-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T12-1/observation.json",
+          "observation_sha256": "f795d1e3350b800a9ce057bb3f27a43348a71e967924b567cd085501a0b8a591"
+        },
+        {
+          "run_id": "current_live-T12-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T12-2/observation.json",
+          "observation_sha256": "2ae20018e10790ad8f319e22d13f40344b408ed4218b6fd197847ffb2c975c59"
+        },
+        {
+          "run_id": "current_live-T12-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T12-3/observation.json",
+          "observation_sha256": "ef5fba5781dbf3ae24ca5acb38fd175b2575f4c4292920891bf8b0903c31ad7c"
+        }
+      ],
+      "diagnostic_findings": [
+        "T-MARGIN:ERROR"
+      ],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "computed_pending_independent_review",
+          "evidence_paths": [
+            "/Users/finn/.local/share/langgraph-trip-planner/eval-p5-next-step-20261025/evidence/objective-facts.json#cases.T12"
+          ],
+          "result": {
+            "engineering_only": true,
+            "cross_date_rejection_margin_null_verified": true,
+            "new_applicability_not_applied": true
+          }
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T13",
+      "title": "非法候选回退",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "injected_failure",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T13.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T13.json",
+          "canonical_sha256": "d12baa8455c47b7f4c74e8b60852e4a5ad1b32b5f83673f52f2a5bc6e4cf7f4e",
+          "file_sha256": "1d251f94e60f3330222a72170fee1417c4d2478404786adc4cab4af11a4a05b0"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T13.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T13.json",
+          "canonical_sha256": "b92b91acec78a84b218d3c74a5492e9eb5d5af57911b567328c8bd6a34712708",
+          "file_sha256": "1d36d4ae001b4f0e22b6461c3a452822de27aad857f609f38de44ebe28057a56"
+        }
+      },
+      "review_focus": "预设非法 ID 应被检出且规则回退；模型 FAIL 不计真实模型错误率。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T13-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T13-1/observation.json",
+          "observation_sha256": "30a75d776680525533156c82d026a0e0b8dd623851acb0a7466c665b624889d7"
+        }
+      ],
+      "diagnostic_findings": [
+        "T-VALID:FAIL"
+      ],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T14",
+      "title": "全部日程冲突",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "no_model",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T14.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T14.json",
+          "canonical_sha256": "ca8f12e9c0187446176698a04e9fb9d305bba7c20468eb531a9aaccd2059f5fc",
+          "file_sha256": "3b2f673cd0d5e801f00e3e0fbe8264c000c5571eef77d8dd2ae24d90f1f57174"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T14.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T14.json",
+          "canonical_sha256": "1bd8f9cdef1b9d33cff6baa0c680816c0331a06eb767fe834ec41c1f0372124b",
+          "file_sha256": "0840e52c31adf931480c8f79759d69d17012e0b76d061aba16be080a6fdb9775"
+        }
+      },
+      "review_focus": "全部日程冲突应空结果、不调模型、不写日程。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T14-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T14-1/observation.json",
+          "observation_sha256": "58f949fff786f83add7c59c39689c3cfd261c34e4fe6cc22beccc6c514af064e"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T15",
+      "title": "模型超时回退",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "injected_failure",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T15.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T15.json",
+          "canonical_sha256": "255f02fa2267a6f634dfc85c1bbc88db6b14d46503f8a4e1edae599d29052002",
+          "file_sha256": "85c53e3b02bc18f8288d6361cefc386db64cc4326df04cf65556d8e94c3d94a3"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T15.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T15.json",
+          "canonical_sha256": "2e794eb18aecbaad5b09f9ec430d89cabe9a46ef402989ded4fc57f27c3ee6da",
+          "file_sha256": "cfbb5f566a2fdfe52e57a2b0f51bedbb7b1fd781c36efe58fbc81a5c6ab7a258"
+        }
+      },
+      "review_focus": "预设模型超时后有界回退，原安排不受影响；不是实际供应商事故。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T15-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T15-1/observation.json",
+          "observation_sha256": "d505118c3c020f72af22942f96e2b0a46e669ef83b036be137ba26616ffcd1fe"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T16",
+      "title": "取消传播",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "injected_failure",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T16.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T16.json",
+          "canonical_sha256": "f353e483d789d6d2ece47e3d2e6ec1dc25a68eada2efc6b240d2e00581440192",
+          "file_sha256": "332b7e771c70cf28baed60afb45e887b989f25f14f9734235b0710c4945c2518"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T16.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T16.json",
+          "canonical_sha256": "fdec41038e416692739c7c1966d0b9e1171d367ae9b69e3daf34d18b99fc0999",
+          "file_sha256": "4df43ad70516529253139696bf06d39481b133bb517c3747f9d776519e0d73b5"
+        }
+      },
+      "review_focus": "取消应向下传播，取消后无新外部调用及业务写入。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-T16-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T16-1/observation.json",
+          "observation_sha256": "09bc6e3e749a9c20bd15b491f8ef525a29952c762c6b3706462601aa0ed057f8"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T17",
+      "title": "双检查点过期拒绝",
+      "case_version": "1.0.1-draft",
+      "split": "holdout",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-ticket-template-v1",
+      "execution_mode": "injected_failure",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T17.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T17.json",
+          "canonical_sha256": "80f9c718cc9772bd8357b8edbc0ba1fd70d02855fa6d281172e6f9267fcd4b62",
+          "file_sha256": "073af1d59bd21f38d10f685cdc0ec8306198af165bf158b50f607034b4af2417"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T17.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T17.json",
+          "canonical_sha256": "233fe7822f5158743ed53c35dd1424cc4b5cf4d0ecc8974ae8d0ed94a1f0aff1",
+          "file_sha256": "3a342b8644cf6e1d6cc2ca2b7241316f489e66229918f00aede617cc2237177d"
+        }
+      },
+      "review_focus": "客观＋PR01：独立核对两处409/最新快照；窗口争议不抵销并发保护。",
+      "decision_ids": [
+        "D01"
+      ],
+      "evidence": [
+        {
+          "run_id": "current_live-T17-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T17-1/observation.json",
+          "observation_sha256": "acbb6bd7a77c5d8ca0c63ac9f3be31c09630361183a65752ad2839b01fbc8e43"
+        }
+      ],
+      "diagnostic_findings": [
+        "T-ELIG:FAIL"
+      ],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [
+        "PR01"
+      ],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "computed_pending_independent_review",
+          "evidence_paths": [
+            "/Users/finn/.local/share/langgraph-trip-planner/eval-p5-next-step-20261025/evidence/objective-facts.json#cases.T17"
+          ],
+          "result": {
+            "engineering_only": true,
+            "conditional_schedule_witnesses_available": true,
+            "fixedness_contract_required": true,
+            "old_diagnostic_results_unchanged": true
+          }
+        },
+        "explicit_intent": {
+          "status": "review_applicability",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "T18",
+      "title": "旧日程与补采铁路候选",
+      "case_version": "1.0.1-draft",
+      "split": "holdout",
+      "data_origin": "mixed_historical_itinerary_and_new_capture",
+      "source_family": "ltp27-suhang-20261020",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/T18.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/T18.json",
+          "canonical_sha256": "28fe3bb3ade86701442593d2059de4cc0bfed16d9f9b6e5cc4b54f1fa4478ae2",
+          "file_sha256": "f80bcc1ec026202dfe32de90c87b1477c5c03ad10c759c8ea690c0118e1522be"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/T18.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/T18.json",
+          "canonical_sha256": "48ee8135e6c2f7a3150a92bb1983848cdd887251c69b45063297042c887e3291",
+          "file_sha256": "3ca85fe7ba6bdb38f4ca0cc5a6e127ec51280dc0e98c917d59d6a0ab0fe93800"
+        }
+      },
+      "review_focus": "客观核验35/45与来源；偏好未来分场景定义多答案，原排名继续未评。",
+      "decision_ids": [
+        "D03",
+        "D04"
+      ],
+      "evidence": [
+        {
+          "run_id": "current_live-T18-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T18-1/observation.json",
+          "observation_sha256": "7467f24f79a9f307e8fa44e6c878162708db0c1e6846c41a3e6b7f31f3b43e14"
+        },
+        {
+          "run_id": "current_live-T18-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T18-2/observation.json",
+          "observation_sha256": "be0da442200f5769ae724cd557a8ac7f5235a7a06595c7ae70a218d3c3a5ddba"
+        },
+        {
+          "run_id": "current_live-T18-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-T18-3/observation.json",
+          "observation_sha256": "193f4a24312207894ed4328745e57d05e628acb22b0e7c0625a9daaf31bc8809"
+        }
+      ],
+      "diagnostic_findings": [
+        "T-MARGIN:ERROR"
+      ],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [
+        "PR02",
+        "PR03"
+      ],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "computed_pending_independent_review",
+          "evidence_paths": [
+            "/Users/finn/.local/share/langgraph-trip-planner/eval-p5-next-step-20261025/evidence/objective-facts.json#cases.T18"
+          ],
+          "result": {
+            "engineering_only": true,
+            "eligible_under_saved_schedule": 35,
+            "excluded": 45,
+            "earliest_departure": "15:45",
+            "seat_counts": {
+              "一等座": 3,
+              "二等座": 30,
+              "二等卧": 1,
+              "软卧": 1
+            },
+            "no_rank_gold": true
+          }
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "pending_scenario_spec",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R01",
+      "title": "明确交换顺序",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R01.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R01.json",
+          "canonical_sha256": "367dc302633d9eafd8f7558989114a24025d9c227fa1facef4f837199cc52514",
+          "file_sha256": "c38f9077928cf26860944d07aea8939c0b4d94992d86b6fc29791c84b42c3ed4"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R01.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R01.json",
+          "canonical_sha256": "f74801e5daa06f0aa879517b8eb2411638335b37c03613e4fa22210ed3e22904",
+          "file_sha256": "6f2e3cc938fd66ea6429b96afd6e540112315cd95e56fe5aa0f66adeae28b253"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R01.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R01.json",
+          "canonical_sha256": "d06aa375057a10c6b6768050bf769023ed067b6c2d4164565419bf993c87db15",
+          "file_sha256": "878333fcabd9aec6a5c197988b188911c4c5c3466193d85e86b8f00941cf7d88"
+        }
+      },
+      "review_focus": "核定交换 A/B 意图与最终 B→A→C；硬约束、餐次及事实同时成立。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-R01-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R01-1/observation.json",
+          "observation_sha256": "0210f2924fa605ed8dee23b73639eb839d8371bd1eb7b4401d932f1ce9c65460"
+        },
+        {
+          "run_id": "current_live-R01-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R01-2/observation.json",
+          "observation_sha256": "5ffb5060352ecf1d7e8b50b751390f070273e5af595e4e08905c806182098f4b"
+        },
+        {
+          "run_id": "current_live-R01-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R01-3/observation.json",
+          "observation_sha256": "3c3f47d95537d14f66d80e47cfa7abc12e8ccadeb6091a90a2c29bf6f34bfc6e"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R02",
+      "title": "锁定第二景点",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R02.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R02.json",
+          "canonical_sha256": "705d7baacd700c94cb388639e9ba2cdcb48dd27272eedb868ca1aa1660f77f0d",
+          "file_sha256": "f17830fab35f2ac3386821b579adc1a71366d3f2ce3f52f920656a7420981ac4"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R02.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R02.json",
+          "canonical_sha256": "c5f708f43e5b4f1299813f37045045218b7824dcfa7ef7dc23b0a3fe87c900a2",
+          "file_sha256": "df745836e58f3be0725c62c1b2871dff3cf2f9c6cf53f5a18cbcad419afd43a3"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R02.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R02.json",
+          "canonical_sha256": "fb22f7fec4975240af9a4dbb2e975c1ed481a8246933a45b7a96334684412a29",
+          "file_sha256": "2c749160ee45b49795cb8b891ba47404ee19408f21cb4694736a715be44ec86b"
+        }
+      },
+      "review_focus": "明确指令＋客观：核对B锁第二且C提前的所有可行排列，不按个人喜好选景点。",
+      "decision_ids": [
+        "D05"
+      ],
+      "evidence": [
+        {
+          "run_id": "current_live-R02-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R02-1/observation.json",
+          "observation_sha256": "fbef6daada53c4a172180a56b4cb28e84ecff6b50f13fb8bf164616e6b893c96"
+        },
+        {
+          "run_id": "current_live-R02-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R02-2/observation.json",
+          "observation_sha256": "1d51d5fe2692b2ac70391150310fb9c99dd70eb5de5b3ed5685a55de22dded4b"
+        },
+        {
+          "run_id": "current_live-R02-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R02-3/observation.json",
+          "observation_sha256": "a77a9874a7444ce020e4429fecc04fa041bcefafe8f0f14cb40dd290a910f85a"
+        }
+      ],
+      "diagnostic_findings": [
+        "R-INTENT:FAIL"
+      ],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "computed_pending_independent_review",
+          "evidence_paths": [
+            "/Users/finn/.local/share/langgraph-trip-planner/eval-p5-next-step-20261025/evidence/objective-facts.json#cases.R02"
+          ],
+          "result": {
+            "engineering_only": true,
+            "enumerated": 20,
+            "feasible_under_declared_assumptions": 18,
+            "not_human_signoff": true
+          }
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R03",
+      "title": "删除与手动午餐",
+      "case_version": "1.0.1-draft",
+      "split": "holdout",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R03.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R03.json",
+          "canonical_sha256": "d8b652bc1a19ee8dd918b4b0fb8a5b2d00e6b1945539e89f53fc913e4f594d84",
+          "file_sha256": "53d59b55de4f0146580da8691ce14d304ca27c18ee201d7e4de3a39e71e3b93b"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R03.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R03.json",
+          "canonical_sha256": "7f35487925f5a589960f18ab7687611250f2d400ebd637036b2e9e8a42206c50",
+          "file_sha256": "3511bd7561fcf932c1658c342d73aeafbbdf1a91b8bb5d0bd01690c2cb86b6b5"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R03.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R03.json",
+          "canonical_sha256": "6fc7fcabecd755ddf783f2b702bcd8adf433677e00820dbff8774d9875e8e3ee",
+          "file_sha256": "7a100ff2952441b954e33a0c52527c5153ae5c5d68b32261bd383d452ac10745"
+        }
+      },
+      "review_focus": "删除项不恢复、手动午餐及位置保护，核定移动后的时间轴。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-R03-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R03-1/observation.json",
+          "observation_sha256": "f145d57193061e28e45aef1cfdbb1ad12b96a31ef715930082abefdb0b9df89f"
+        },
+        {
+          "run_id": "current_live-R03-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R03-2/observation.json",
+          "observation_sha256": "1dd0d39f60dbce925394eb578a7bff90151b4c0ff65c4c5868343d3d450c49ff"
+        },
+        {
+          "run_id": "current_live-R03-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R03-3/observation.json",
+          "observation_sha256": "6355e1b5d2c1d498e2b9a07c28ce72d20a6c41b5df3b9ec9210a707625f7ce94"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R04",
+      "title": "保留两顿正餐",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R04.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R04.json",
+          "canonical_sha256": "c9d67470c8ff9cfee543c981191fd43216ec6380b1afe6d77ef42303a5418e94",
+          "file_sha256": "4e1c8be21f55240b98d7bb7de6cd19e4b9ed2cc7d16f3cfc63054e5a6a10d271"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R04.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R04.json",
+          "canonical_sha256": "6f83f31ccdd02207fba536f1d2738fd3f9e90cb3b80ed33c40a1a83f0c4a22ca",
+          "file_sha256": "26e1b6f9d232546f58bfe104d408963db563a5b57b05936d9f2bc624cf12efe6"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R04.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R04.json",
+          "canonical_sha256": "e32e74e41e00d15d9c8b3d733f8de8461776d5d7052cbf8e836af55e689907bc",
+          "file_sha256": "de6154f0024323607f741b7ed6d2e16dfc801fda3ed7745aeb2d9e30c565a448"
+        }
+      },
+      "review_focus": "原两顿正餐均保留，时段与插入位置有效，不靠数量掩盖漏餐。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-R04-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R04-1/observation.json",
+          "observation_sha256": "25fc767b2417fb7e5441c6fc526abc882c9948c02f7a5f46e2810dc3773dae42"
+        },
+        {
+          "run_id": "current_live-R04-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R04-2/observation.json",
+          "observation_sha256": "62bfbd411f06801a1d453802cf179b6be348c844c65c0a8e5bb90d87b998d209"
+        },
+        {
+          "run_id": "current_live-R04-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R04-3/observation.json",
+          "observation_sha256": "e2cb4d61c6c4f012d6d5b04d80d5127aa0f318c504b00c55dfa0713ae3c70eff"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R05",
+      "title": "不恢复已删晚餐",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R05.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R05.json",
+          "canonical_sha256": "b24d5ac6c179d2c543ce2096e18bef6f0ecf1003a4c95e9167ab17609a7a6db8",
+          "file_sha256": "f20e97a8dbd93a34c359938d666806d3006d1accfc6a7fb6579e5258c5c0a90b"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R05.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R05.json",
+          "canonical_sha256": "3c0c4253ab3e9aa392c37272bb9b76bde39cda772a71fea655130eea54da8259",
+          "file_sha256": "3303128fa9ca07edde4565d9c8ceeae99167a1545b5b039043fa16e31e7f8832"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R05.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R05.json",
+          "canonical_sha256": "9f70c84de94c09a6165fb964ec8bfe12e3f51c91b68d486b7f1b3aecb4e17048",
+          "file_sha256": "38c97aff75ef38157c48414e62c9c94f7d7d1b07d396b7710d08b5c004d67202"
+        }
+      },
+      "review_focus": "已删晚餐不补回，不能将无晚餐自动计为模型漏餐。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-R05-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R05-1/observation.json",
+          "observation_sha256": "969e20110d73db45251d560bca34a6269b9ecf5dd1d37398bc24efb58c016307"
+        },
+        {
+          "run_id": "current_live-R05-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R05-2/observation.json",
+          "observation_sha256": "6cd1874fe69450dcd8ab24bcb6e669a1b23f04b69e24af07fc891736308dd52f"
+        },
+        {
+          "run_id": "current_live-R05-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R05-3/observation.json",
+          "observation_sha256": "2f1f2f371875db801d09a2403c5eb32333aef890ebbe39f86de02928bd06cbd2"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R06",
+      "title": "餐厅事实来源",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R06.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R06.json",
+          "canonical_sha256": "1369f642c770162eee671b926dd91774561e3c6794ee51f0fd16c5667efeaa90",
+          "file_sha256": "90d67ff9eee6fc7426514f187b2afc4a93c4093f512d82b1e946ca7ff2277077"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R06.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R06.json",
+          "canonical_sha256": "6889901ae8720a9ce2ead24850e5b97ab83797d69416d85f0d8c639366901f79",
+          "file_sha256": "233701b69a5f1ee1a7e3c838da8cf764ebca0453ec2b333fbdae54006fc23e0b"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R06.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R06.json",
+          "canonical_sha256": "2bd823bb81c56a83612b683fdb7c063449068db6641b478f671218b201a50d91",
+          "file_sha256": "548071d08ce0eff39b50fcbb5e0e3160411d32b853466eb7468d427c45385b14"
+        }
+      },
+      "review_focus": "餐厅名称、坐标、价格沿候选事实，禁止由模型编造或替换。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-R06-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R06-1/observation.json",
+          "observation_sha256": "930a558277ef2d1b9e2fb2f6ce97c93b42489e4f83fb74222a51e7f7d696a762"
+        },
+        {
+          "run_id": "current_live-R06-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R06-2/observation.json",
+          "observation_sha256": "db89734011e7c6bb1412501f9716b37f4c3b2cf13ea030c9fe237e45728ddfd7"
+        },
+        {
+          "run_id": "current_live-R06-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R06-3/observation.json",
+          "observation_sha256": "4530373fc944b07103bd36d082725bbf6889d7161d9888d29675148194eb8b40"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R07",
+      "title": "关闭餐厅修正",
+      "case_version": "1.0.1-draft",
+      "split": "holdout",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "injected_failure",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R07.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R07.json",
+          "canonical_sha256": "99b44c5d9445e9ea7c56a896a0151c60b0093dd29d6cfbdf232a57ab4e069f35",
+          "file_sha256": "8ee64ccb5d9d62a125abae108023e5a052a930cad0598a62f1cd1103993235d8"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R07.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R07.json",
+          "canonical_sha256": "af0141653e7fa02c3dbe5bb9cbd0208b88fcb74626dcdb509a17607c1832656d",
+          "file_sha256": "8d8d850d0fa3952b4d9e8bda1630f138760ff91c1b1dee194d6d64a669559a01"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R07.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R07.json",
+          "canonical_sha256": "955033657420c5614d260a779acf30e8745925b77555e97b7dada5759bb5dc45",
+          "file_sha256": "c9d4a3bb257b6c614393b600e770b0145d7a73fc6506b7b5af167c3f33fa71a9"
+        }
+      },
+      "review_focus": "关闭餐厅注入后有限恢复并保留旧安排，不能标为优化成功。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-R07-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R07-1/observation.json",
+          "observation_sha256": "e792e4a5437876a65a78ee62c6a53c12859c816e99d36a32888506c6d66007d1"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R08",
+      "title": "无法保留正餐拒绝",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "injected_failure",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R08.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R08.json",
+          "canonical_sha256": "cc5305a5f9cab61c9a89bcfd0bf8c6fe0ade190c91f2632dbf46fb653068161e",
+          "file_sha256": "a8ace272cd82115894a3516a5a847a417c181c2cc4c3d494c4f7091cc745d88a"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R08.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R08.json",
+          "canonical_sha256": "57d93cf64f07d79a9385351f374f73821193fc07fbe0bcf9506942ef6c554761",
+          "file_sha256": "8f2e0504ca67a158a88e29a35c2b76841fe565ee19682d57d73bea815c2c8e3c"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R08.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R08.json",
+          "canonical_sha256": "4255508d4db7d0fa48ff7077ed572a354e8c970295b08fd9c6780b8dacc69da0",
+          "file_sha256": "d6100dc70cd2b7a4188df157d1802242eeef9ecc208b323d509cb3bf0e367029"
+        }
+      },
+      "review_focus": "正餐无法保留时拒绝且无部分写入，确认拒绝为预期结果。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-R08-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R08-1/observation.json",
+          "observation_sha256": "65ec02e2b11f38140471130fd21003bd682ae43f66601854d902b12f4f6fd01a"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R09",
+      "title": "固定休息与抵离窗口",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R09.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R09.json",
+          "canonical_sha256": "8b90cd0dc2dabe96fbd80847df7db461763cb958b79924ef99b53e4414de1da4",
+          "file_sha256": "21f902702e8c0c94444f5678f30debabd93eb1a0ac5e20ed9cc9dcb000c464b4"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R09.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R09.json",
+          "canonical_sha256": "7ca9285900341cd76c31488468e0862a4e6139c7835c6b11b76341cb1cbc3e20",
+          "file_sha256": "36f63c5b8e26c409b947169fcb7ec04780a6c21b740bdace4db730186f0036f5"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R09.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R09.json",
+          "canonical_sha256": "c22b539ab8a3e7a5d319800b84126b06c68bf737062d8a137386fad1c9c86c4b",
+          "file_sha256": "0d67dfbdafd7988a664e78a928e189d923754ef753c0093c7dc9c807ce028539"
+        }
+      },
+      "review_focus": "固定休息、19:00 离开窗口、游览时长与餐次同时满足。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-R09-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R09-1/observation.json",
+          "observation_sha256": "11d4ef70edf84e3a00f7ed90cf3803a7d1c6d497023f662f3e303850c5737831"
+        },
+        {
+          "run_id": "current_live-R09-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R09-2/observation.json",
+          "observation_sha256": "49349823394a77fe08e8b834e9332d79d3b459d42c9b4705541100003743a5cf"
+        },
+        {
+          "run_id": "current_live-R09-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R09-3/observation.json",
+          "observation_sha256": "c945037350f4203445cebb86db682b5118240fe53f5332b9a75619e5af7d3580"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R10",
+      "title": "旧日程与补采路线改善",
+      "case_version": "1.0.1-draft",
+      "split": "holdout",
+      "data_origin": "mixed_historical_day_and_new_route_capture",
+      "source_family": "meal-recovery-suzhou-20261014",
+      "execution_mode": "live_model_with_replay",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R10.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R10.json",
+          "canonical_sha256": "fadb6460068013b24562b41ac5c2318124fa4016e50b648d0c3dea8335940d97",
+          "file_sha256": "f7c0711c580c9c08d9fbbe12b2808906caa57740aca6519422668e1dec2d84a6"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R10.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R10.json",
+          "canonical_sha256": "55b03b8523f74e534cf58b773f10cc979b326730206150e832a91861e0a52002",
+          "file_sha256": "6bf0d18a726cda887b532348fa8d71d4e93d8c03eb795dac7cae0c80eb32e2cf"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R10.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R10.json",
+          "canonical_sha256": "beacb46d18a7c5082332509f639fd07dd5ea3c726a215d6b895387ef8af4ddea",
+          "file_sha256": "49601373954101bb4283faf3e1d8db1767bafb35ded1ae4dd193f4c31fa5deb2"
+        }
+      },
+      "review_focus": "客观＋目标：核验180/162/138及营业餐次，只按明确优化目标评价，不把短路线等同舒适。",
+      "decision_ids": [
+        "D06"
+      ],
+      "evidence": [
+        {
+          "run_id": "current_live-R10-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R10-1/observation.json",
+          "observation_sha256": "a68c15d94a9319396008f3927f211b7ee81c7f73ebdba3b2b9df884bdb7720a3"
+        },
+        {
+          "run_id": "current_live-R10-2",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R10-2/observation.json",
+          "observation_sha256": "69861df4b7ced3eada7234bd14906e0cd66bc85ba3f7cb201b398ac69305561e"
+        },
+        {
+          "run_id": "current_live-R10-3",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R10-3/observation.json",
+          "observation_sha256": "b08ef21c98db8bf3e1f2fb248e899894d842f00e719f39fef38dcd0707667def"
+        }
+      ],
+      "diagnostic_findings": [
+        "R-INTENT:FAIL",
+        "R-ROUTE:FAIL"
+      ],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "computed_pending_independent_review",
+          "evidence_paths": [
+            "/Users/finn/.local/share/langgraph-trip-planner/eval-p5-next-step-20261025/evidence/objective-facts.json#cases.R10"
+          ],
+          "result": {
+            "engineering_only": true,
+            "enumerated": 20,
+            "feasible_under_declared_assumptions": 3,
+            "not_human_signoff": true
+          }
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "pending_scenario_spec",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R11",
+      "title": "路线共享期限",
+      "case_version": "1.0.1-draft",
+      "split": "dev",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "injected_failure",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R11.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R11.json",
+          "canonical_sha256": "4c3e848b441f1a859b739deaf97720eb5d53ddb6e5f98beeea558a493fbeb180",
+          "file_sha256": "ea951829a157fd18ca645f728a11797a4781487792c9c1f7d97ac9d0765c4d8b"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R11.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R11.json",
+          "canonical_sha256": "93129c577d7406170a992c6e00a4891adf86f1858fd206fdeab2fd6d65350104",
+          "file_sha256": "be644b28b5d761846402058f13d7e57791e99b2808ae066bc19d8b89e559216c"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R11.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R11.json",
+          "canonical_sha256": "6402e2f733b8099bce48d6345f2e4457f08f5bc511a6cb6c0c3ba3fca372396d",
+          "file_sha256": "85fc3cb87510b48188d985e7ee6e1f6b3a23168acb61e6d2da51b96efb42dfc1"
+        }
+      },
+      "review_focus": "注入路线超时服从共享期限，失败保留已存状态。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-R11-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R11-1/observation.json",
+          "observation_sha256": "e90d0d44d13da1d836aad2bed09dc359d01ad8d43740d9a519cf2ba097b88b82"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    },
+    {
+      "case_id": "R12",
+      "title": "并发删除晚餐",
+      "case_version": "1.0.1-draft",
+      "split": "holdout",
+      "data_origin": "synthetic",
+      "source_family": "synthetic-day-template-v1",
+      "execution_mode": "injected_failure",
+      "assets": {
+        "input": {
+          "repo_path": "backend/evals/datasets/inputs/R12.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/inputs/R12.json",
+          "canonical_sha256": "56c4fd81d691beaf3b5ed5e836094b8e8ebd450f247358d0a2fd66c02b2684f6",
+          "file_sha256": "d40bb9740b87f9968a925504be507d5f7918a4783685efc241b2f6cf2967d142"
+        },
+        "reference": {
+          "repo_path": "backend/evals/datasets/references/R12.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/references/R12.json",
+          "canonical_sha256": "fddb3bb87cdd1e934a083ee927096e377aa85e7878b99a12f75ae01225bacd80",
+          "file_sha256": "def1b7574287d7a82f846e51f37f61b92700ad2604e766daf6ec3d8fcf05bc36"
+        },
+        "route": {
+          "repo_path": "backend/evals/datasets/routes/R12.json",
+          "frozen_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/source/evals/datasets/routes/R12.json",
+          "canonical_sha256": "3557cbe27f4e0a851531b590874a2c49e17f1cb848b3baa7e592254ff9984ed7",
+          "file_sha256": "e7bf3baf4ff8ea4f0266bf544dc7be463b26c7c8a3063114ca81f3b1adbfe763"
+        }
+      },
+      "review_focus": "并发删除晚餐后拒绝迟到结果，保存的是最新状态而非旧 before。",
+      "decision_ids": [],
+      "evidence": [
+        {
+          "run_id": "current_live-R12-1",
+          "observation_path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p3-20261024/live-plan-pending/slots/current_live-R12-1/observation.json",
+          "observation_sha256": "0a10b74e6af56d1d3d8ba98bc7173f78b36138a82e32db4e0a92840c59f7af2c"
+        }
+      ],
+      "diagnostic_findings": [],
+      "human_review": {
+        "status": "pending_human",
+        "decision": null,
+        "reviewer": null,
+        "reviewed_at": null,
+        "confirmed_reference_sha256": null,
+        "rationale": null,
+        "evidence_paths": [],
+        "proposed_reference_changes": null
+      },
+      "product_rule_ids": [],
+      "review_tracks": {
+        "objective": {
+          "owner_role": "engineering_independent_verification",
+          "status": "pending_verification",
+          "evidence_paths": [],
+          "result": null
+        },
+        "explicit_intent": {
+          "status": "pending_review",
+          "result": null
+        },
+        "conditional_preference": {
+          "status": "not_a_personal_choice_task",
+          "profile": null,
+          "acceptable_answers": null,
+          "reviewers": [],
+          "disagreements": []
+        },
+        "personal_experience": {
+          "status": "not_collected",
+          "not_reference_gold": true
+        }
+      }
+    }
+  ],
+  "acceptance": [
+    {
+      "criterion_id": "A01",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A02",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A03",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A04",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A05",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A06",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A07",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A08",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A09",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A10",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A11",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A12",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A13",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A14",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A15",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    },
+    {
+      "criterion_id": "A16",
+      "user_status": "pending_human",
+      "user_decision": null,
+      "reviewer": null,
+      "reviewed_at": null,
+      "evidence_paths": [],
+      "notes": null
+    }
+  ],
+  "judge_panel": [
+    {
+      "sample_id": "J01",
+      "run_id": "current_live-T01-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "108a0e10448978cc4fd7144e1dc8ae4a8c49cb76b45446048ff5e9160fbe14fb",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "dev"
+    },
+    {
+      "sample_id": "J02",
+      "run_id": "current_live-T03-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "d3df5bd35eb57040ecfe4118d7995510dac09dd10a35018e1bfcc490625cd1c2",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "dev"
+    },
+    {
+      "sample_id": "J03",
+      "run_id": "current_live-T03-2",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "2c475a66529e2af2ea798c969cb5f44519802172cb87badc04024aa14fed54ce",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "dev"
+    },
+    {
+      "sample_id": "J04",
+      "run_id": "current_live-T04-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "1c496f2b7eca71f0ee67f260ace300ad04f6ced30bd5a673ba2d18f859a19518",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "holdout"
+    },
+    {
+      "sample_id": "J05",
+      "run_id": "current_live-T05-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "80a6346a1c9de0fe61f39e05187057b293dc5a74101e1a71386bd5572985c918",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "dev"
+    },
+    {
+      "sample_id": "J06",
+      "run_id": "current_live-T10-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "5de8bef835c61f1f7a67f6e7be89beadab0a1a667d91596925d387c64151f7c6",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "holdout"
+    },
+    {
+      "sample_id": "J07",
+      "run_id": "current_live-T11-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "b9d679a716548b646b9edd73b0d9819196fbdbcfd95e3d8df48caeb62f478505",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "dev"
+    },
+    {
+      "sample_id": "J08",
+      "run_id": "current_live-T18-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "77967612139761233a8293d7aaa8403ea676f8054e5254eb6e38de200af59b72",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "holdout"
+    },
+    {
+      "sample_id": "J09",
+      "run_id": "current_live-R01-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "5ef0578bc8bce57ba7e2e278e8b04d4034fa81faa16c14d0a20897859aea2b9d",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "dev"
+    },
+    {
+      "sample_id": "J10",
+      "run_id": "current_live-R02-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "fdd2237144c07366e753ef0510197eee86475a53360a73a6971c3dfbae81dae6",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "dev"
+    },
+    {
+      "sample_id": "J11",
+      "run_id": "current_live-R09-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "7887b341c77d89715d18518e102bb81ad4df17ce49219918cd465c2f4f8ff578",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "dev"
+    },
+    {
+      "sample_id": "J12",
+      "run_id": "current_live-R10-1",
+      "output_source": "published_report.runs[].detail.final_output",
+      "output_sha256": "0764f2ae3f22f2e98f89b3923e74eb8ea607301e4447b28d7dd7cc466f323351",
+      "reviewer": null,
+      "reviewed_at": null,
+      "scores": {
+        "J-INTENT": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        },
+        "J-TRADEOFF": {
+          "score": null,
+          "evidence_paths": [],
+          "reason": null,
+          "abstain_reason": null
+        }
+      },
+      "judge_round_1": null,
+      "judge_round_2": null,
+      "diagnostic_only": true,
+      "source_split": "holdout"
+    }
+  ],
+  "revised_on": "2026-10-25",
+  "scope": "documentation_only_no_dataset_or_scorer_change",
+  "review_method": "product_rules_objective_constraints_conditional_preferences",
+  "product_decisions": [
+    {
+      "product_rule_id": "PR01",
+      "title": "推荐时调整日程的权限与确认边界",
+      "status": "confirmed_by_user",
+      "decision": {
+        "option": "B",
+        "policy": "允许计算非固定时刻平移后的可行性，说明变化，采用经现有预览确认；取消内容走用户主动调整入口。"
+      },
+      "rationale": "用户确认上一条结合现有交互、减少操作负担的推荐方案。",
+      "reviewer": "用户（当前会话）",
+      "reviewed_at": "2026-10-25",
+      "confirmation_evidence": {
+        "user_message": "好的",
+        "context": "回复上一条明确推荐PR01=B、PR02=A、PR03以A为主并按需追问的说明",
+        "scope": "product_policy_only_not_reference_or_overall_acceptance"
+      }
+    },
+    {
+      "product_rule_id": "PR02",
+      "title": "偏好未说明或冲突时的响应",
+      "status": "confirmed_by_user",
+      "decision": {
+        "option": "A",
+        "policy": "偏好未说明时先展示实际取舍，必要时追问；硬条件缺失或冲突不得静默放宽。"
+      },
+      "rationale": "用户确认上一条结合现有交互、减少操作负担的推荐方案。",
+      "reviewer": "用户（当前会话）",
+      "reviewed_at": "2026-10-25",
+      "confirmation_evidence": {
+        "user_message": "好的",
+        "context": "回复上一条明确推荐PR01=B、PR02=A、PR03以A为主并按需追问的说明",
+        "scope": "product_policy_only_not_reference_or_overall_acceptance"
+      }
+    },
+    {
+      "product_rule_id": "PR03",
+      "title": "舒适/日间/均衡的明确表达",
+      "status": "confirmed_by_user",
+      "decision": {
+        "option": "A_with_targeted_clarification",
+        "policy": "明确选项优先、更多条件按需展开，仍含糊时追问；普通流程不增加必填或确认。"
+      },
+      "rationale": "用户确认上一条结合现有交互、减少操作负担的推荐方案。",
+      "reviewer": "用户（当前会话）",
+      "reviewed_at": "2026-10-25",
+      "confirmation_evidence": {
+        "user_message": "好的",
+        "context": "回复上一条明确推荐PR01=B、PR02=A、PR03以A为主并按需追问的说明",
+        "scope": "product_policy_only_not_reference_or_overall_acceptance"
+      }
+    }
+  ],
+  "decisions_note": "Legacy D topic IDs retained for traceability; only product_decisions contains items requiring current product-owner choices.",
+  "judge_panel_status": "diagnostic_archive_only_not_approved_calibration_set",
+  "judge_calibration_next_step": "Prepare and freeze 12 development-only samples with explicit intent; preserve holdout isolation; no calls authorized by this document.",
+  "product_rules_version": "p5-product-rules-v1-confirmed-20261025",
+  "product_rules_implementation_status": "planned_not_implemented_by_this_confirmation",
+  "engineering_evidence": {
+    "date": "2026-10-25",
+    "status": "computed_pending_independent_review",
+    "path": "/Users/finn/.local/share/langgraph-trip-planner/eval-p5-next-step-20261025/evidence/objective-facts.json",
+    "scope": "standard-library arithmetic only; no dataset edits, scoring, model calls or human signoff",
+    "cases": [
+      "T10",
+      "T11",
+      "T17",
+      "T12",
+      "T18",
+      "R02",
+      "R10"
+    ]
+  },
+  "preference_specifications": {
+    "path": "docs/eval-observability-p5-preference-specs.md",
+    "status": "draft_pending_independent_review",
+    "count": 12,
+    "ids": [
+      "PS01",
+      "PS02",
+      "PS03",
+      "PS04",
+      "PS05",
+      "PS06",
+      "PS07",
+      "PS08",
+      "PS09",
+      "PS10",
+      "PS11",
+      "PS12"
+    ],
+    "not_dataset_cases": true,
+    "not_model_runs": true,
+    "no_new_independent_holdout": true
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "plan_sha256": "023294111d734039fda538b6e5aec57657efb1311352bb00a154e0ffd1abd8b6",
+  "status": "agent_triage_pending_human",
+  "findings": [
+    {"case_id":"T03","rules":["T-RANK"],"variants":["current_live"],"category":"model_issue","note":"3 次中 2 次把 06:40 的 A 排在 08:00 的 B 前；日间边界仍待人审。"},
+    {"case_id":"R02","rules":["R-INTENT"],"variants":["current_live"],"category":"model_issue","note":"3 次均保留 A→B→C；B 锁位保持，但未把 C 提前。C→B→A 参考待人审。"},
+    {"case_id":"R10","rules":["R-INTENT","R-ROUTE"],"variants":["current_live"],"category":"model_issue","note":"3 次交通均为 180 分钟，改善为 0；162/138 分钟参考仍待人审。"},
+    {"case_id":"T10","rules":["T-ELIG","T-MARGIN"],"variants":["baseline","current_live"],"category":"reference_dispute","note":"生产允许平移开始时间而保留活动，草稿参考按旧时刻；先核定窗口边界，不直接判为误放。"},
+    {"case_id":"T11","rules":["T-ELIG","T-MARGIN","T-RANK"],"variants":["baseline","current_live"],"category":"reference_dispute","note":"生产保留 A/B，参考仅 B；首选 B 后仍含 A，连带排名失败。须核定接收城窗口口径。"},
+    {"case_id":"T17","rules":["T-ELIG"],"variants":["current_live"],"category":"reference_dispute","note":"可行集合沿用 T11 的窗口分歧；两处旧快照 409 为独立故障注入检查。"},
+    {"case_id":"T12","rules":["T-MARGIN"],"variants":["baseline","current_live"],"category":"evidence_gap","note":"候选因跨日期提前拒绝，没有生成实际余量；保持 ERROR，不填成功。"},
+    {"case_id":"T18","rules":["T-MARGIN"],"variants":["baseline","current_live"],"category":"evidence_gap","note":"部分提前拒绝项余量缺失；可行集合仍为 35/80。人工首选集合未填，排名未评估。"}
+  ]
+}

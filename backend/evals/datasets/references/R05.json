@@ -1,0 +1,57 @@
+{
+  "expected_outcome": "adjusted",
+  "expected_http": 200,
+  "hard_constraints": {
+    "start_minutes": 540,
+    "end_latest": 1320,
+    "opening_windows": {
+      "SYN_R05_A": [
+        [
+          480,
+          1260
+        ]
+      ],
+      "SYN_R05_B": [
+        [
+          480,
+          1260
+        ]
+      ],
+      "SYN_R05_C": [
+        [
+          480,
+          1260
+        ]
+      ],
+      "SYN_R05_L": [
+        [
+          600,
+          1320
+        ]
+      ],
+      "SYN_R05_D": [
+        [
+          600,
+          1320
+        ]
+      ]
+    },
+    "last_entry_deadlines": {},
+    "lunch_start_range": [
+      690,
+      870
+    ],
+    "dinner_start_range": [
+      1050,
+      1290
+    ],
+    "rest_periods": []
+  },
+  "expected_order": null,
+  "intent_kind": "preserve_constraints",
+  "baseline_traffic_minutes": 25,
+  "required_route_improvement": false,
+  "acceptable_first": null,
+  "max_recovery": 1,
+  "method": "Explicit synthetic constraints and independent interval construction; human confirmation pending"
+}

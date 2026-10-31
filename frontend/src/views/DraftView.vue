@@ -21,7 +21,7 @@
       <TripSetupSummary v-if="!route.query?.multi" :request="draft.request" />
       <details class="city-journey-context" :open="!route.query?.multi"><summary>本城抵离时间与交通约束 <span>编辑前可展开核对</span></summary><JourneySummary :journey="draft.request.journey" :city="draft.city" :days="draft.days" /></details>
       <details v-if="!route.query?.multi" class="journey-change comparison-disclosure"><summary>查票与比较往返方案 <span>需要时展开</span></summary>
-      <JourneyComparison :draft-id="draftId" :request="draft.request" :days-detail="draft.days_detail" :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @choose="chooseTravel" />
+      <JourneyComparison :draft-id="draftId" :request="draft.request" :days-detail="draft.days_detail" :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @choose="chooseTravel" @adjust="chooseTravelAdjusted" />
       </details>
       <details ref="travelEditor" v-if="!route.query?.multi" class="journey-change" :open="travelEditorOpen" @toggle="travelEditorOpen=($event.target as HTMLDetailsElement).open">
         <summary>编辑往返交通，先查看对行程的影响</summary>
@@ -30,6 +30,7 @@
         </details>
         <label><input type="checkbox" v-model="synchronizeTravel" @change="journeyPreview=null" />同步可容纳的每日时间安排</label>
         <a-button :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @click="previewTravel">查看变更影响</a-button>
+        <a-button :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @click="previewAdjustment()">按交通重新安排并预览</a-button>
         <p v-if="journeyError" role="alert">{{ journeyError }}</p>
         <div v-if="journeyPreview" class="travel-preview">
           <div class="preview-tickets" aria-label="即将保存的去返程">
@@ -41,6 +42,12 @@
             </div>
           </div>
           <p>{{ journeyPreview.notice }}</p><p>往返大交通已知小计：{{ journeyPreview.intercity_total }} 元</p>
+          <template v-if="journeyPreview.adjustment_id">
+            <h4>本次移动、取消与待安排清单</h4><ul><li v-for="(change,index) in journeyPreview.changes" :key="index">{{change}}</li></ul>
+            <p v-if="journeyPreview.unassigned_attractions?.length">仍有 {{journeyPreview.unassigned_attractions.length}} 个景点待安排；它们没有被删除，也未计入已完成安排。</p>
+            <details v-for="(day,index) in journeyPreview.days_detail" :key="index"><summary>{{draft.days[index]?.date}} · {{day?'调整后时间轴':'当天待装配，路线及餐次尚未核对'}}</summary><ul v-if="day"><li v-for="(item,j) in day.timeline_schedule" :key="j">{{item.start_time}}—{{item.end_time}} {{item.ref_name}}</li></ul></details>
+            <label><input type="checkbox" v-model="acknowledgeTravelAdjustment" />我已核对活动移动、时刻变化、用餐／休息取消及待安排清单，确认后保存</label>
+          </template>
           <p v-if="journeyPreview.budget">整趟已知费用：{{journeyPreview.budget.total}} 元；{{journeyPreview.budget.is_within_budget === false ? '已超预算' : '仍有费用待核对'}}</p>
           <div v-for="day in journeyPreview.impacts" :key="day.date">
             <strong>{{ day.date }}</strong>
@@ -51,10 +58,14 @@
             <p v-if="day.conflicts.length">需要调整：{{ day.conflicts.join('；') }}</p>
             <p v-if="day.window.unknown_cost_items?.length">费用待核对：{{ day.window.unknown_cost_items.join('；') }}</p>
           </div>
-          <a-button :disabled="journeyBusy || Object.keys(dayBusy).length > 0" @click="saveTravel">确认以上影响并保存交通</a-button>
+          <a-button :disabled="journeyBusy || Object.keys(dayBusy).length > 0 || (!!journeyPreview.adjustment_id && !acknowledgeTravelAdjustment)" @click="saveTravel">确认以上影响并保存交通</a-button>
         </div>
         <a-button v-if="journeyDirty || journeyPreview" :disabled="journeyBusy" @click="cancelTravel">取消本次交通变更</a-button>
       </details>
+      <section v-if="!route.query?.multi && draft.unassigned_attractions?.length" class="journey-change unassigned-attractions" aria-label="待安排景点">
+        <h3>{{draft.unassigned_attractions.length}} 个景点待安排</h3><p>它们仍属于本次选择，未被删除。先选日期预览，或明确选择不再安排，再定稿。</p>
+        <div v-for="item in draft.unassigned_attractions" :key="item.id"><strong>{{item.name}}</strong><p>{{item.reason}}</p><select v-model.number="unassignedDays[item.id]" :aria-label="item.name+'安排日期'"><option :value="undefined" disabled>选择安排日期</option><option v-for="(day,index) in draft.days" :key="index" :value="index" :disabled="day.travel_window?.unavailable">{{day.date}}{{day.travel_window?.unavailable?' · 交通日':''}}</option></select><a-button :disabled="journeyBusy || journeyDirty || !!journeyPreview || Object.keys(dayBusy).length>0 || unassignedDays[item.id]===undefined" @click="previewPending(item.id,false)">加入这天，预览</a-button><a-button :disabled="journeyBusy || journeyDirty || !!journeyPreview || Object.keys(dayBusy).length>0" @click="previewPending(item.id,true)">不再安排，预览</a-button></div>
+      </section>
       <div class="days-heading"><div><p class="draft-eyebrow">DAY BY DAY</p><h2>每天的安排</h2></div><span>{{draft.days.length}} 天 · 点击日期快速定位</span></div>
       <nav class="day-navigation" aria-label="每日行程导航"><a v-for="(ctx,idx) in draft.days" :key="idx" :href="`#draft-day-${idx}`"><strong>第 {{Number(idx)+1}} 天</strong><span>{{ctx.date.slice(5)}}</span><small>{{draft.days_detail[idx]?.is_assembled?'已安排':'待安排'}}</small></a></nav>
       <div class="days-container">
@@ -81,7 +92,7 @@
       </div>
       <div v-else class="finalize-bar"><p>每天都核对好了？<small>{{journeyDirty || journeyPreview ? '交通变更尚未确认，请先保存或取消本次变更。' : '定稿后保存为只读行程。'}}</small></p>
         <a-button type="primary" size="large" @click="onFinalize"
-                  :disabled="!!loadError || journeyBusy || journeyDirty || !!journeyPreview || Object.keys(dayBusy).length > 0">
+                  :disabled="!!loadError || journeyBusy || journeyDirty || !!journeyPreview || !!draft.unassigned_attractions?.length || Object.keys(dayBusy).length > 0">
           定稿并保存
         </a-button>
       </div>
@@ -102,7 +113,7 @@ import type {Journey} from '@/types'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
-  getDraft, assembleDay, recomputeDay, aiRearrangeDay, changeJourney,
+  getDraft, assembleDay, recomputeDay, aiRearrangeDay, changeJourney, adjustJourney,
   rewriteNarrative, refreshDiningOptions,
 } from '@/services/api'
 import DayCard from '@/components/draft/DayCard.vue'
@@ -127,14 +138,25 @@ const journeyBusy=ref(false)
 const journeyError=ref('')
 const synchronizeTravel=ref(true)
 const journeyTicketBasis=ref<string|undefined>()
+const acknowledgeTravelAdjustment=ref(false)
+const adjustmentActions=ref<any>({})
+const unassignedDays=reactive<Record<string,number>>({})
 const travelEditor=ref<HTMLDetailsElement|null>(null)
 const travelEditorOpen=ref(false)
 function cancelTravel(){journeyEdit.value=draft.value?.request?.journey?JSON.parse(JSON.stringify(draft.value.request.journey)):null;journeyPreview.value=null;journeyError.value='';journeyTicketBasis.value=undefined}
 
 async function chooseTravel(value:Journey,ticketBasis?:string){journeyTicketBasis.value=ticketBasis;journeyEdit.value=JSON.parse(JSON.stringify(value));synchronizeTravel.value=true;await nextTick();await previewTravel();await nextTick();if(travelEditor.value){travelEditor.value.open=true;travelEditor.value.scrollIntoView?.({behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'})}}
+async function chooseTravelAdjusted(value:Journey,ticketBasis?:string){journeyEdit.value=JSON.parse(JSON.stringify(value));await nextTick();journeyTicketBasis.value=ticketBasis;await previewAdjustment()}
+async function previewPending(id:string,discard:boolean){journeyEdit.value=draft.value.request.journey?JSON.parse(JSON.stringify(draft.value.request.journey)):null;await nextTick();await previewAdjustment(discard?{discard_ids:[id]}:{placements:[{id,day_index:unassignedDays[id]}]})}
+async function previewAdjustment(actions:any={}){
+ if(journeyBusy.value || Object.keys(dayBusy).length)return
+ travelEditorOpen.value=true;journeyBusy.value=true;journeyError.value='';journeyPreview.value=null;acknowledgeTravelAdjustment.value=false
+ const requested=JSON.stringify(journeyEdit.value);adjustmentActions.value=JSON.parse(JSON.stringify(actions))
+ try{const result=await adjustJourney(draftId.value,{journey:journeyEdit.value,ticket_basis:journeyTicketBasis.value,...actions});if(requested!==JSON.stringify(journeyEdit.value)){journeyError.value='生成期间交通输入已变化，旧预览未采用，请重新预览。';return}journeyPreview.value=result;await nextTick();travelEditor.value?.scrollIntoView?.({block:'start'})}catch(e:any){journeyError.value=typeof e?.response?.data?.detail==='string'?e.response.data.detail:'调整未完成，已保存行程未改变，请重试'}finally{journeyBusy.value=false}
+}
 
 watch(()=>draft.value?.request?.journey, v=>{journeyEdit.value=v?JSON.parse(JSON.stringify(v)):null;journeyPreview.value=null;journeyTicketBasis.value=undefined},{immediate:true})
-watch(journeyEdit,()=>{journeyPreview.value=null},{deep:true})
+watch(journeyEdit,()=>{journeyPreview.value=null;acknowledgeTravelAdjustment.value=false},{deep:true})
 function formatMinutes(n:number){return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`}
 async function previewTravel(){
  if(journeyBusy.value || Object.keys(dayBusy).length)return
@@ -144,7 +166,7 @@ async function previewTravel(){
 async function saveTravel(){
  if(!journeyPreview.value || journeyBusy.value || Object.keys(dayBusy).length)return
  journeyBusy.value=true;journeyError.value=''
- try{await changeJourney(draftId.value,journeyEdit.value,journeyPreview.value.preview_token,synchronizeTravel.value,journeyTicketBasis.value);draft.value=await getDraft(draftId.value);journeyPreview.value=null;message.success('交通与可容纳的时间调整已保存，请核对当天安排')}catch(e:any){journeyError.value=e?.response?.data?.detail || '交通修改未保存，请重新预览';journeyPreview.value=null}finally{journeyBusy.value=false}
+ try{if(journeyPreview.value.adjustment_id){if(!acknowledgeTravelAdjustment.value)return;await adjustJourney(draftId.value,{journey:journeyEdit.value,ticket_basis:journeyTicketBasis.value,...adjustmentActions.value,adjustment_id:journeyPreview.value.adjustment_id,preview_token:journeyPreview.value.preview_token,acknowledge_adjustments:true})}else await changeJourney(draftId.value,journeyEdit.value,journeyPreview.value.preview_token,synchronizeTravel.value,journeyTicketBasis.value);draft.value=await getDraft(draftId.value);journeyPreview.value=null;message.success('交通与可容纳的时间调整已保存，请核对当天安排')}catch(e:any){journeyError.value=e?.response?.data?.detail || '交通修改未保存，请重新预览';journeyPreview.value=null}finally{journeyBusy.value=false}
 }
 const loading = ref(true)
 const loadError = ref('')
@@ -343,6 +365,33 @@ onMounted(async()=>{await loadDraft();if(route.query.date){await nextTick();cons
 .journey-change p,.travel-preview p {
   overflow-wrap: anywhere;
   line-height: 1.8
+}
+.unassigned-attractions>div {
+  padding: 16px 0;
+  border-top: 1px solid var(--draft-line)
+}
+.unassigned-attractions select {
+  max-width: 100%;
+  padding: 7px 10px;
+  margin: 0 8px 8px 0;
+  border: 1px solid var(--draft-line);
+  border-radius: 8px;
+  background: var(--draft-surface);
+  color: var(--draft-ink)
+}
+.unassigned-attractions :deep(.ant-btn) {
+  margin: 0 8px 8px 0
+}
+.travel-preview label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 0;
+  line-height: 1.7
+}
+.travel-preview input[type=checkbox] {
+  flex-shrink: 0;
+  margin-top: 5px
 }
 .comparison-disclosure>summary {
   display: flex;

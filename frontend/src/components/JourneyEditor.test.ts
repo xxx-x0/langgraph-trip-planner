@@ -7,6 +7,24 @@ const button=(w:any,name:string)=>w.findAll('button').find((b:any)=>b.text()===n
 const latest=(w:any)=>w.emitted('update:modelValue')!.at(-1)![0] as any
 
 describe('manual intercity inputs',()=>{
+ it('reserves first and last travel days for a new departure city without inventing a service',async()=>{
+  const w=mount(JourneyEditor,{props:{startDate:'2026-11-10',endDate:'2026-11-14'}})
+  await w.get('[aria-label="出发城市"]').setValue('上海')
+  expect(latest(w).planning).toMatchObject({arrival_policy:'travel_day',departure_policy:'travel_day',ready_at:null})
+  expect(latest(w).outbound).toBeUndefined();expect(w.text()).toContain('首日暂不安排景点')
+  const select=w.findAll('select').find(s=>s.text().includes('填写预计目的地可用时间'))!
+  await select.setValue('time_window');expect(await (w.vm as any).validate()).toBe(false)
+  await w.get('input[type="datetime-local"]').setValue('2026-11-10T15:00')
+  expect(await (w.vm as any).validate()).toBe(true);expect(latest(w).planning.ready_at).toBe('2026-11-10T15:00')
+ })
+ it('leaves an old journey without reservations unchanged until the user chooses one',async()=>{
+  const old={origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'}
+  const w=mount(JourneyEditor,{props:{modelValue:old}})
+  expect(w.emitted('update:modelValue')).toBeUndefined()
+  const select=w.findAll('select').find(s=>s.text().includes('填写预计目的地可用时间'))!
+  expect(select.element.value).toBe('unreserved')
+  await select.setValue('travel_day');expect(latest(w).planning).toMatchObject({arrival_policy:'travel_day',departure_policy:'unreserved'})
+ })
  it('exposes departure city and modes without opt-in; never invents times or fares',async()=>{
   const w=mount(JourneyEditor,{props:{startDate:'2026-10-30',endDate:'2026-11-05',passengers:2,destinationCity:'青岛'}})
   expect(w.find('input[aria-label="出发城市"]').exists()).toBe(true)

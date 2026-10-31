@@ -1,0 +1,878 @@
+{
+  "expected_outcome": "recommended",
+  "expected_http": 200,
+  "eligible_ids": [
+    "rail_69_G3106",
+    "rail_70_G7690",
+    "rail_72_G3342",
+    "rail_73_G1482",
+    "rail_75_G7696",
+    "rail_76_G7696",
+    "rail_78_G48",
+    "rail_81_D3296",
+    "rail_82_G7652",
+    "rail_83_D18",
+    "rail_85_G1666",
+    "rail_86_G230",
+    "rail_88_Z282",
+    "rail_90_G7310",
+    "rail_91_G1098",
+    "rail_95_G46",
+    "rail_96_G1510",
+    "rail_92_G1098",
+    "rail_98_G7626",
+    "rail_99_G1380",
+    "rail_101_G3380",
+    "rail_102_G1662",
+    "rail_104_G7588",
+    "rail_106_G7566",
+    "rail_107_G7642",
+    "rail_110_G7582",
+    "rail_112_G7666",
+    "rail_114_D2282",
+    "rail_115_G3024",
+    "rail_117_G3060",
+    "rail_120_G3072",
+    "rail_122_G1656",
+    "rail_124_D3240",
+    "rail_126_G206",
+    "rail_127_G236"
+  ],
+  "candidate_checks": [
+    {
+      "candidate_id": "rail_0_K528",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -830
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_1_K348",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -830
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_3_G1862",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -525
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_4_G3272",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -520
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_6_G1866",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -498
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_8_G7492",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -494
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_9_G3110",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -485
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_11_G2668",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -468
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_12_D2222",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -457
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_14_G1224",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -436
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_17_G2624",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -423
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_18_G3006",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -418
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_16_G756",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -408
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_20_G590",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -392
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_22_G8322",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -373
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_24_G7572",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -360
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_26_G818",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -357
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_27_G1228",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -343
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_28_G8387",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -337
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_30_D2246",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -325
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_32_G820",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -313
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_33_G1492",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -294
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_34_G1492",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -281
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_36_G7576",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -281
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_38_G822",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -261
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_40_G812",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -251
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_41_G824",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -246
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_43_G1652",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -222
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_45_G7486",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -217
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_46_G834",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -202
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_48_G40",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -165
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_49_D204",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -160
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_51_D3236",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -145
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_53_Z176",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -130
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_54_D2196",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -116
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_56_G44",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -107
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_57_G2808",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -101
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_59_G1654",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -81
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_61_G850",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -64
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_62_G1502",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -59
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_64_G876",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -28
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_65_G7478",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -23
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_67_G7376",
+      "eligible": false,
+      "reasons": [
+        "preserved_itinerary_exceeds_departure_window"
+      ],
+      "margins": [
+        -8
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_69_G3106",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        3
+      ],
+      "tight": true
+    },
+    {
+      "candidate_id": "rail_70_G7690",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        8
+      ],
+      "tight": true
+    },
+    {
+      "candidate_id": "rail_72_G3342",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        31
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_73_G1482",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        33
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_75_G7696",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        49
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_76_G7696",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        63
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_78_G48",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        69
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_81_D3296",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        74
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_82_G7652",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        79
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_83_D18",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        85
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_85_G1666",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        98
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_86_G230",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        109
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_88_Z282",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        115
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_90_G7310",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        122
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_91_G1098",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        127
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_95_G46",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        135
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_96_G1510",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        136
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_92_G1098",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        140
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_98_G7626",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        150
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_99_G1380",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        162
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_101_G3380",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        173
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_102_G1662",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        188
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_104_G7588",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        200
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_106_G7566",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        204
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_107_G7642",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        215
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_109_K5834",
+      "eligible": false,
+      "reasons": [
+        "arrival_outside_trip_dates"
+      ],
+      "margins": [
+        237
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_110_G7582",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        241
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_112_G7666",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        252
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_114_D2282",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        257
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_115_G3024",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        260
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_117_G3060",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        265
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_118_K552",
+      "eligible": false,
+      "reasons": [
+        "arrival_outside_trip_dates"
+      ],
+      "margins": [
+        267
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_120_G3072",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        284
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_122_G1656",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        308
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_124_D3240",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        316
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_126_G206",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        331
+      ],
+      "tight": false
+    },
+    {
+      "candidate_id": "rail_127_G236",
+      "eligible": true,
+      "reasons": [],
+      "margins": [
+        400
+      ],
+      "tight": false
+    }
+  ],
+  "bounds": {
+    "start_date": "2026-10-26",
+    "end_date": "2026-11-01",
+    "departure_after": "2026-11-01T15:45"
+  },
+  "buffer_fields": {
+    "transfer_before_minutes": 60,
+    "station_buffer_minutes": 60,
+    "transfer_after_minutes": 60,
+    "baggage_minutes": 30,
+    "lodging_buffer_minutes": 30
+  },
+  "acceptable_first": null,
+  "rank_key": null,
+  "preferred_pairs": [],
+  "expected_ticket_total": null,
+  "checkpoint_statuses": {},
+  "method": "independent interval arithmetic over frozen historical end time and buffers; no production evaluator imported",
+  "ranking_status": "pending_human_no_gold",
+  "source_limitations": [
+    "Fresh 2026-10-24 public list for 2026-11-01, not recovery of 2026-10-20 batch",
+    "Old municipal routes/POIs/hotel facts not revalidated",
+    "Listing fare and availability are observation-time only, not a whole-party confirmed quote",
+    "Buffers are preserved estimates, not station navigation or arrival guarantees"
+  ]
+}

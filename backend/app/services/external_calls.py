@@ -14,6 +14,7 @@ from enum import StrEnum
 from typing import Any, Awaitable, Callable
 
 from ..config import get_settings
+from . import observability as trace
 
 
 class FailureKind(StrEnum):
@@ -146,6 +147,19 @@ def _event(provider, operation, outcome, started, attempt=0):
                  attempt=attempt, milliseconds=round((time.monotonic()-started)*1000))
     _events.append(event)
     logging.getLogger('app.external').info('external_call %s', json.dumps(event))
+    with trace.span('external_result'):
+        trace.record(provider=provider, external_operation=operation, outcome=outcome, attempt=attempt,
+                     milliseconds=event['milliseconds'])
+
+
+@asynccontextmanager
+async def _observed_gate(gate):
+    with trace.span('external_queue'):
+        await gate.acquire()
+    try:
+        yield
+    finally:
+        gate.release()
 
 
 async def invoke_external(provider: str, operation: str, invoke: Callable[[], Awaitable[Any]], *,
@@ -161,15 +175,17 @@ async def invoke_external(provider: str, operation: str, invoke: Callable[[], Aw
     attempt = 0
     try:
         async with asyncio.timeout(max(0, deadline - time.monotonic())):
-            async with gate:
+            async with _observed_gate(gate):
                 cached = _cache.get(key) if cache_ttl else None
                 if cached and cached[0] > time.monotonic():
                     _event(provider, operation, 'cache_hit', started)
                     return copy.deepcopy(cached[1])
                 for attempt in range(1, policy.max_attempts + 1):
                     try:
-                        async with asyncio.timeout(min(policy.attempt_timeout, max(0, deadline-time.monotonic()))):
-                            result = await invoke()
+                        with trace.span('external_attempt'):
+                            trace.record(provider=provider, external_operation=operation, attempt=attempt)
+                            async with asyncio.timeout(min(policy.attempt_timeout, max(0, deadline-time.monotonic()))):
+                                result = await invoke()
                         if cache_ttl:
                             _cache[key] = (time.monotonic()+cache_ttl, copy.deepcopy(result))
                             _cache.move_to_end(key)
@@ -184,8 +200,10 @@ async def invoke_external(provider: str, operation: str, invoke: Callable[[], Aw
                         if not safe.retryable or attempt == policy.max_attempts:
                             raise safe from None
                         if recover and kind in {FailureKind.CONNECTION, FailureKind.TIMEOUT}:
-                            await recover()
-                        await asyncio.sleep(policy.backoff * attempt)
+                            with trace.span('external_reconnect'):
+                                await recover()
+                        with trace.span('external_backoff'):
+                            await asyncio.sleep(policy.backoff * attempt)
     except asyncio.CancelledError:
         _event(provider, operation, 'cancelled', started, attempt)
         raise
@@ -197,6 +215,12 @@ async def invoke_external(provider: str, operation: str, invoke: Callable[[], Aw
 async def invoke_llm(runnable, messages, *, max_attempts=2, timeout=None):
     settings = get_settings()
     total = min(timeout or settings.external_llm_timeout, settings.external_llm_timeout)
-    return await invoke_external('llm', 'generate', lambda: runnable.ainvoke(messages),
+    async def invoke():
+        with trace.span('model_call', run_type='llm'):
+            trace.model_identity(runnable, messages)
+            result = await runnable.ainvoke(messages)
+            trace.model_usage(result)
+            return result
+    return await invoke_external('llm', 'generate', invoke,
         policy=CallPolicy(total_timeout=total, attempt_timeout=min(30, total),
                           max_attempts=min(max_attempts, 2), concurrency=2))

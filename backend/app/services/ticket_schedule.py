@@ -38,7 +38,7 @@ def day_facts(day):
         return None
     value = DayDetail.model_validate(day).model_dump(mode='json')
     return {k: value.get(k) for k in ('date', 'attractions', 'meals', 'hotel', 'route_segments',
-        'timeline_schedule', 'timeline_order', 'day_start_time', 'rest_periods', 'locked_attraction_names', 'removed_attraction_names')}
+        'timeline_schedule', 'timeline_order', 'day_start_time', 'time_constraints', 'rest_periods', 'locked_attraction_names', 'removed_attraction_names')}
 
 
 def changed():
@@ -101,7 +101,17 @@ class ScheduleCheck:
         if current != self.basis:
             raise changed()
 
+    def assess(self, candidate):
+        """Keep evaluate's legacy tuple while exporting versioned staged evidence."""
+        leg, reasons, problems = self.evaluate(candidate)
+        cross = any('跨出' in p for p in problems)
+        adjusted = getattr(self, '_adjustments', [])
+        return leg, reasons, problems, dict(stage='date' if cross else 'schedule',
+            fit_status='conflict' if problems else 'requires_adjustment' if adjusted else 'direct',
+            adjustments=adjusted if not problems else [], margins=None if cross else getattr(self, '_margins', []))
+
     def evaluate(self, candidate):
+        self._adjustments, self._margins = [], []
         leg = candidate.leg(self.query.passengers)
         if self.old_leg:
             fields = ['transfer_before_minutes', 'transfer_after_minutes', 'lodging_buffer_minutes']
@@ -118,6 +128,10 @@ class ScheduleCheck:
                 plan.transfers.append(CityTransfer(from_stop=self.edge[0], to_stop=self.edge[1], leg=leg))
                 summary = multicity.projection(plan, self.document['snapshots'])
                 cities = [c for c in summary['cities'] if c['id'] in self.affected]
+                from .schedule_constraints import schedule_changes
+                for city in cities:
+                    before = self.document['snapshots'].get(city['id'], {}).get('days_detail', [])
+                    self._adjustments += schedule_changes(before, city['days'], city['city'])
                 problems = list(summary['conflicts'])
                 if any(c['stale'] for c in cities):
                     problems.append('城市日期或人数变化，原每日安排不能直接沿用')
@@ -133,6 +147,8 @@ class ScheduleCheck:
                 req = TripRequest.model_validate(req.model_dump(mode='json'))
                 details, impacts, _ = synchronize_days(self.payload, req)
                 problems = [p for i in impacts for p in i['conflicts']]
+                from .schedule_constraints import schedule_changes
+                self._adjustments = schedule_changes(self.payload.days_detail, details, req.city)
                 cities = [dict(city=req.city, days=[d.model_dump(mode='json') if d else None for d in details], windows=[dict(date=i['date'], **i['window']) for i in impacts])]
             reasons = []
             for city in cities:
@@ -155,10 +171,12 @@ class ScheduleCheck:
                                     self.context.kind == 'multi' and city['id'] == self.edge[1])
                         if departing and detail['date'] == leg.departure_time[:10]:
                             margin = hi - last
+                            self._margins.append(margin)
                             note = '；时间较紧，建议增加接驳缓冲后重查' if margin <= 30 else ''
                             reasons.append(f"{detail['date']} 原安排至{clock(last)}，含缓冲须{clock(hi)}前结束，现有缓冲外剩余{margin}分钟{note}")
                         if arriving and detail['date'] == leg.arrival_time[:10]:
                             margin = first - lo
+                            self._margins.append(margin)
                             note = '；时间较紧，建议增加接驳缓冲后重查' if margin <= 30 else ''
                             reasons.append(f"{detail['date']} 含缓冲{clock(lo)}后可开始，当前安排{clock(first)}开始，现有缓冲外剩余{margin}分钟{note}")
                     if problems:

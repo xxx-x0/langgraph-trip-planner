@@ -1,0 +1,51 @@
+{
+  "expected_outcome": "recommended",
+  "expected_http": 200,
+  "eligible_ids": [
+    "SYN_T03_A",
+    "SYN_T03_B",
+    "SYN_T03_C"
+  ],
+  "candidate_checks": [
+    {
+      "candidate_id": "SYN_T03_A",
+      "eligible": true,
+      "reasons": [],
+      "margins": [],
+      "tight": false
+    },
+    {
+      "candidate_id": "SYN_T03_B",
+      "eligible": true,
+      "reasons": [],
+      "margins": [],
+      "tight": false
+    },
+    {
+      "candidate_id": "SYN_T03_C",
+      "eligible": true,
+      "reasons": [],
+      "margins": [],
+      "tight": false
+    }
+  ],
+  "bounds": {
+    "start_date": "2027-04-12",
+    "end_date": "2027-04-15"
+  },
+  "buffer_fields": {
+    "transfer_before_minutes": 0,
+    "station_buffer_minutes": 0,
+    "transfer_after_minutes": 0,
+    "baggage_minutes": 0,
+    "lodging_buffer_minutes": 0
+  },
+  "acceptable_first": [
+    "SYN_T03_B"
+  ],
+  "rank_key": null,
+  "preferred_pairs": [],
+  "expected_ticket_total": null,
+  "checkpoint_statuses": {},
+  "method": "Independent date/interval arithmetic; candidate preference specification; no production evaluator called"
+}

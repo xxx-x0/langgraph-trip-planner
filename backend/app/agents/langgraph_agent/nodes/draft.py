@@ -28,6 +28,7 @@ async def save_draft_node(state: TripPlannerState) -> Dict[str, Any]:
         hotels_by_day=state.get("hotels_by_day", []) or [],
         dining_pool=state.get("dining_pool", []) or [],
         weather_info=weather_list,
+        explicit_assignments=bool(state.get('user_day_assignments')),
     )
     print(f"✅ 草稿已保存: draft_id={draft_id}")
     return {"draft_id": draft_id}
