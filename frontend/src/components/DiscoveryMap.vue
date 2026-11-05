@@ -23,6 +23,7 @@ let AMap: any = null
 let markers: any[] = []
 let infoWindow: any = null
 const mapReady = ref(false)
+let disposed=false
 
 function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -31,13 +32,15 @@ function escapeHtml(str: string): string {
 async function initMap() {
   try {
     const AMapLoader = (await import('@amap/amap-jsapi-loader')).default
+    if(disposed)return
     AMap = await AMapLoader.load({
       key: import.meta.env.VITE_AMAP_WEB_JS_KEY || '',
       version: '2.0',
       plugins: ['AMap.Marker', 'AMap.InfoWindow'],
     })
+    if(disposed||!mapContainer.value)return
 
-    map = new AMap.Map('discovery-map', {
+    map = new AMap.Map(mapContainer.value, {
       zoom: 12,
       center: [116.397128, 39.916527],
       viewMode: '2D',
@@ -53,7 +56,7 @@ async function initMap() {
       syncMarkers()
     }
   } catch (e) {
-    console.error('地图初始化失败:', e)
+    if(!disposed)console.error('地图初始化失败:', e)
   }
 }
 
@@ -136,6 +139,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  disposed=true
+  mapReady.value=false
   if (map) {
     map.destroy()
     map = null

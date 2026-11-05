@@ -527,11 +527,17 @@ async def load_more_attractions(req: LoadMoreAttractionsRequest):
 )
 async def ai_select_attractions(req: AISelectRequest):
     try:
+        extra = {}
+        if req.request:
+            from ...services.journey_planning import dates
+            from ...services.journey_service import travel_window
+            extra['daily_windows'] = [dict(date=d, **travel_window(req.request, d)) for d in dates(req.request)]
         result = await pick_attractions_from_pool(
             destination=req.destination,
             days=req.days,
             pool=req.attractions,
             preferences=req.preferences,
+            **extra,
         )
         return AISelectResponse(**result)
     except Exception:

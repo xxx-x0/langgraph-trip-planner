@@ -1,0 +1,114 @@
+[
+  {
+    "city": "北京",
+    "region": "北京",
+    "country": "中国",
+    "latitude": 39.9042,
+    "longitude": 116.4074,
+    "search": "beijing"
+  },
+  {
+    "city": "上海",
+    "region": "上海",
+    "country": "中国",
+    "latitude": 31.2304,
+    "longitude": 121.4737,
+    "search": "shanghai"
+  },
+  {
+    "city": "广州",
+    "region": "广东",
+    "country": "中国",
+    "latitude": 23.1291,
+    "longitude": 113.2644,
+    "search": "guangzhou"
+  },
+  {
+    "city": "深圳",
+    "region": "广东",
+    "country": "中国",
+    "latitude": 22.5431,
+    "longitude": 114.0579,
+    "search": "shenzhen"
+  },
+  {
+    "city": "杭州",
+    "region": "浙江",
+    "country": "中国",
+    "latitude": 30.2741,
+    "longitude": 120.1551,
+    "search": "hangzhou"
+  },
+  {
+    "city": "成都",
+    "region": "四川",
+    "country": "中国",
+    "latitude": 30.5728,
+    "longitude": 104.0668,
+    "search": "chengdu"
+  },
+  {
+    "city": "重庆",
+    "region": "重庆",
+    "country": "中国",
+    "latitude": 29.563,
+    "longitude": 106.5516,
+    "search": "chongqing"
+  },
+  {
+    "city": "南京",
+    "region": "江苏",
+    "country": "中国",
+    "latitude": 32.0603,
+    "longitude": 118.7969,
+    "search": "nanjing"
+  },
+  {
+    "city": "苏州",
+    "region": "江苏",
+    "country": "中国",
+    "latitude": 31.299,
+    "longitude": 120.5853,
+    "search": "suzhou"
+  },
+  {
+    "city": "厦门",
+    "region": "福建",
+    "country": "中国",
+    "latitude": 24.4798,
+    "longitude": 118.0894,
+    "search": "xiamen"
+  },
+  {
+    "city": "武汉",
+    "region": "湖北",
+    "country": "中国",
+    "latitude": 30.5928,
+    "longitude": 114.3055,
+    "search": "wuhan"
+  },
+  {
+    "city": "西安",
+    "region": "陕西",
+    "country": "中国",
+    "latitude": 34.3416,
+    "longitude": 108.9398,
+    "search": "xian"
+  },
+  {
+    "city": "东京",
+    "region": "关东",
+    "country": "日本",
+    "latitude": 35.6762,
+    "longitude": 139.6503,
+    "search": "tokyo"
+  },
+  {
+    "city": "大阪",
+    "region": "关西",
+    "country": "日本",
+    "latitude": 34.6937,
+    "longitude": 135.5023,
+    "search": "osaka"
+  }
+]

@@ -61,7 +61,7 @@ def rest_conflicts(detail):
         if x['kind']=='meal' and x['ref_name'] in meals:
             meal=meals[x['ref_name']]
             slot=meal.preferred_slot or meal.type
-            bounds={'breakfast':(360,630),'lunch':(660,870),'dinner':(1050,1320)}.get(slot)
+            bounds={'breakfast':(360,630),'lunch':(660,870),'dinner':(1020 if detail.coordination_policy else 1050,1320)}.get(slot)
             if bounds and not bounds[0]<=lo<=bounds[1]: problems.append(meal.name+'休息后不在原正餐时段，请调整休息或用餐')
             hours=opening_windows(meal.open_hours)
         elif x['kind']=='attraction' and x['ref_name'] in attractions:

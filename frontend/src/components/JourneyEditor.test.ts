@@ -7,11 +7,11 @@ const button=(w:any,name:string)=>w.findAll('button').find((b:any)=>b.text()===n
 const latest=(w:any)=>w.emitted('update:modelValue')!.at(-1)![0] as any
 
 describe('manual intercity inputs',()=>{
- it('reserves first and last travel days for a new departure city without inventing a service',async()=>{
+ it('keeps unknown first and last days adjustable and allows an explicit time boundary',async()=>{
   const w=mount(JourneyEditor,{props:{startDate:'2026-11-10',endDate:'2026-11-14'}})
   await w.get('[aria-label="出发城市"]').setValue('上海')
-  expect(latest(w).planning).toMatchObject({arrival_policy:'travel_day',departure_policy:'travel_day',ready_at:null})
-  expect(latest(w).outbound).toBeUndefined();expect(w.text()).toContain('首日暂不安排景点')
+  expect(latest(w).planning).toMatchObject({arrival_policy:'unreserved',departure_policy:'unreserved',ready_at:null})
+  expect(latest(w).outbound).toBeUndefined();expect(w.text()).toContain('首末天不会自动整天留空')
   const select=w.findAll('select').find(s=>s.text().includes('填写预计目的地可用时间'))!
   await select.setValue('time_window');expect(await (w.vm as any).validate()).toBe(false)
   await w.get('input[type="datetime-local"]').setValue('2026-11-10T15:00')

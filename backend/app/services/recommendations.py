@@ -56,8 +56,8 @@ def distance(a,b):
     return _haversine_distance(a.latitude,a.longitude,b.latitude,b.longitude)
 
 
-def explain_dining(candidates, attractions, intent, start='08:00', schedule=None, hotel=None, meals=None):
-    anchors=meal_anchors(attractions,start,schedule,hotel,meals)
+def explain_dining(candidates, attractions, intent, start='08:00', schedule=None, hotel=None, meals=None, *, anchors_override=None):
+    anchors=anchors_override or meal_anchors(attractions,start,schedule,hotel,meals)
     for c in candidates:
         old=c.recommendation
         if c.cuisine in {'餐饮相关','餐饮相关场所','餐饮服务','中餐厅'}: c.cuisine=None

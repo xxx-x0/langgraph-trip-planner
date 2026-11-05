@@ -267,6 +267,7 @@ export interface AISelectRequest {
   days: number
   attractions: Array<Partial<DiscoveredAttraction> & { name: string }>
   preferences?: Record<string, any>
+  request?: TripFormData
 }
 
 export interface AISelectResponse {
@@ -311,6 +312,9 @@ export async function compareJourneys(draftId:string,candidates:unknown[]) {
 }
 export async function recommendTickets(body:unknown,signal?:AbortSignal) {
  return (await apiClient.post('/api/tickets/recommend',body,{signal,timeout:45000})).data
+}
+export async function recommendJourneys(body:unknown,signal?:AbortSignal) {
+ return (await apiClient.post('/api/tickets/journey-options',body,{signal,timeout:45000})).data
 }
 export async function startTicketSearch(body:unknown,signal?:AbortSignal) {
  return (await apiClient.post('/api/tickets/search',body,{signal,timeout:10000})).data

@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import Antd from 'ant-design-vue'
 import DraftView from './DraftView.vue'
-import { getDraft, recomputeDay, aiRearrangeDay, multiApi, changeJourney, refreshDiningOptions, adjustJourney } from '@/services/api'
+import { getDraft, recomputeDay, aiRearrangeDay, multiApi, changeJourney, refreshDiningOptions, adjustJourney, assembleDay } from '@/services/api'
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn(), query: {} as Record<string,string> }))
 
@@ -52,21 +52,40 @@ beforeEach(() => {
 })
 
 describe('saved draft editing', () => {
+  it('previews meal refill and retains the opt-in on explicit save, then reloads the saved meals',async()=>{
+    const data:any=draft();data.days_detail[0].meals=[{name:'已有午餐',type:'lunch'}]
+    vi.mocked(getDraft).mockResolvedValue(data)
+    vi.mocked(adjustJourney).mockResolvedValue({adjustment_id:'meal-plan',preview_token:'meal-token',days_detail:data.days_detail,impacts:[],changes:[],meal_recovery:[]})
+    const w=await openDraft()
+    expect(w.get('[aria-label="整体协调行程"]').text()).toContain('还有 1 顿')
+    await w.get('[aria-label="整体协调行程"] button').trigger('click');await flushPromises()
+    expect(adjustJourney).toHaveBeenCalledWith('draft-test',expect.objectContaining({coordinate_trip:true,refill_meals:true,journey:null}))
+    expect(adjustJourney).toHaveBeenCalledTimes(1)
+    await w.get('.proposal-ack input').setValue(true)
+    vi.mocked(getDraft).mockResolvedValue({...data,days_detail:[{...data.days_detail[0],meals:[...data.days_detail[0].meals,{name:'新晚餐',type:'dinner'}]}]})
+    await w.get('.proposal-buttons .primary-action').trigger('click');await flushPromises()
+    expect(adjustJourney).toHaveBeenLastCalledWith('draft-test',expect.objectContaining({refill_meals:true,adjustment_id:'meal-plan',preview_token:'meal-token',acknowledge_adjustments:true}))
+    expect(w.get('[aria-label="整体协调行程"]').text()).not.toContain('还有 1 顿')
+    expect(w.get('[aria-label="整体协调行程"] button').text()).toContain('AI 统筹整趟行程')
+    w.unmount()
+  })
   it('shows party totals once and cancels a preview without saving',async()=>{
     const data:any=draft();data.request.journey={origin_city:'杭州',return_city:'杭州',destination_timezone:'Asia/Shanghai',outbound:null,inbound:null}
     vi.mocked(getDraft).mockResolvedValue(data)
-    vi.mocked(changeJourney).mockResolvedValue({preview_token:'token',impacts:[],intercity_total:1140,budget:{total:1894,is_within_budget:null}} as any)
+    vi.mocked(adjustJourney).mockResolvedValue({adjustment_id:'joint',preview_token:'token',impacts:[],intercity_total:1140,budget:{total:1894,is_within_budget:null}} as any)
     const w=await openDraft()
     const changed={...data.request.journey,outbound:{service_number:'SC4766',mode:'flight',departure_time:'2026-10-20T10:05',arrival_time:'2026-10-20T11:50',passengers:2,ticket_total:1140,currency:'CNY'}}
     w.findComponent({name:'JourneyComparison'}).vm.$emit('choose',changed,'basis');await flushPromises()
-    expect(w.get('.travel-preview').text()).toContain('全体 2 人票价：1140 CNY')
-    expect(w.get('.travel-preview').text()).toContain('此金额不再乘人数')
-    expect(w.findAll('button').find(b=>b.text().includes('定稿并保存'))!.attributes('disabled')).toBeDefined()
-    expect((w.findAll('details.journey-change')[1]!.element as HTMLDetailsElement).open).toBe(true)
-    await w.findAll('button').find(b=>b.text().includes('取消本次交通变更'))!.trigger('click');await flushPromises()
+    expect(w.get('.travel-preview .ticket-card').text()).toContain('2 人同行')
+    expect(w.get('.travel-preview .ticket-card').text()).toContain('¥1,140')
+    expect(w.get('.travel-preview').text()).toContain('不再重复乘人数')
+    expect(w.findAll('button').some(b=>b.text().includes('定稿并保存'))).toBe(false)
+    expect(w.find('.transport-desk .travel-preview').isVisible()).toBe(true)
+    expect(w.find('.transport-search').attributes('style')).toContain('display: none')
+    await w.get('.proposal-buttons .secondary-action').trigger('click');await flushPromises()
     expect(w.find('.travel-preview').exists()).toBe(false)
     expect(w.findAllComponents({name:'JourneyEditor'}).at(-1)!.props('modelValue')).toEqual(data.request.journey)
-    expect(changeJourney).toHaveBeenCalledTimes(1)
+    expect(adjustJourney).toHaveBeenCalledTimes(1)
     expect(w.findAll('button').find(b=>b.text().includes('定稿并保存'))!.attributes('disabled')).toBeUndefined();w.unmount()
   })
   it('makes an explicit meal placement manual and preserves locked and removed activities on failure',async()=>{
@@ -361,32 +380,45 @@ it('requires preview confirmation for transport, invalidates preview on edits, a
  const {default:JourneyEditor}=await import('@/components/JourneyEditor.vue')
  w.findAllComponents(JourneyEditor).at(-1)!.vm.$emit('update:modelValue',{origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'})
  await flushPromises()
- expect(w.findAll('button').find(b=>b.text().includes('定稿并保存'))!.attributes('disabled')).toBeDefined()
+ expect(w.findAll('button').some(b=>b.text().includes('定稿并保存'))).toBe(false)
  vi.mocked(changeJourney).mockResolvedValue({preview_token:'preview',notice:'原安排保留',intercity_total:0,impacts:[]})
  await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
  expect(vi.mocked(changeJourney).mock.calls[0]).toEqual(['draft-test',{origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'},undefined,true,undefined])
  const edited={origin_city:'南京',return_city:'南京',destination_timezone:'Asia/Shanghai'}
  w.findAllComponents(JourneyEditor).at(-1)!.vm.$emit('update:modelValue',edited);await flushPromises()
- expect(w.findAll('button').some(b=>b.text()==='确认以上影响并保存交通')).toBe(false)
+ expect(w.findAll('button').some(b=>b.text().startsWith('确认并保存'))).toBe(false)
  await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
- await w.findAll('button').find(b=>b.text()==='确认以上影响并保存交通')!.trigger('click');await flushPromises()
+ await w.findAll('button').find(b=>b.text().startsWith('确认并保存'))!.trigger('click');await flushPromises()
  expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',edited,'preview',true,undefined])
  w.unmount()
 })
 
 
-it('chooses an alternative into a synchronization preview and waits for explicit confirmation',async()=>{
+it('shows unsaved ticket edits without reusing the old available-time summary',async()=>{
+ const w=await openDraft()
+ const {default:JourneyEditor}=await import('@/components/JourneyEditor.vue')
+ const next={origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai',outbound:{mode:'train',service_number:'G99',departure_time:'2026-10-20T09:00',arrival_time:'2026-10-20T15:00',departure_station:'上海虹桥',arrival_station:'北京南',passengers:1,ticket_total:null}}
+ w.findAllComponents(JourneyEditor).at(-1)!.vm.$emit('update:modelValue',next);await flushPromises()
+ expect(w.get('.transport-overview').text()).toContain('G99')
+ expect(w.get('.transport-overview').text()).toContain('预览后再更新可游玩时间')
+ expect(w.find('.transport-overview .day-windows').exists()).toBe(false)
+ expect(changeJourney).not.toHaveBeenCalled();expect(adjustJourney).not.toHaveBeenCalled()
+ w.unmount()
+})
+
+it('coordinates a chosen alternative with both days and waits for explicit confirmation',async()=>{
  const w=await openDraft()
  const {default:JourneyComparison}=await import('@/components/JourneyComparison.vue')
  const journey={origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'}
- vi.mocked(changeJourney).mockResolvedValue({preview_token:'selected',notice:'保留全部活动',intercity_total:240,budget:{total:500},impacts:[{date:'2026-10-20',window:{start_minutes:600,end_minutes:1320,notes:[],unknown_cost_items:[],overnight_stay:true},changes:['市内出发从08:00调整到10:00'],conflicts:[]}]})
+ vi.mocked(adjustJourney).mockResolvedValue({adjustment_id:'whole',preview_token:'selected',notice:'保留全部活动',intercity_total:240,budget:{total:500},impacts:[{date:'2026-10-20',window:{start_minutes:600,end_minutes:1320,notes:[],unknown_cost_items:[],overnight_stay:true},changes:['市内出发从08:00调整到10:00'],conflicts:[]}]})
  w.findComponent(JourneyComparison).vm.$emit('choose',journey);await flushPromises()
- expect(vi.mocked(changeJourney).mock.calls).toEqual([['draft-test',journey,undefined,true,undefined]])
+ expect(adjustJourney).toHaveBeenCalledWith('draft-test',{journey,coordinate_trip:true,ticket_basis:undefined})
  expect(w.get('.travel-preview').text()).toContain('市内出发从08:00调整到10:00')
- expect(w.findAll('details.journey-change').some(d=>(d.element as HTMLDetailsElement).open && d.text().includes('编辑往返交通'))).toBe(true)
+ expect(w.get('.transport-desk .travel-preview').isVisible()).toBe(true)
  expect(getDraft).toHaveBeenCalledTimes(1)
- await w.findAll('button').find(b=>b.text()==='确认以上影响并保存交通')!.trigger('click');await flushPromises()
- expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',journey,'selected',true,undefined])
+ await w.get('.proposal-ack input').setValue(true)
+ await w.findAll('button').find(b=>b.text().startsWith('确认并保存'))!.trigger('click');await flushPromises()
+ expect(adjustJourney).toHaveBeenLastCalledWith('draft-test',expect.objectContaining({journey,coordinate_trip:true,adjustment_id:'whole',preview_token:'selected',acknowledge_adjustments:true}))
  w.unmount()
 })
 
@@ -399,7 +431,7 @@ it('invalidates a synchronization preview when the user changes the synchronizat
  expect(w.find('.travel-preview').exists()).toBe(false)
  await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
  expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',null,undefined,false,undefined])
- await w.findAll('button').find(b=>b.text()==='取消本次交通变更')!.trigger('click');await flushPromises()
+ await w.get('.proposal-buttons .secondary-action').trigger('click');await flushPromises()
  expect(w.find('.travel-preview').exists()).toBe(false)
  expect(vi.mocked(changeJourney).mock.calls).toHaveLength(2)
  w.unmount()
@@ -408,13 +440,15 @@ it('invalidates a synchronization preview when the user changes the synchronizat
 it('carries the recommendation basis into both preview and confirmation and clears it on cancellation',async()=>{
  const w=await openDraft();const {default:JourneyComparison}=await import('@/components/JourneyComparison.vue')
  const journey={origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'}
- vi.mocked(changeJourney).mockResolvedValue({preview_token:'verified',notice:'核对',intercity_total:0,impacts:[]})
+ vi.mocked(adjustJourney).mockResolvedValue({adjustment_id:'basis-check',preview_token:'verified',notice:'核对',intercity_total:0,impacts:[]})
  w.findComponent(JourneyComparison).vm.$emit('choose',journey,'saved-basis');await flushPromises()
- expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',journey,undefined,true,'saved-basis'])
- await w.findAll('button').find(b=>b.text()==='确认以上影响并保存交通')!.trigger('click');await flushPromises()
- expect(vi.mocked(changeJourney).mock.calls.at(-1)).toEqual(['draft-test',journey,'verified',true,'saved-basis'])
+ expect(adjustJourney).toHaveBeenLastCalledWith('draft-test',expect.objectContaining({journey,coordinate_trip:true,ticket_basis:'saved-basis'}))
+ await w.get('.proposal-ack input').setValue(true)
+ await w.findAll('button').find(b=>b.text().startsWith('确认并保存'))!.trigger('click');await flushPromises()
+ expect(adjustJourney).toHaveBeenLastCalledWith('draft-test',expect.objectContaining({journey,coordinate_trip:true,preview_token:'verified',ticket_basis:'saved-basis',acknowledge_adjustments:true}))
  w.findComponent(JourneyComparison).vm.$emit('choose',journey,'another-basis');await flushPromises()
- await w.findAll('button').find(b=>b.text()==='取消本次交通变更')!.trigger('click');await flushPromises()
+ await w.get('.proposal-buttons .secondary-action').trigger('click');await flushPromises()
+ vi.mocked(changeJourney).mockResolvedValue({preview_token:'basic',impacts:[]})
  await w.findAll('button').find(b=>b.text()==='查看变更影响')!.trigger('click');await flushPromises()
  expect(vi.mocked(changeJourney).mock.calls.at(-1)![4]).toBeUndefined();w.unmount()
 })
@@ -438,14 +472,42 @@ it('requires review of the transport-first proposal before atomic confirmation',
  const journey={origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'}
  vi.mocked(adjustJourney).mockResolvedValue({adjustment_id:'proposal',preview_token:'token',notice:'需要核对',changes:['A移至第二天','午餐移除，核对在途用餐'],impacts:[],days_detail:[],unassigned_attractions:[{id:'a',name:'A'}],intercity_total:0})
  w.findComponent(JourneyComparison).vm.$emit('adjust',journey,'basis');await flushPromises()
- expect(adjustJourney).toHaveBeenCalledWith('draft-test',{journey,ticket_basis:'basis'})
+ expect(adjustJourney).toHaveBeenCalledWith('draft-test',{journey,ticket_basis:'basis',coordinate_trip:true})
  expect(w.get('.travel-preview').text()).toContain('A移至第二天')
- const save=w.findAll('button').find(b=>b.text()==='确认以上影响并保存交通')!
+ const save=w.findAll('button').find(b=>b.text().startsWith('确认并保存'))!
  expect(save.attributes('disabled')).toBeDefined()
  await w.get('.travel-preview input[type="checkbox"]').setValue(true)
  await save.trigger('click');await flushPromises()
- expect(vi.mocked(adjustJourney).mock.calls[1]).toEqual(['draft-test',{journey,ticket_basis:'basis',adjustment_id:'proposal',preview_token:'token',acknowledge_adjustments:true}])
+ expect(vi.mocked(adjustJourney).mock.calls[1]).toEqual(['draft-test',{journey,ticket_basis:'basis',coordinate_trip:true,adjustment_id:'proposal',preview_token:'token',acknowledge_adjustments:true}])
  expect(changeJourney).not.toHaveBeenCalled();w.unmount()
+})
+
+it('always coordinates ticket adoption instead of accepting a merely conflict-free schedule',async()=>{
+ const w=await openDraft();const {default:JourneyComparison}=await import('@/components/JourneyComparison.vue')
+ const journey={origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'}
+ vi.mocked(changeJourney).mockResolvedValue({preview_token:'conflict',impacts:[{date:'2026-10-20',window:{notes:[]},conflicts:['景点与到达冲突']} ]})
+ vi.mocked(adjustJourney).mockResolvedValue({adjustment_id:'joint',preview_token:'joint-token',changes:['A移至次日'],impacts:[],days_detail:[],unassigned_attractions:[],intercity_total:0})
+ w.findComponent(JourneyComparison).vm.$emit('choose',journey,'basis');await flushPromises()
+ expect(adjustJourney).toHaveBeenCalledWith('draft-test',{journey,ticket_basis:'basis',coordinate_trip:true})
+ expect(w.get('.travel-preview').text()).toContain('A移至次日')
+ expect(w.findAll('button').find(b=>b.text().startsWith('确认并保存'))!.attributes('disabled')).toBeDefined()
+ expect(changeJourney).not.toHaveBeenCalled()
+ w.unmount()
+})
+
+it('starts a new journey with a coordinated preview and keeps the original draft until confirmation',async()=>{
+ const data:any=draft();data.days_detail=[null];data.request.journey={origin_city:'上海',return_city:'上海',destination_timezone:'Asia/Shanghai'}
+ vi.mocked(getDraft).mockResolvedValue(data)
+ vi.mocked(assembleDay).mockRejectedValue({response:{status:409,data:{detail:'与交通或休息安排冲突，本次修改未保存：营业时间'}}})
+ vi.mocked(adjustJourney).mockResolvedValue({adjustment_id:'initial-fit',preview_token:'p',changes:['A移至第二天'],impacts:[],days_detail:[],unassigned_attractions:[],intercity_total:0})
+ const w=await openDraft()
+ expect(adjustJourney).toHaveBeenCalledWith('draft-test',{journey:data.request.journey,ticket_basis:undefined,coordinate_trip:true,assemble_pending:true,refill_meals:true})
+ expect(assembleDay).not.toHaveBeenCalled()
+ expect(w.get('.travel-preview').text()).toContain('A移至第二天')
+ expect(w.text()).not.toContain('本次修改尚未保存')
+ expect(w.findAll('button').find(b=>b.text().startsWith('确认并保存'))!.attributes('disabled')).toBeDefined()
+ expect(data.days_detail).toEqual([null])
+ w.unmount()
 })
 
 it('discards a late transport-first preview after local traffic input changes',async()=>{

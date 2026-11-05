@@ -237,8 +237,26 @@ def rule_assemble_day_timeline(
 
     hotel = None if ctx.travel_window.get("unavailable") else ctx.hotel
     timeline = _build_timeline_order(attractions, meals_with_insert, hotel)
+    gaps = {m.name:m.recommendation['schedule_gap'] for m in meals
+            if m.schedule_mode=='auto' and isinstance(m.recommendation.get('schedule_gap'),dict)}
+    for name, gap in gaps.items():
+        before = gap.get('before')
+        if before and before.get('kind')=='meal' and before.get('ref_name') in gaps:
+            continue  # Its preceding auto meal restores the whole adjacent chain.
+        chain=[dict(kind='meal',ref_name=name)];after=gap.get('after');seen={name}
+        while after and after.get('kind')=='meal' and after.get('ref_name') in gaps:
+            following=after['ref_name']
+            if following in seen or gaps[following].get('before')!=chain[-1]: break
+            seen.add(following);chain.append(after);after=gaps[following].get('after')
+        remaining=[item for item in timeline if not (item['kind']=='meal' and item['ref_name'] in seen)]
+        # Reuse only intact surrounding anchors. Restore neighboring meals as a
+        # unit, including a departure meal after the final hotel/luggage stop.
+        index=next((i+1 for i,item in enumerate(remaining) if item==before),None) if before else 0
+        if index is not None and ((index==len(remaining) and after is None) or (index<len(remaining) and remaining[index]==after)):
+            timeline=remaining[:index]+chain+remaining[index:]
 
     return DayDetail(
+        coordination_policy=ctx.coordination_policy,
         trip_intent=ctx.trip_intent,
         travel_window=ctx.travel_window, rest_periods=ctx.rest_periods,
         time_constraints=overrides.get("time_constraints"),

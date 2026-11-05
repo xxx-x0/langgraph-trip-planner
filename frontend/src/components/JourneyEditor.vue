@@ -19,7 +19,7 @@
         <button v-for="mode in modes" :key="mode.key" type="button" :aria-pressed="value[direction.key]?.mode === mode.key" :class="{selected:value[direction.key]?.mode === mode.key}" @click="selectMode(direction.key,mode.key)">{{ mode.label }}</button>
       </div>
       <div v-if="!value[direction.key] && !singleLeg" class="leg-empty">
-        <p>班次可以稍后确定。先预留交通占用时间，避免首尾日排满；填写出发城市后生效。这里设置的是目的地活动边界，包含你预计的接驳和办理时间。</p>
+        <p>未定班次时，景点先作为可调整安排。选定交通后按实际抵离时间联动调整，首末天不会自动整天留空。已有明确时间要求时可在这里设置。</p>
         <label>{{direction.label}}交通时间预留<select :value="reservationPolicy(direction.key)" @change="setReservationPolicy(direction.key,($event.target as HTMLSelectElement).value)"><option value="travel_day">{{direction.key==='outbound'?'首日留给交通':'末日留给交通'}}</option><option value="time_window">填写预计目的地可用时间</option><option value="unreserved">暂不预留，按全天游玩</option></select></label>
         <label v-if="reservationPolicy(direction.key)==='time_window'">{{direction.key==='outbound'?'预计可以开始本城活动的时间':'预计必须结束本城活动的时间'}}<input type="datetime-local" :value="direction.key==='outbound'?value.planning?.ready_at:value.planning?.leave_by" @input="setReservationTime(direction.key,($event.target as HTMLInputElement).value)" /></label>
         <p v-if="reservationPolicy(direction.key)==='travel_day'">{{direction.key==='outbound'?'首日':'末日'}}暂不安排景点；景点优先放到其他可用日期，放不下的保留待安排。这不是已查到或已订的班次。</p>
@@ -82,7 +82,7 @@ import {ref, watch, computed, nextTick} from 'vue'
 import type {Journey,JourneyExtras,JourneyLeg,JourneyPlanning} from '@/types'
 const props=defineProps<{modelValue?:Journey|null; startDate?:string; endDate?:string; passengers?:number; singleLeg?:boolean; destinationCity?:string}>()
 const emit=defineEmits<{(e:'update:modelValue',value:Journey|null):void}>()
-const emptyJourney=()=>({origin_city:'',return_city:'',destination_timezone:'Asia/Shanghai',...(props.singleLeg?{}:{planning:{arrival_policy:'travel_day' as const,departure_policy:'travel_day' as const,ready_at:null,leave_by:null}})})
+const emptyJourney=()=>({origin_city:'',return_city:'',destination_timezone:'Asia/Shanghai',...(props.singleLeg?{}:{planning:{arrival_policy:'unreserved' as const,departure_policy:'unreserved' as const,ready_at:null,leave_by:null}})})
 const value=ref<Journey>(JSON.parse(JSON.stringify(props.modelValue || emptyJourney())))
 const activeLeg=ref<'outbound'|'inbound'>('outbound')
 const editorRoot=ref<HTMLElement>()

@@ -24,10 +24,13 @@ def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherI
     else:
         lines.append('今天还没有安排景点，可以先把用餐和休息时间定下来。')
     kind = intent.get('companion_type')
+    coordinated = bool(day.coordination_policy)
     text = intent.get('free_text_input') or ''
     affirmative = re.sub(r'(?:不要|不想|不需要|无需|不打算)\s*(?:慢游|慢慢(?:逛)?|轻松|不赶(?:时间)?)', '', text)
     slow = any(word in affirmative for word in ('慢游', '慢慢', '不赶', '轻松'))
-    if kind == 'elderly':
+    if coordinated:
+        pass  # The saved schedule below already reserves meals and breaks.
+    elif kind == 'elderly':
         lines.append('这次有长辈同行，建议把休息留在两处活动之间；走累了就缩短后面的停留，不必把每一站走完。')
     elif intent.get('children'):
         lines.append('这次带孩子出门，建议先保证吃饭和休息，再决定后面的景点是否继续；儿童餐和设施还需要向店家确认。')
@@ -67,7 +70,14 @@ def refresh_day_description(day: DayDetail | DayPlan, weather: Optional[WeatherI
         meal = next((m for m in day.meals if m.type in {'lunch','dinner'}),day.meals[0])
         lines.append(f'这次想把美食作为重点，可以先核实{meal.name}的营业时间，再为用餐留出更充裕的时间。')
     unlocked = [n for n in names if n not in getattr(day,'locked_attraction_names',[])]
-    if len(names)>1 and unlocked:
+    if coordinated and schedule:
+        ending=max(x['end_minutes'] for x in schedule)
+        meals=sum(x['kind']=='meal' for x in schedule)
+        lines.append(f'景点与用餐已一起协调，保留原游览时长和{meals}次用餐，预计{ending//60:02d}:{ending%60:02d}结束市内安排。')
+        upper=day.travel_window.get('end_minutes',1440)
+        if upper<1440:
+            lines.append(f'原接驳预留之外，还留有{max(0,upper-ending)}分钟返程余量。')
+    elif len(names)>1 and unlocked:
         lines.append(f'如果当天时间不够，可以先缩短{unlocked[-1]}的停留，再看是否保留。')
     elif names:
         lines.append('如果当天时间不够，可以先减少购物或拍照停留；需要删减景点时再调整安排。')

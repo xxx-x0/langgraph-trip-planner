@@ -9,9 +9,17 @@
       </div>
     </header>
 
-    <TripSetupSummary v-if="formData" :request="formData" />
-    <JourneySummary v-if="formData?.journey" :journey="formData.journey" :city="formData.city" />
+    <TripSetupSummary v-if="formData" :request="formData" compact />
+    <section v-if="formData?.journey" class="joint-overview" aria-label="交通后的游玩时间">
+      <div class="joint-windows"><div v-for="day in travelDays.filter((_:any,i:number)=>i===0||i===travelDays.length-1)" :key="day.date"><small>{{day.date}}</small><strong>{{day.window.unavailable||day.window.usable_minutes===0?'当天在途':timeLabel(Math.max(480,day.window.start_minutes??0))+'—'+timeLabel(Math.min(1320,day.window.end_minutes??1440))+' 可安排活动'}}</strong><span>{{day.window.provisional?'班次未齐，时间暂定':'已扣除抵离与接驳预留'}}</span></div></div>
+      <details><summary>{{formData.journey.origin_city}} → {{formData.city}} → {{formData.journey.return_city}} · 查看班次、费用与接驳</summary><JourneySummary :journey="formData.journey" :city="formData.city" :days="travelDays.map((d:any)=>({date:d.date,travel_window:d.window}))" /></details>
+    </section>
     <p v-else class="travel-notice">抵离交通未填写，首末日游玩时间暂定。</p>
+    <details v-if="formData&&!multiRoute.query?.multi&&phase!=='planning'" class="joint-planning">
+      <summary>交通与景点一起调整 <span>已选 {{selectedCount}} 个景点 · 可换班次，重新衔接每天</span></summary>
+      <JourneyPlanner :model-value="formData.journey" :request="formData" :selected-visit-minutes="selectedVisitMinutes" :fixed-route="!!formData.journey?.origin_city" :disabled="aiSelectLoading||assignLoading||journeyUpdating" @update:model-value="updateJourney" @busy="journeySearching=$event" />
+      <p v-if="journeyNotice" role="status">{{journeyNotice}}</p>
+    </details>
     <!-- 阶段1: 景点发现与选择 -->
     <div v-if="phase === 'discover'" class="discover-layout">
       <!-- 左侧: 景点列表 -->
@@ -202,33 +210,38 @@
             AI 正在筛选景点，请稍候
           </template>
           <template v-else>
-            已选择 <strong>{{ selectedCount }}</strong> 个景点
-            <span v-if="selectedCount < 2" class="hint">（至少选择2个景点）</span>
+            已选择 <strong>{{ selectedCount }}</strong> 个想去的地方
+            <span v-if="selectedCount < 1" class="hint">（选择想去的景点）</span>
+            <small v-else>{{assignmentEdited?'将沿用你确认的初步分组，继续核对路线与时间。':'接下来结合交通、营业时间与路线安排每天。'}}</small>
           </template>
         </div>
+        <div class="selection-actions">
+        <button class="optional-grouping" :disabled="selectionLocked||selectedCount<1" @click="startDayAssignment">{{assignLoading?'正在整理初步分组…':assignmentEdited?'查看已调整的分组':'初步分组（可选）'}}</button>
         <a-button
           type="primary"
           size="large"
-          :loading="assignLoading"
-          :disabled="selectionLocked || selectedCount < 2"
-          @click="startDayAssignment"
+          :disabled="selectionLocked || selectedCount < 1"
+          @click="confirmAndPlan"
         >
-          {{ aiSelectLoading ? '等待 AI 选择完成' : `开始规划 (${selectedCount}个景点) →` }}
+          {{ aiSelectLoading ? '等待 AI 选择完成' : assignmentEdited?'按当前分组生成日程 →':'让 AI 安排日程 →' }}
         </a-button>
+        </div>
+        <p v-if="planningError" class="planning-error" role="alert">{{planningError}}</p>
       </div>
     </div>
 
-    <!-- 阶段2: 日程分配 -->
+    <!-- 可选预览：只有用户实际调整后，才将分组作为输入。 -->
     <div v-else-if="phase === 'assign'" class="assign-layout">
       <div class="assign-header">
         <div class="assign-header-main">
-          <h3>调整日程分配</h3>
-          <p>系统已按地理距离与游玩时长智能分配，可拖拽景点微调</p>
+          <span class="assignment-kicker">{{assignmentEdited?'沿用当前分组':'可选 · 初步预览'}}</span>
+          <h3>先看大致怎么玩，具体时间交给 AI</h3>
+          <p>这是按位置和游览时长整理的初步分组。接下来核对交通、营业时间与实际路线，必要的调整会在草稿中展示。</p>
         </div>
-        <a-button @click="resetToSmart" :disabled="!smartAssignmentCache">
-          🔄 重置为智能推荐
-        </a-button>
+        <button v-if="assignmentEdited" class="automatic-grouping" :disabled="selectionLocked" @click="resetToSmart">改为 AI 自动安排</button>
       </div>
+
+      <div class="grouping-caption"><span>{{selectedCount}} 个想去的地方 · {{formData?.travel_days}} 天</span><span>游览时长不含路程与用餐 · 可拖动或选择日期</span></div>
 
       <div class="day-columns">
         <div
@@ -240,23 +253,18 @@
         >
           <div class="day-header">
             <span class="day-header-title">
-              <span>第 {{ dayIdx + 1 }} 天</span>
-              <a-tooltip placement="top">
-                <template #title>已根据距离和时长自动均衡，可手动拖拽调整</template>
-                <InfoCircleOutlined class="day-balance-info" />
-              </a-tooltip>
+              <span>第 {{ dayIdx + 1 }} 天</span><small>{{assignmentDate(dayIdx)}}</small>
             </span>
             <span
               class="day-duration-badge"
               :class="{ warning: dayDurations[dayIdx]?.warning }"
             >
               <template v-if="dayDurations[dayIdx]">
-                预计 {{ formatDuration(dayDurations[dayIdx].total_minutes) }}
-                <span v-if="dayDurations[dayIdx].warning"> ⚠️</span>
+                游览约 {{ formatDuration(dayDurations[dayIdx].total_minutes) }}
               </template>
             </span>
           </div>
-          <p v-if="travelDays[dayIdx]" class="travel-notice">
+          <p v-if="travelDays[dayIdx]" class="grouping-window">
             {{ travelDays[dayIdx].window.unavailable ? '当天在途，不安排景点' : '可在 '+timeLabel(Math.max(480,travelDays[dayIdx].window.start_minutes ?? 0))+'—'+timeLabel(Math.min(1320,travelDays[dayIdx].window.end_minutes ?? 1440))+' 内安排活动' }}
             {{ travelDays[dayIdx].window.provisional ? '（暂定）' : '' }}
           </p>
@@ -268,8 +276,8 @@
               draggable="true"
               @dragstart="handleDragStart($event, dayIdx, attrIdx)"
             >
-              <span class="mini-card-name">{{ attr.name }}</span>
-              <span v-if="attr.category" class="mini-card-tag">{{ attr.category }}</span>
+              <span class="mini-card-index" aria-hidden="true">{{String(attrIdx+1).padStart(2,'0')}}</span>
+              <div class="mini-card-copy"><span class="mini-card-name">{{ attr.name }}</span><small>{{attr.category||'景点'}}<template v-if="attr.visit_minutes"> · 约 {{formatDuration(attr.visit_minutes)}}</template></small></div>
               <select
                 class="day-move-select"
                 :aria-label="`${attr.name}安排日期`"
@@ -278,21 +286,23 @@
                 @dragstart.stop.prevent
                 @change="moveAttraction(dayIdx, attrIdx, Number(($event.target as HTMLSelectElement).value))"
               >
-                <option v-for="(_, targetDay) in dayAssignments" :key="targetDay" :value="targetDay">
+                <option v-for="(_, targetDay) in dayAssignments" :key="targetDay" :value="targetDay" :disabled="travelDays[targetDay]?.window.unavailable">
                   第 {{ targetDay + 1 }} 天
                 </option>
               </select>
             </div>
-            <div v-if="day.length === 0" class="day-empty">{{multiRoute.query?.multi?"这天先留给休息或移动；餐饮和住宿仍需核对，也可拖入景点。":"拖拽景点到此处"}}</div>
+            <div v-if="day.length === 0" class="day-empty">{{travelDays[dayIdx]?.window.unavailable?'当天在途':"暂未分组到这天，可留给 AI 衔接。"}}</div>
           </div>
+          <p v-if="dayDurations[dayIdx]?.warning" class="grouping-warning">{{dayDurations[dayIdx].warning}}，实际安排还需留出路程与用餐。</p>
         </div>
       </div>
 
-      <p v-if="unassignedSelectionNames.length">{{unassignedSelectionNames.length}} 个所选景点暂未分配：{{unassignedSelectionNames.join('、')}}。生成草稿后会保留在待安排列表，不会自动删除。</p>
+      <div v-if="unassignedSelectionNames.length" class="grouping-pending"><strong>{{unassignedSelectionNames.length}} 个景点还需找合适的时段</strong><p>{{unassignedSelectionNames.join('、')}}。生成时会一起考虑，仍放不下的保留在待安排清单。</p></div>
+      <p v-if="planningError" class="planning-error" role="alert">{{planningError}}</p>
       <div class="assign-actions">
-        <a-button @click="phase = 'discover'">← 返回选择</a-button>
-        <a-button type="primary" size="large" @click="confirmAndPlan">
-          确认并生成行程 →
+        <button class="back-to-selection" :disabled="selectionLocked" @click="phase = 'discover'">← 返回景点选择</button>
+        <a-button type="primary" size="large" :disabled="selectionLocked||selectedCount<1" @click="confirmAndPlan">
+          {{assignmentEdited?'按当前分组生成日程 →':'让 AI 安排日程 →'}}
         </a-button>
       </div>
     </div>
@@ -305,10 +315,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import JourneySummary from '@/components/JourneySummary.vue'
+import JourneyPlanner from '@/components/JourneyPlanner.vue'
 import TripSetupSummary from '@/components/TripSetupSummary.vue'
 import { useRouter, useRoute } from 'vue-router'
 import { message } from 'ant-design-vue'
-import { InfoCircleOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
+import { ThunderboltOutlined } from '@ant-design/icons-vue'
 import SelectableAttractionCard from '@/components/SelectableAttractionCard.vue'
 import DiscoveryMap from '@/components/DiscoveryMap.vue'
 import { useTripLoader } from '@/composables/useTripLoader'
@@ -323,16 +334,18 @@ import {
 import {
   searchAttractionManual,
   createDraftFromSelectionsStream, previewDayAssignment,
-  loadMoreAttractions, aiSelectAttractions,
+  loadMoreAttractions, aiSelectAttractions, previewJourney,
 } from '@/services/api'
 import type { DraftStreamEvent } from '@/services/api'
-import type { DiscoveredAttraction, TripFormData, DiscoveryStreamEvent, DayDurationInfo } from '@/types'
+import type { DiscoveredAttraction, TripFormData, DiscoveryStreamEvent, DayDurationInfo, Journey } from '@/types'
 
 const router = useRouter()
 const multiRoute = useRoute()
 const tripLoader = useTripLoader()
 
 const formData = ref<TripFormData | null>(null)
+const journeyUpdating=ref(false),journeySearching=ref(false),journeyNotice=ref('')
+let journeyGeneration=0
 const travelDays=computed(()=>{try {const p=JSON.parse(sessionStorage.getItem('journeyPreview')||'null');return JSON.stringify(p?.request)===JSON.stringify(formData.value)?p.days:[]}catch{return []}})
 function timeLabel(n:number){return `${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`}
 const attractions = reactive<DiscoveredAttraction[]>([])
@@ -345,6 +358,9 @@ const searchResults = ref<DiscoveredAttraction[]>([])
 const activeCategory = ref('全部')
 const highlightedAttraction = ref('')
 const phase = ref<'discover' | 'assign' | 'planning'>('discover')
+const planningOriginPhase=ref<'discover'|'assign'>('discover')
+const planningError=ref('')
+const assignmentEdited=ref(false),assignmentSelectionKey=ref('')
 const dayAssignments = ref<DiscoveredAttraction[][]>([])
 const unassignedSelectionNames=computed(()=>{const assigned=new Set(dayAssignments.value.flatMap(day=>day.map(a=>a.name)));return attractions.filter(a=>a.selected&&!assigned.has(a.name)).map(a=>a.name)})
 const dayDurations = ref<DayDurationInfo[]>([])
@@ -362,12 +378,13 @@ const aiSelectLoading = ref(false)
 const aiSelectRequestId = ref(0)
 const aiSelectSummary = ref('')
 
-watch([attractions, dayAssignments, dayDurations, weatherInfo, phase], () => {
+watch([attractions, dayAssignments, dayDurations, weatherInfo, phase, formData, assignmentEdited, assignmentSelectionKey], () => {
   if (!formData.value) return
   try {
     sessionStorage.setItem('discoveryRecovery', JSON.stringify({ form: formData.value,
       attractions, assignments: dayAssignments.value, durations: dayDurations.value,
-      weather: weatherInfo.value, phase: phase.value === 'planning' ? 'assign' : phase.value }))
+      weather: weatherInfo.value, assignmentEdited:assignmentEdited.value, assignmentSelectionKey:assignmentSelectionKey.value,
+      phase: phase.value === 'planning' ? planningOriginPhase.value : phase.value }))
   } catch { /* Existing in-memory choices remain usable if storage is full. */ }
 }, { deep: true })
 
@@ -417,15 +434,51 @@ const otherAttractions = computed(
 )
 
 const selectedCount = computed(() => attractions.filter(a => a.selected).length)
-const selectionLocked = computed(() => aiSelectLoading.value)
+const selectionKey=computed(()=>JSON.stringify(attractions.filter(a=>a.selected).map(a=>[a.poi_id||'',a.name]).sort((a,b)=>a.join('|').localeCompare(b.join('|')))))
+watch(selectionKey,key=>{
+  if(dayAssignments.value.length&&key!==assignmentSelectionKey.value){
+    dayAssignments.value=[];dayDurations.value=[];smartAssignmentCache.value=null;assignmentEdited.value=false;assignmentSelectionKey.value=''
+  }
+  planningError.value=''
+})
+const selectedVisitMinutes=computed(()=>attractions.filter(a=>a.selected).reduce((sum,a)=>sum+(a.visit_minutes||120),0))
+const selectionLocked = computed(() => aiSelectLoading.value||journeyUpdating.value||journeySearching.value||assignLoading.value||phase.value==='planning')
 const aiSelectDisabled = computed(
-  () => aiSelectLoading.value || loading.value || attractions.length === 0
+  () => selectionLocked.value || loading.value || attractions.length === 0
 )
+
+async function updateJourney(journey:Journey|null){
+  if(!formData.value||aiSelectLoading.value||assignLoading.value||phase.value==='planning')return
+  const current=++journeyGeneration
+  const request:TripFormData=JSON.parse(JSON.stringify({...formData.value,journey}))
+  journeyUpdating.value=true;journeyNotice.value='正在更新交通与每天的可用时间…'
+  try{
+    const preview=await previewJourney(request)
+    if(current!==journeyGeneration)return
+    sessionStorage.setItem('journeyPreview',JSON.stringify({request,days:preview.days}))
+    sessionStorage.setItem('tripFormData',JSON.stringify(request))
+    formData.value=request
+    if(dayAssignments.value.length&&!assignmentEdited.value){
+      const groups=dayAssignments.value.map(day=>[...day])
+      const assigned=new Set(groups.flatMap(day=>day.map(a=>a.name)))
+      if(!groups.length)groups.push([])
+      groups[0].push(...attractions.filter(a=>a.selected&&!assigned.has(a.name)))
+      dayAssignments.value=reserveAssignmentWindows(groups,preview.days.map((d:any)=>d.window))
+      recalculateDayDurations();smartAssignmentCache.value=null
+    }
+    recalculateDayDurations()
+    journeyNotice.value=assignmentEdited.value?'交通和可用时段已更新，当前分组已保留。你可以调整分组，或改为 AI 自动安排。':'已更新交通和可用时段，保留全部已选景点。每日路线与用餐会在生成日程时核对。'
+  }catch{if(current===journeyGeneration)journeyNotice.value='这次交通修改未保存，请检查日期和班次；原景点与交通安排仍保留。'}
+  finally{if(current===journeyGeneration)journeyUpdating.value=false}
+}
 
 function clearAssignmentPreview() {
   dayAssignments.value = []
   dayDurations.value = []
   smartAssignmentCache.value = null
+  assignmentEdited.value=false
+  assignmentSelectionKey.value=''
+  planningError.value=''
 }
 
 function goBack() {
@@ -539,6 +592,7 @@ async function handleAiSelect() {
       days,
       attractions: attractions.map(toAiSelectAttractionPayload),
       preferences: buildAiSelectPreferences(data),
+      request: data,
     })
 
     if (!isCurrentAiSelectionRequest(requestId, aiSelectRequestId.value, aiSelectLoading.value)) {
@@ -615,12 +669,11 @@ async function handleLoadMore() {
 }
 
 async function startDayAssignment() {
-  if (selectionLocked.value) {
-    message.info('AI 正在筛选景点，请稍候')
-    return
-  }
+  if (selectionLocked.value) return
   const selected = attractions.filter(a => a.selected)
-  if (selected.length < 2) return
+  if (selected.length < 1) return
+  planningError.value=''
+  if(dayAssignments.value.length&&assignmentSelectionKey.value===selectionKey.value){phase.value='assign';return}
 
   const days = formData.value?.travel_days || 1
   assignLoading.value = true
@@ -648,11 +701,11 @@ async function startDayAssignment() {
         for(const attraction of moved){const target=[...openDays].sort((a,b)=>dayAssignments.value[a].length-dayAssignments.value[b].length)[0];dayAssignments.value[target].push(attraction)}
       }
     }
-    dayDurations.value = resp.day_durations
+    recalculateDayDurations()
     smartAssignmentCache.value = JSON.parse(JSON.stringify(dayAssignments.value))
     phase.value = 'assign'
   } catch (e: any) {
-    message.warning('智能分配失败，使用均分方案')
+    message.warning('暂未取得分组建议，先按选择顺序展示；仍可交给 AI 继续规划。')
     const perDay = Math.ceil(selected.length / days)
     const assignments: DiscoveredAttraction[][] = []
     for (let d = 0; d < days; d++) {
@@ -660,14 +713,12 @@ async function startDayAssignment() {
     }
     dayAssignments.value = assignments
     if(formData.value?.journey?.planning && travelDays.value.length===days)dayAssignments.value=reserveAssignmentWindows(assignments,travelDays.value.map((d:any)=>d.window))
-    dayDurations.value = assignments.map((day, idx) => ({
-      day_index: idx,
-      total_minutes: day.reduce((sum, a) => sum + (a.visit_minutes || 90), 0),
-      warning: null,
-    }))
+    recalculateDayDurations()
     smartAssignmentCache.value = null
     phase.value = 'assign'
   } finally {
+    assignmentEdited.value=false
+    assignmentSelectionKey.value=selectionKey.value
     assignLoading.value = false
   }
 }
@@ -678,26 +729,26 @@ function recalculateDayDurations() {
     return {
       day_index: idx,
       total_minutes: total,
-      warning: total > 480 ? '当天偏紧' : null,
+      warning: total>availableMinutes(idx)?'游览已超出可用时段':total>480?'这天游览较多':null,
     }
   })
 }
 
 function resetToSmart() {
-  if (!smartAssignmentCache.value) {
-    message.info('无智能推荐结果可恢复')
-    return
-  }
-  dayAssignments.value = JSON.parse(JSON.stringify(smartAssignmentCache.value))
+  if(smartAssignmentCache.value)dayAssignments.value = JSON.parse(JSON.stringify(smartAssignmentCache.value))
+  if(travelDays.value.length===dayAssignments.value.length)dayAssignments.value=reserveAssignmentWindows(dayAssignments.value,travelDays.value.map((d:any)=>d.window))
+  assignmentEdited.value=false;planningError.value=''
   recalculateDayDurations()
-  message.success('已恢复智能推荐')
+  message.success('已交给 AI 安排，全部已选景点会一起考虑')
 }
 
+function availableMinutes(index:number){const w=travelDays.value[index]?.window;return w?.unavailable?0:Math.max(0,Math.min(1320,w?.end_minutes??1440)-Math.max(480,w?.start_minutes??0))}
+function assignmentDate(index:number){if(!formData.value?.start_date)return '';const date=new Date(formData.value.start_date+'T00:00:00');date.setDate(date.getDate()+index);return `${date.getMonth()+1}月${date.getDate()}日`}
 function formatDuration(min: number): string {
-  if (min < 60) return `${min}min`
+  if (min < 60) return `${min} 分钟`
   const h = Math.floor(min / 60)
   const m = min % 60
-  return m > 0 ? `${h}h${m}min` : `${h}h`
+  return m > 0 ? `${h} 小时 ${m} 分` : `${h} 小时`
 }
 
 // Drag and drop
@@ -716,24 +767,28 @@ function handleDrop(_event: DragEvent, toDay: number) {
 }
 
 function moveAttraction(fromDay: number, fromIdx: number, toDay: number) {
-  if (fromDay === toDay || travelDays.value[toDay]?.window.unavailable || !dayAssignments.value[toDay] || !dayAssignments.value[fromDay]?.[fromIdx]) return
+  if (selectionLocked.value || fromDay === toDay || travelDays.value[toDay]?.window.unavailable || !dayAssignments.value[toDay] || !dayAssignments.value[fromDay]?.[fromIdx]) return
   const [item] = dayAssignments.value[fromDay].splice(fromIdx, 1)
   dayAssignments.value[toDay].push(item)
+  assignmentEdited.value=true;planningError.value=''
   recalculateDayDurations()
 }
 
 async function confirmAndPlan() {
-  if (!formData.value) return
+  if (!formData.value||selectionLocked.value||assignLoading.value) return
+  const selected = attractions.filter(a => a.selected)
+  if(!selected.length)return
+  const useGrouping=assignmentEdited.value&&assignmentSelectionKey.value===selectionKey.value&&dayAssignments.value.length>0
 
-  const hasEmpty = hasUnsupportedEmptyDay(dayAssignments.value, !!multiRoute.query?.multi || !!formData.value.journey?.planning, travelDays.value.map((d:any)=>!!d.window.unavailable))
+  const hasEmpty = useGrouping&&hasUnsupportedEmptyDay(dayAssignments.value, !!multiRoute.query?.multi || !!formData.value.journey?.planning, travelDays.value.map((d:any)=>!!d.window.unavailable))
   if (hasEmpty) {
-    message.warning('每天至少需要安排一个景点')
+    planningError.value='当前分组有空白日期，请调整分组，或改为 AI 自动安排。'
     return
   }
 
+  planningOriginPhase.value=phase.value==='assign'?'assign':'discover'
+  planningError.value=''
   phase.value = 'planning'
-
-  const selected = attractions.filter(a => a.selected)
 
   // 启动全局 Bauhaus 加载海报（CONSTRUCTION）
   tripLoader.begin('construction', {
@@ -772,7 +827,7 @@ async function confirmAndPlan() {
         open_hours: a.open_hours,
         tel: a.tel,
       })),
-      dayAssignments.value.map(day =>
+      useGrouping?dayAssignments.value.map(day =>
         day.map(a => ({
           name: a.name,
           description: a.description,
@@ -787,7 +842,7 @@ async function confirmAndPlan() {
           open_hours: a.open_hours,
           tel: a.tel,
         }))
-      ),
+      ):null,
       weatherInfo.value,
       (event: DraftStreamEvent) => {
         if (event.type === 'node_complete' && event.node) {
@@ -804,16 +859,20 @@ async function confirmAndPlan() {
         } else if (event.type === 'error') {
           window.clearTimeout(watchdog)
           tripLoader.dismiss()
-          message.error(event.message || '骨架生成失败')
-          phase.value = 'assign'
+          planningError.value=event.message||'本次规划未完成，已选景点已保留，可以重试。'
+          message.error(planningError.value)
+          phase.value = planningOriginPhase.value
         }
       }
     )
   } catch (e: any) {
     window.clearTimeout(watchdog)
     tripLoader.dismiss()
-    message.error('规划失败: ' + (e.message || '未知错误'))
-    phase.value = 'assign'
+    planningError.value='本次规划未完成，已选景点已保留。'+(e.message||'请稍后重试。')
+    message.error(planningError.value)
+    phase.value = planningOriginPhase.value
+  } finally {
+    window.clearTimeout(watchdog)
   }
 }
 
@@ -846,6 +905,10 @@ onMounted(() => {
           attractions.push(...recovered.attractions)
           dayAssignments.value = recovered.assignments || []
           dayDurations.value = recovered.durations || []
+          assignmentSelectionKey.value=recovered.assignmentSelectionKey||selectionKey.value
+          // Old snapshots do not identify manual edits. Keep their groups until
+          // the user explicitly chooses automatic planning or changes selection.
+          assignmentEdited.value=recovered.assignmentEdited??(recovered.phase==='assign'&&dayAssignments.value.length>0)
           weatherInfo.value = recovered.weather || ''
           phase.value = recovered.phase === 'assign' ? 'assign' : 'discover'
           loading.value = false
@@ -865,6 +928,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.discover-page>.trip-setup-summary{width:calc(100% - 48px);max-width:1200px;margin:0 auto 12px}.joint-overview,.joint-planning{width:calc(100% - 48px)}
+@media(max-width:650px){.discover-page>.trip-setup-summary,.joint-overview,.joint-planning{width:calc(100% - 28px)}}
+.joint-planning{margin:18px auto;padding:16px 24px;max-width:1200px;border:1px solid var(--color-border);border-radius:14px;color:var(--color-text-primary);background:var(--color-bg-primary)}.joint-planning>summary{cursor:pointer;line-height:1.8}.joint-planning>summary span{font-size:12px;color:var(--color-text-secondary);margin-left:16px}
+.joint-overview{margin:18px auto;padding:18px 24px;max-width:1200px;border:1px solid var(--color-border);border-radius:14px;color:var(--color-text-primary);background:var(--color-bg-primary)}.joint-windows{display:flex;flex-wrap:wrap;gap:20px;margin-bottom:14px}.joint-windows>div{display:flex;flex:1;flex-direction:column;gap:5px;min-width:220px}.joint-windows small,.joint-windows span{font-size:12px;color:var(--color-text-secondary)}.joint-windows strong{font-size:17px;font-weight:500}.joint-overview summary{cursor:pointer;font-size:13px;line-height:1.8}.joint-overview details[open]>summary{margin-bottom:16px}
 .search-status { font-size: 13px; line-height: 1.7; margin: 8px 0; color: var(--text-secondary); }
 .loading-text span { font-weight: 400; font-size: 13px; }
 .search-recovery { padding: 8px 12px; border: 1px solid var(--border-color, #ddd); border-radius: 8px; background: var(--white, #fff); color: var(--text-primary); cursor: pointer; }
@@ -1357,219 +1424,49 @@ onMounted(() => {
   transform: none;
 }
 
-/* === 日程分配 === */
-.assign-layout {
-  max-width: var(--content-max-width, 1400px);
-  margin: 0 auto;
-  padding: var(--space-6, 24px);
-}
-
-.assign-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--space-5, 20px);
-  gap: 16px;
-  background: var(--primary-yellow, #F0C020);
-  border: var(--border-main, 4px) solid var(--border, #121212);
-  padding: var(--space-6, 24px);
-  box-shadow: var(--shadow-main, 8px 8px 0px 0px #121212);
-}
-
-.assign-header-main {
-  flex: 1;
-}
-
-.assign-header h3 {
-  margin: 0 0 8px;
-  font-size: var(--text-2xl, 20px);
-  font-weight: var(--font-black, 900);
-  text-transform: uppercase;
-  color: var(--foreground, #121212);
-}
-
-.assign-header p {
-  margin: 0;
-  font-size: 14px;
-  font-weight: var(--font-medium, 500);
-  color: var(--foreground, #121212);
-}
-
-.day-columns {
-  display: flex;
-  gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 16px;
-}
-
-.day-column {
-  flex: 1;
-  min-width: 200px;
-  background: var(--white, #fff);
-  border: var(--border-main, 4px) solid var(--border, #121212);
-  box-shadow: var(--shadow-main, 8px 8px 0px 0px #121212);
-  padding: var(--space-3, 12px);
-  min-height: 200px;
-  transition: transform 0.2s;
-}
-
-.day-column:hover {
-  transform: translateY(-2px);
-}
-
-.day-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: var(--font-black, 900);
-  text-transform: uppercase;
-  font-size: 15px;
-  color: var(--foreground, #121212);
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--border, #121212);
-  margin-bottom: 8px;
-}
-
-.day-header-title {
-  display: inline-flex;
-  align-items: center;
-}
-
-.day-balance-info {
-  margin-left: 6px;
-  color: var(--color-text-secondary, #888);
-  font-size: 14px;
-  cursor: help;
-}
-
-.day-duration-badge {
-  font-size: 11px;
-  font-weight: var(--font-bold, 700);
-  color: var(--foreground, #121212);
-  background: var(--background, #F0F0F0);
-  padding: 4px 8px;
-  border: 2px solid var(--border, #121212);
-  border-radius: 0;
-}
-
-.day-duration-badge.warning {
-  background: var(--primary-red, #D02020);
-  color: var(--white, #fff);
-}
-
-.day-attractions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.draggable-mini-card {
-  padding: 10px 12px;
-  background: var(--white, #fff);
-  border: 2px solid var(--border, #121212);
-  cursor: grab;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
-  position: relative;
-}
-
-.draggable-mini-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--primary-blue, #1040C0);
-}
-
-.draggable-mini-card:hover {
-  box-shadow: 4px 4px 0px 0px var(--border, #121212);
-  transform: translate(-2px, -2px);
-}
-
-.draggable-mini-card:active {
-  cursor: grabbing;
-  box-shadow: 6px 6px 0px 0px var(--border, #121212);
-  transform: translate(-3px, -3px);
-}
-
-.mini-card-name {
-  font-size: 14px;
-  font-weight: var(--font-bold, 700);
-  color: var(--foreground, #121212);
-  flex: 1;
-}
-
-.day-move-select {
-  max-width: 90px;
-  padding: 5px 6px;
-  border: 1px solid var(--border, #121212);
-  border-radius: 6px;
-  color: var(--foreground, #121212);
-  background: var(--white, #fff);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.day-move-select:focus-visible { outline: 2px solid var(--primary-blue, #1040C0); outline-offset: 2px; }
-
-.mini-card-tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  border: 2px solid var(--border, #121212);
-  background: var(--primary-yellow, #F0C020);
-  color: var(--foreground, #121212);
-  font-weight: var(--font-black, 900);
-  text-transform: uppercase;
-}
-
-.day-empty {
-  padding: 20px;
-  text-align: center;
-  color: var(--foreground, #121212);
-  font-size: 13px;
-  font-weight: var(--font-bold, 700);
-  text-transform: uppercase;
-  border: 2px dashed var(--border, #121212);
-  background: var(--background, #F0F0F0);
-}
-
-.assign-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-top: var(--space-6, 24px);
-  padding-top: var(--space-4, 16px);
-  border-top: var(--border-main, 4px) solid var(--border, #121212);
-}
-
-/* Override Ant Design Buttons in assign actions */
-:deep(.assign-actions .ant-btn) {
-  border: 2px solid var(--border, #121212);
-  border-radius: 0;
-  font-weight: var(--font-black, 900);
-  text-transform: uppercase;
-  box-shadow: 3px 3px 0px 0px var(--border, #121212);
-  height: auto;
-  padding: 10px 24px;
-}
-
-:deep(.assign-actions .ant-btn-primary) {
-  background: var(--primary-blue, #1040C0);
-  color: var(--white, #fff);
-}
-
-:deep(.assign-actions .ant-btn:hover) {
-  transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0px 0px var(--border, #121212);
-}
-
-:deep(.assign-actions .ant-btn:active) {
-  transform: translate(3px, 3px);
-  box-shadow: none;
-}
+/* Optional grouping preview: an intention, not a verified daily schedule. */
+.assign-layout { max-width:1200px; margin:24px auto 0; padding:0 0 36px; color:var(--color-text-primary); }
+.assign-header { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:26px 28px; margin-bottom:26px; border:1px solid var(--color-border); border-radius:18px; background:var(--color-bg-primary); }
+.assign-header-main { max-width:760px; }
+.assignment-kicker { color:var(--color-primary); font-size:11px; }
+.assign-header h3 { font-size:23px; line-height:1.4; font-weight:500; letter-spacing:-.02em; margin:8px 0; color:var(--color-text-primary); }
+.assign-header p { font-size:13px; line-height:1.9; color:var(--color-text-secondary); margin:0; }
+.automatic-grouping,.optional-grouping,.back-to-selection { font:inherit; cursor:pointer; padding:9px 12px; border:0; background:none; color:var(--color-primary); font-size:12px; border-radius:8px; min-height:40px; }
+.automatic-grouping { flex-shrink:0; border:1px solid var(--color-border-strong); background:var(--color-bg-primary); }
+.automatic-grouping:disabled,.optional-grouping:disabled,.back-to-selection:disabled { opacity:.45; cursor:default; }
+.grouping-caption { display:flex; justify-content:space-between; gap:14px; margin:0 2px 14px; font-size:12px; color:var(--color-text-secondary); }
+.grouping-caption>span:last-child { font-size:11px; }
+.day-columns { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); align-items:start; gap:16px; }
+.day-column { padding:20px; min-width:0; border:1px solid var(--color-border); border-radius:16px; background:var(--color-bg-primary); }
+.day-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+.day-header-title { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:600; }
+.day-header-title small { font-size:11px; font-weight:400; color:var(--color-text-secondary); }
+.day-duration-badge { font-size:11px; color:var(--color-text-secondary); padding:5px 8px; background:var(--color-bg-secondary); border-radius:6px; }
+.day-duration-badge.warning { color:var(--color-warning); background:color-mix(in srgb,var(--color-warning) 7%,var(--color-bg-primary)); }
+.grouping-window { margin:0 0 14px; font-size:11px; line-height:1.7; color:var(--color-text-secondary); }
+.day-attractions { display:flex; flex-direction:column; gap:8px; }
+.draggable-mini-card { display:flex; align-items:center; gap:12px; padding:14px 12px; border:1px solid var(--color-border); border-radius:10px; background:var(--color-bg-secondary); cursor:grab; transition:border-color .16s; }
+.draggable-mini-card:hover { border-color:var(--color-border-strong); }
+.draggable-mini-card:active { cursor:grabbing; }
+.mini-card-index { font-size:10px; font-variant-numeric:tabular-nums; color:var(--color-text-secondary); opacity:.7; }
+.mini-card-copy { flex:1; min-width:0; }
+.mini-card-name { font-size:13px; font-weight:500; color:var(--color-text-primary); overflow-wrap:anywhere; }
+.mini-card-copy small { display:block; font-size:10px; color:var(--color-text-secondary); margin-top:5px; }
+.day-move-select { max-width:88px; min-height:34px; padding:6px; font:inherit; font-size:11px; border:1px solid var(--color-border-strong); border-radius:7px; color:var(--color-text-primary); background:var(--color-bg-primary); cursor:pointer; }
+.day-empty { padding:28px 16px; text-align:center; color:var(--color-text-secondary); font-size:12px; line-height:1.8; border:1px dashed var(--color-border); border-radius:10px; }
+.grouping-warning { font-size:11px; color:var(--color-warning); margin:14px 0 0; line-height:1.8; }
+.grouping-pending { padding:18px 20px; margin-top:18px; border:1px solid var(--color-border); border-radius:12px; background:var(--color-bg-primary); font-size:13px; }
+.grouping-pending p { font-size:12px; color:var(--color-text-secondary); margin:6px 0 0; line-height:1.8; }
+.assign-actions { display:flex; justify-content:space-between; align-items:center; gap:16px; border-top:1px solid var(--color-border); margin-top:26px; padding-top:20px; }
+.selection-actions { display:flex; align-items:center; gap:14px; }
+.selection-info small { display:block; font-size:11px; font-weight:400; color:var(--color-text-secondary); margin-top:5px; }
+.bottom-bar { flex-wrap:wrap; }
+.planning-error { flex-basis:100%; padding:12px 16px; margin:8px 0 0; font-size:12px; line-height:1.8; color:var(--color-warning); border:1px solid color-mix(in srgb,var(--color-warning) 25%,var(--color-border)); border-radius:9px; background:var(--color-bg-primary); }
+.assign-actions :deep(.ant-btn-primary) { min-height:44px; border-radius:9px; padding:10px 20px; height:auto; font-size:13px; box-shadow:none; }
+.assign-layout :focus-visible,.selection-actions :focus-visible { outline:2px solid var(--color-primary); outline-offset:3px; }
+@media(max-width:1248px) { .assign-layout { margin:24px 24px 0; } }
+@media(max-width:650px) { .assign-layout { margin:18px 14px 0; }.assign-header { padding:20px; flex-direction:column; align-items:flex-start; gap:16px; }.assign-header h3 { font-size:21px; }.grouping-caption { flex-direction:column; gap:6px; }.day-column { padding:16px; }.assign-actions { flex-wrap:wrap; }.assign-actions :deep(.ant-btn-primary) { flex:1; }.selection-actions { display:grid; grid-template-columns:1fr; gap:6px; }.selection-actions .optional-grouping { order:2; }.mini-card-index { display:none; } }
+@media(prefers-reduced-motion:reduce) { .draggable-mini-card { transition:none; } }
 
 /* === 规划中 === */
 .planning-layout {

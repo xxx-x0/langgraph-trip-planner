@@ -33,6 +33,10 @@ const router = createRouter({
     if (to.path !== from.path) return { top: 0 }
   },
   routes: [
+    { path: '/travel-records', name: 'TravelRecords', component: () => import('@/views/TravelRecordsView.vue') },
+    { path: '/travel-records/new', name: 'TravelMemoryNew', component: () => import('@/views/TravelMemoryEditorView.vue') },
+    { path: '/travel-records/:id/edit', name: 'TravelMemoryEdit', component: () => import('@/views/TravelMemoryEditorView.vue') },
+    { path: '/travel-records/:id', name: 'TravelMemory', component: () => import('@/views/TravelMemoryView.vue') },
     { path: "/quality", redirect: "/quality/runs" },
     { path: "/quality/runs", component: () => import("@/views/quality/QualityView.vue") },
     { path: "/quality/experiments", component: () => import("@/views/quality/QualityView.vue") },

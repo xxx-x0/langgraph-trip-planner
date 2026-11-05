@@ -85,6 +85,8 @@ def travel_window(request, day):
 
 def apply_context(ctx,request):
     ctx.travel_window=travel_window(request,ctx.date)
+    if hasattr(ctx, 'coordination_policy') and hasattr(request, 'coordination_policy'):
+        ctx.coordination_policy = dict(request.coordination_policy)
     if hasattr(request, "rest_periods"):
         ctx.rest_periods=[r.model_copy(deep=True) for r in request.rest_periods if r.date.isoformat()==ctx.date]
     if 'overnight_stay' in ctx.travel_window: ctx.overnight_stay=ctx.travel_window['overnight_stay']

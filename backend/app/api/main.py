@@ -183,3 +183,6 @@ app.include_router(ticket_assistant_router, prefix="/api")
 # Read-only, explicitly enabled evaluation workbench; never opens a business session.
 from .routes.quality import router as quality_router
 app.include_router(quality_router, prefix="/api")
+
+from .routes.travel_memories import router as travel_memories_router
+app.include_router(travel_memories_router, prefix="/api")

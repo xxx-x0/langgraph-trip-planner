@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 from typing import List, Literal
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
@@ -56,6 +57,7 @@ class Settings(BaseSettings):
     llm_thinking_mode: Literal["enabled", "disabled"] = "disabled"
     llm_structured_output_mode: Literal["json_prompt", "function_calling", "auto"] = "json_prompt"
     external_llm_timeout: float = 60.0
+    windhub_api_key: SecretStr | None = None
 
     # Local single-user ticket browser; independent of the user's daily profile.
     ticket_browser_profile_dir: str = str(Path.home() / '.local/share/langgraph-trip-planner/ticket-browser')

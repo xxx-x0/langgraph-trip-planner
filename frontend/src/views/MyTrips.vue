@@ -72,6 +72,7 @@
           </div>
           <div class="card-actions" @click.stop>
             <router-link class="trip-open-link" :to="`/trip/${trip.id}`">查看行程 <span aria-hidden="true">↗</span></router-link>
+            <router-link class="trip-open-link" :to="{ path: '/travel-records/new', query: { source_kind: 'single', source_id: String(trip.id) } }">补记回忆</router-link>
             <button
               class="action-btn"
               :class="{ 'fav-active': trip.status === 'favorite' }"

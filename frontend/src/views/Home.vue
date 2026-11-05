@@ -94,7 +94,7 @@
           </div>
         </div>
 
-        <JourneyEditor ref="journeyEditor" v-model="journey" class="form-card" :destination-city="formData.city" :start-date="formData.start_date?.format('YYYY-MM-DD')" :end-date="formData.end_date?.format('YYYY-MM-DD')" :passengers="formData.companions.count" />
+        <JourneyPlanner ref="journeyPlanner" v-model="journey" :request="currentRequest" />
 
         <!-- 卡片 2: 偏好设置 - 白色背景 -->
         <div class="form-card">
@@ -310,7 +310,7 @@
             class="bauhaus-btn bauhaus-btn-yellow bauhaus-btn-square submit-btn"
             :disabled="submitting" :aria-busy="submitting"
           >
-            {{ submitting ? '正在核对交通与入住条件…' : '开始探索景点 →' }}
+            {{ submitting ? '正在衔接交通与游玩时间…' : '开始智能规划 →' }}
           </button>
         </div>
       </a-form>
@@ -320,11 +320,11 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import JourneyEditor from '@/components/JourneyEditor.vue'
+import JourneyPlanner from '@/components/JourneyPlanner.vue'
 import type {Journey} from '@/types'
 import {previewJourney} from '@/services/api'
 const journey=ref<Journey|null>(null)
-const journeyEditor=ref<InstanceType<typeof JourneyEditor>>()
+const journeyPlanner=ref<InstanceType<typeof JourneyPlanner>>()
 const partyCard=ref<HTMLElement>()
 const submitting=ref(false)
 const knownTicketTotal=computed(()=>[journey.value?.outbound,journey.value?.inbound].reduce((sum,leg)=>sum+(leg && leg.currency==='CNY' && leg.price_source!=='unknown' && leg.passengers===formData.companions.count ? leg.ticket_total??0 : 0),0))
@@ -433,25 +433,12 @@ watch([() => formData.start_date, () => formData.end_date], ([start, end]) => {
   }
 })
 
-const handleSubmit = async () => {
-  if(submitting.value)return
-  if (!formData.start_date || !formData.end_date) {
-    message.error('请选择日期')
-    return
-  }
-
-  if (occupancyIssue.value) {
-    partyCard.value?.scrollIntoView?.({block:'center',behavior:'auto'});partyCard.value?.focus?.({preventScroll:true})
-    message.error(occupancyIssue.value); return
-  }
-  if (journeyEditor.value && !await journeyEditor.value.validate()) return
-  if (submitting.value) return
-  const requestData: TripFormData = {
+const currentRequest = computed<TripFormData>(() => ({
     hotel_occupancy: occupancy.value,
     journey: journey.value,
     city: formData.city,
-    start_date: formData.start_date.format('YYYY-MM-DD'),
-    end_date: formData.end_date.format('YYYY-MM-DD'),
+    start_date: formData.start_date?.format('YYYY-MM-DD') || '',
+    end_date: formData.end_date?.format('YYYY-MM-DD') || '',
     travel_days: formData.travel_days,
     transportation: formData.transportation,
     accommodation: formData.accommodation,
@@ -464,11 +451,29 @@ const handleSubmit = async () => {
     default_day_start_time: formData.default_day_start_time,
     budget: formData.budget || undefined,
     companions: formData.companions,
+  }))
+
+const handleSubmit = async () => {
+  if(submitting.value)return
+  if (!formData.start_date || !formData.end_date) {
+    message.error('请选择日期')
+    return
+  }
+  if (occupancyIssue.value) {
+    partyCard.value?.scrollIntoView?.({block:'center',behavior:'auto'});partyCard.value?.focus?.({preventScroll:true})
+    message.error(occupancyIssue.value); return
   }
 
   submitting.value=true
   try {
+    if (journeyPlanner.value && !await journeyPlanner.value.prepare()) return
+    // The planner may have filled a real proposal while querying. Read the
+    // current request only after it finishes, not the pre-query form snapshot.
+    const requestData:TripFormData=JSON.parse(JSON.stringify(currentRequest.value))
     const preview=await previewJourney(requestData)
+    if(JSON.stringify(requestData)!==JSON.stringify(JSON.parse(JSON.stringify(currentRequest.value)))){
+      message.info('规划条件已改变，请按最新条件重新开始');return
+    }
     sessionStorage.setItem('journeyPreview',JSON.stringify({request:requestData,days:preview.days}))
     sessionStorage.setItem('tripFormData',JSON.stringify(requestData))
     await router.push('/discover')

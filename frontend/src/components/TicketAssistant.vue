@@ -1,8 +1,12 @@
 <template>
   <section class="ticket-assistant" aria-label="查票与文字导入">
-    <h3>查票、筛选，再采用合适的一班</h3>
-    <p>确认本段日期和起终点，后台查票后比较可行班次，无需安装扩展；需要登录或验证时会提示处理。</p>
-    <details class="query-settings" :open="!singleSegment"><summary><span>{{query.from || '出发地'}} <b>→</b> {{query.to || '目的地'}}</span><span>{{query.date}} · {{query.passengers}} 人 · {{query.mode==='train'?'高铁 / 火车':'飞机'}}<small>修改查询条件 ＋</small></span></summary><div class="ticket-fields">
+    <h3>{{compact?'找一班更合适的交通':'查票、筛选，再采用合适的一班'}}</h3>
+    <p>{{compact?'按行程日期查找班次，采用前会先预览日程调整。':'确认本段日期和起终点，后台查票后比较可行班次，无需安装扩展；需要登录或验证时会提示处理。'}}</p>
+    <div v-if="compact" class="quick-query">
+      <div v-if="!singleSegment" class="query-switch" role="group" aria-label="查询方向"><button type="button" :aria-pressed="query.direction==='outbound'" :disabled="disabled" @click="query.direction='outbound'">去程</button><button type="button" :aria-pressed="query.direction==='inbound'" :disabled="disabled" @click="query.direction='inbound'">返程</button></div>
+      <div class="query-switch query-modes" role="group" aria-label="查询交通方式"><button type="button" :aria-pressed="query.mode==='train'" :disabled="disabled" @click="query.mode='train'">高铁 / 火车</button><button type="button" :aria-pressed="query.mode==='flight'" :disabled="disabled" @click="query.mode='flight'">飞机</button></div>
+    </div>
+    <details class="query-settings" :open="settingsOpen" @toggle="settingsOpen=($event.target as HTMLDetailsElement).open"><summary><span>{{query.from || '出发地'}} <b>→</b> {{query.to || '目的地'}}</span><span>{{query.date}} · {{query.passengers}} 人 · {{query.mode==='train'?'高铁 / 火车':'飞机'}}<small>{{settingsOpen?'收起查询条件 −':'修改查询条件 ＋'}}</small></span></summary><div class="ticket-fields">
       <label v-if="!singleSegment">查询方向<select v-model="query.direction"><option value="outbound">去程</option><option value="inbound">返程</option></select></label>
       <label>查询交通方式<select v-model="query.mode"><option value="train">火车／高铁</option><option value="flight">飞机</option></select></label>
       <label>查询出发日期<input type="date" v-model="query.date" /></label>
@@ -78,10 +82,11 @@ import {stations,flightCities,queryError,queryText,searchLink,type TicketQuery} 
 import {parseTicket,previewError,ticketLeg,type TicketPreview} from '@/utils/ticketImport'
 import BrowserTicketAssistant from './BrowserTicketAssistant.vue'
 import type {TicketScheduleContext} from '@/utils/ticketSchedule'
-const props=defineProps<{request:TripFormData;disabled?:boolean;singleSegment?:boolean;comparisonFull?:boolean;scheduleContext?:TicketScheduleContext}>()
+const props=defineProps<{request:TripFormData;disabled?:boolean;singleSegment?:boolean;compact?:boolean;comparisonFull?:boolean;scheduleContext?:TicketScheduleContext}>()
 const emit=defineEmits<{(e:'adjust',value:{leg:JourneyLeg;ticketBasis?:string;direction?:'outbound'|'inbound'}):void;(e:'add',value:{name:string;journey:Journey;start_date:string;end_date:string}):void;(e:'adopt',value:{leg:JourneyLeg;direction:'outbound'|'inbound';ticketBasis?:string}):void}>()
 const directions=computed(()=>props.singleSegment?[{key:'outbound' as const,label:'本段'}]:[{key:'outbound' as const,label:'去程'},{key:'inbound' as const,label:'返程'}])
 const query=reactive<TicketQuery>({mode:props.request.journey?.outbound?.mode==='flight'?'flight':'train',direction:'outbound',from:props.request.journey?.origin_city||'',to:props.request.city||'',date:props.request.start_date||'',passengers:props.request.companions?.count||1,fromScope:'auto',toScope:'auto'})
+const settingsOpen=ref(!props.singleSegment&&(!props.compact||!query.from||!query.to))
 const originCity=ref(props.request.journey?.origin_city||''),returnCity=ref(props.request.journey?.return_city||'')
 const candidateName=ref('导入的交通备选'),pending=reactive<{outbound:JourneyLeg|null;inbound:JourneyLeg|null}>({outbound:null,inbound:null})
 const raw=ref(''),preview=ref<TicketPreview|null>(null),source=ref('12306'),confirmed=ref(false),importOpen=ref(false),importDirection=ref<'outbound'|'inbound'>('outbound')
@@ -122,5 +127,6 @@ function addCandidate(){if(props.disabled||props.comparisonFull||!candidateName.
 </style>
 
 <style scoped>
+.quick-query{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:24px 0 12px}.query-switch{display:flex;gap:4px;background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:10px;padding:4px}.query-switch button{font-size:12px;min-height:36px;padding:8px 18px;border:0;border-radius:7px;background:transparent;color:var(--color-text-secondary)}.query-switch button[aria-pressed=true]{background:var(--color-bg-primary);color:var(--color-text-primary);box-shadow:0 1px 4px #0000000c}.query-modes{background:transparent;border:0;padding:0}.query-modes button[aria-pressed=true]{background:var(--color-bg-secondary);box-shadow:none}
 .query-settings{border:1px solid #ffffff18;border-radius:14px;padding:0 18px;margin:18px 0}.query-settings>summary{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:18px 0;cursor:pointer;font-size:16px;list-style:none}.query-settings>summary>span:last-child{font-size:12px;text-align:right}.query-settings small{display:block;color:var(--trip-accent,#8c623d);font-size:10px;margin-top:6px}.query-settings b{font-weight:400;opacity:.5;margin:0 16px}.query-settings .ticket-fields{padding:0 0 18px}.query-settings[open]>summary{margin-bottom:12px;border-bottom:1px solid #ffffff18}@media(max-width:600px){.query-settings>summary{flex-wrap:wrap}.query-settings>summary>span:last-child{text-align:left;font-size:11px}.query-settings>summary>span:first-child{width:100%}}
 </style>

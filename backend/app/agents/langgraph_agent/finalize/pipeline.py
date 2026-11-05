@@ -57,6 +57,7 @@ def _day_detail_to_day_plan(detail: DayDetail, transportation: str, accommodatio
         schedule_suggestion=detail.schedule_suggestion,
         route_comparison=detail.route_comparison,
         travel_window=detail.travel_window, rest_periods=detail.rest_periods,
+        coordination_policy=detail.coordination_policy,
         description_source=detail.description_source,
         transportation=transportation,
         accommodation=accommodation,
@@ -196,6 +197,9 @@ async def _finalize_draft(draft_id: str, *, user_id: str) -> Tuple[TripPlan, int
                 attraction.ticket_price = None
         schedule_day(detail)
         problems = conflicts(detail) + place_hours_report(detail)['violations']
+        if request.coordination_policy:
+            from ....services.trip_coordination import pace_problems
+            problems += pace_problems(detail,request,[])
         if problems: raise ValueError("与交通或休息安排冲突，请先调整第"+str(idx+1)+"天："+"；".join(problems))
         detail.day_budget = compute_day_budget(detail)
         refresh_day_description(detail, next((WeatherInfo.model_validate(w) for w in weather_info

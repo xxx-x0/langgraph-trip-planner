@@ -36,15 +36,28 @@ router = APIRouter(prefix="/trip/draft", tags=["trip_draft"])
 
 
 async def _save_day_detail(draft_id, day_index, detail, *, expected_day, expected_request, weather=None):
-    detail.trip_intent = intent_for(TripRequest.model_validate_json(expected_request))
-    apply_context(detail,TripRequest.model_validate_json(expected_request))
+    request=TripRequest.model_validate_json(expected_request)
+    detail.trip_intent = intent_for(request)
+    apply_context(detail,request)
+    rest_update={}
+    if request.coordination_policy:
+        from ...services.trip_coordination import reschedule_generated_breaks
+        if reschedule_generated_breaks(detail,request):
+            raw=json.loads(expected_request)
+            raw.update(rest_periods=[r.model_dump(mode='json') for r in request.rest_periods],coordination_policy=request.coordination_policy)
+            rest_update['updated_request']=json.dumps(raw,ensure_ascii=False)
     problems = conflicts(detail)
     problems += place_hours_report(detail)['violations']
+    if request.coordination_policy:
+        from ...services.trip_coordination import pace_problems
+        problems += pace_problems(detail,request,[])
+        if problems:
+            raise HTTPException(409,detail='本次修改超出已协调的用餐、休息或交通时间，原安排未改变：'+'；'.join(dict.fromkeys(problems))+'。可使用「AI 统筹整趟行程」一起调整。')
     if problems:
         raise HTTPException(409, detail="与交通或休息安排冲突，本次修改未保存：" + "；".join(problems) + "。请删减活动、调整用餐或修改交通。")
     refresh_day_description(detail, weather)
     try:
-        await trip_draft_service.patch_day_detail(draft_id, day_index, detail, expected_day=expected_day, expected_request=expected_request)
+        await trip_draft_service.patch_day_detail(draft_id, day_index, detail, expected_day=expected_day, expected_request=expected_request,**rest_update)
     except trip_draft_service.DraftChangedDuringFinalize as error:
         raise HTTPException(409, detail=str(error)) from error
 
@@ -187,6 +200,7 @@ def _load_payload(record) -> TripDraftPayload:
                 if entry.get('kind') == 'hotel':
                     amount, missing = hotel_cost_for_date(detail.hotel, detail.date) if detail.hotel and detail.overnight_stay else (0, [])
                     entry['cost'] = (amount if amount or not missing else None) if detail.overnight_stay else None
+            detail.meal_warnings = [w.replace('未安排，请自行安排或补充餐厅', '未安排') for w in detail.meal_warnings]
             refresh_day_description(detail, next((ctx.weather for ctx in days if ctx.date == detail.date), None))
             days_detail.append(detail)
 
@@ -754,6 +768,9 @@ class JourneyAdjustment(BaseModel):
     acknowledge_adjustments: bool = False
     placements: list[UnassignedPlacement] = Field(default_factory=list,max_length=1)
     discard_ids: list[str] = Field(default_factory=list,max_length=100)
+    assemble_pending: bool = False
+    refill_meals: bool = False
+    coordinate_trip: bool = False
 
 
 @router.post('/{draft_id}/journey-adjustment', summary='按交通重新安排单城日期，预览后原子确认')
@@ -781,8 +798,15 @@ async def adjust_journey(draft_id: str, change: JourneyAdjustment):
         return {'saved':True}
     original_basis=adjustment.basis(record)
     try:
-        value=await adjustment.propose(record,_load_payload(record),request,
-            placements=[p.model_dump() for p in change.placements],discard_ids=change.discard_ids)
+        if change.coordinate_trip:
+            if change.placements or change.discard_ids:
+                raise HTTPException(422,'整体协调与单个待安排项操作请分开预览')
+            from ...services.trip_coordination import propose
+            value=await propose(record,_load_payload(record),request,refill_meals=change.refill_meals)
+        else:
+            value=await adjustment.propose(record,_load_payload(record),request,
+                placements=[p.model_dump() for p in change.placements],discard_ids=change.discard_ids,
+                assemble_pending=change.assemble_pending,refill_meals=change.refill_meals)
     except TimeoutError:
         raise ExternalServiceError('amap','交通调整路线核对',FailureKind.TIMEOUT) from None
     current=await trip_draft_service.get_draft(draft_id)
@@ -792,7 +816,8 @@ async def adjust_journey(draft_id: str, change: JourneyAdjustment):
     return dict(saved=False,adjustment_id=ident,preview_token=token,changes=value['changes'],impacts=value['impacts'],
         days_detail=[d.model_dump(mode='json') if d else None for d in value['details']],
         intercity_total=round(sum(i['window'].get('intercity_cost',0) for i in value['impacts']),2),
-        unassigned_attractions=value['unassigned'],budget=value['budget'].model_dump(mode='json'),
+        unassigned_attractions=value['unassigned'],budget=value['budget'].model_dump(mode='json'),meal_recovery=value['meal_recovery'],
+        coordination=value.get('coordination'),
         notice='这是本次交通优先的有界调整预览。景点时长、锁定、固定预约和手动用餐受保护；移动、取消及待安排清单确认后才保存。尚未装配日期不表示路线已核实。')
 
 @router.post('/{draft_id}/journey', summary='预览并确认抵离交通变更')

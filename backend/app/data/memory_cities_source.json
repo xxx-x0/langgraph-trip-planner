@@ -1,0 +1,12 @@
+{
+  "source": "https://download.geonames.org/export/dump/",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "selection": "All CN/HK/MO/TW entries in cities15000; other places population >=100000 or PPLC; 14 finn-digital reference cities override nearby matches.",
+  "count": 7940,
+  "files": {
+    "cities15000.zip": "f3bce12026e673fbef0833cd7fe1960009c90576a45ac208e73544e16d5bfbc5",
+    "countryInfo.txt": "79f8f59ea01cbb40438bf1856dd6c2ff201f03f8fc72d0530b2646aaf603ef04",
+    "admin1CodesASCII.txt": "2e4867f5397acb056ea26377601b57af37cb4c81399770225018e9e439e91ad3",
+    "CN-alternates.zip": "973c81c754b82c146174301d1ed527cce2bbb7f6d377d42773441e37511aa2cf"
+  }
+}

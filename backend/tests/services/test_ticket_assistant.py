@@ -1,8 +1,12 @@
 """Synthetic ticket facts; these tests do not query a ticketing provider."""
 import asyncio
+import json
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+import httpx
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
+from app.services import ticket_jev
 from app.services.ticket_assistant import TicketRankingRequest, Ranking, rank_tickets
 
 
@@ -85,3 +89,80 @@ async def test_api_contract_no_database_write():
         assert response.json()['ranked_by']=='rules'
         invalid=body();invalid['query']['date']='invalid'
         assert (await client.post('/api/tickets/recommend',json=invalid)).status_code==422
+
+
+@pytest.mark.asyncio
+async def test_jev_receives_only_eligible_facts_and_calculated_tradeoffs():
+    request = body()
+    request['engine'] = 'jev'
+    request['query']['preferences'] = {'accepted_seats': ['二等座'], 'max_reference_fare_per_person': 600}
+    request['candidates'].extend([
+        {**request['candidates'][0], 'id': 'faster', 'service': 'G104', 'arrival': '2026-10-27T11:45', 'fare_per_person': 550},
+        {**request['candidates'][0], 'id': 'conflict', 'service': 'G106', 'fare_per_person': 490},
+    ])
+    request['context'] = dict(kind='multi', draft_id='mc_example', revision=1, from_stop='origin', to_stop='a')
+
+    def assess(candidate):
+        return (candidate.leg(2), [], ['与已存景点冲突'] if candidate.id == 'conflict' else [],
+                {'fit_status': 'direct', 'margins': [70, 45], 'adjustments': []})
+
+    check = SimpleNamespace(basis='basis', assess=assess, assert_current=AsyncMock())
+
+    def respond(call):
+        assert str(call.url) == 'https://windhub.cc/v1/systemone'
+        assert call.headers['authorization'] == 'Bearer test-windhub-token'
+        payload = json.loads(call.content)
+        assert payload['model'] == 'jev-latest'
+        assert 'mc_example' not in call.content.decode()
+        criteria = payload['questions']['ticket']['criteria']
+        assert set(criteria) == {'rail_1', 'faster'}
+        assert criteria['faster']['比已知最低价班次多花元'] == 50
+        assert criteria['faster']['比已知最低价班次少坐分钟'] == 45
+        assert criteria['faster']['现有缓冲外最小余量分钟'] == 45
+        return httpx.Response(200, json={'answers': {'ticket': {'choice': 'faster'}}})
+
+    async_client = httpx.AsyncClient
+    with patch.object(ticket_jev, 'get_settings', return_value=SimpleNamespace(windhub_api_key=SecretStr('test-windhub-token'))), \
+         patch.object(ticket_jev.httpx, 'AsyncClient', side_effect=lambda **kwargs: async_client(transport=httpx.MockTransport(respond), **kwargs)), \
+         patch('app.services.ticket_assistant.load_schedule', new=AsyncMock(return_value=check)), \
+         patch('app.services.ticket_assistant.get_llm') as default:
+        result = await rank_tickets(TicketRankingRequest.model_validate(request))
+
+    assert result['ranked_by'] == 'jev' and result['schedule_basis'] == 'basis'
+    assert [r['candidate']['id'] for r in result['recommendations']] == ['faster']
+    assert result['recommendations'][0]['leg']['ticket_total'] is None
+    assert [r['candidate']['id'] for r in result['preference_excluded']] == ['rail_2']
+    assert [r['candidate']['id'] for r in result['excluded']] == ['conflict']
+    default.assert_not_called()
+    check.assert_current.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('default_succeeds', [True, False])
+async def test_jev_invalid_choice_falls_back_to_default_then_rules(default_succeeds):
+    request = {**body(), 'engine': 'jev'}
+    async_client = httpx.AsyncClient
+    transport = httpx.MockTransport(lambda call: httpx.Response(200, json={'answers': {'ticket': {'choice': 'invented'}}}))
+    model = AsyncMock(return_value=Ranking(ids=['rail_2']), side_effect=None if default_succeeds else RuntimeError('offline'))
+    with patch.object(ticket_jev, 'get_settings', return_value=SimpleNamespace(windhub_api_key=SecretStr('test-windhub-token'))), \
+         patch.object(ticket_jev.httpx, 'AsyncClient', side_effect=lambda **kwargs: async_client(transport=transport, **kwargs)), \
+         patch('app.services.ticket_assistant.get_llm', return_value=object()), \
+         patch('app.services.ticket_assistant.invoke_structured_or_json', new=model):
+        result = await rank_tickets(TicketRankingRequest.model_validate(request))
+    model.assert_awaited_once()
+    assert result['ranked_by'] == ('ai' if default_succeeds else 'rules')
+    assert 'Jev' in result['message']
+    assert result['recommendations'][0]['candidate']['id'] == ('rail_2' if default_succeeds else 'rail_1')
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('priority', ['price', 'time', 'unspecified'])
+async def test_jev_opt_in_never_runs_for_non_model_priorities(priority):
+    request = {**body(), 'engine': 'jev'}
+    request['query']['priority'] = priority
+    with patch('app.services.ticket_assistant.choose_ticket', new=AsyncMock()) as jev, \
+         patch('app.services.ticket_assistant.get_llm') as default:
+        result = await rank_tickets(TicketRankingRequest.model_validate(request))
+    assert result['ranked_by'] == ('options' if priority == 'unspecified' else 'metric')
+    jev.assert_not_awaited()
+    default.assert_not_called()

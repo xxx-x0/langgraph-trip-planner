@@ -448,6 +448,17 @@ async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any
             for day_attrs in day_assignments
         ]
 
+    # Automatic planning no longer needs a separate discovery-page grouping
+    # request. Estimate only missing durations here and retain them in the
+    # selection catalog, including attractions that end up pending.
+    if not day_assignments:
+        missing = [a for a in selected_attractions if not a.get("visit_minutes")]
+        durations = await estimate_durations_batch(missing) if missing else {}
+        selected_attractions = [
+            dict(a, visit_minutes=a.get("visit_minutes") or durations.get(a["name"], 90))
+            for a in selected_attractions
+        ]
+
     if day_assignments:
         print(f"📊 使用用户自定义日程分配: {len(day_assignments)} 天")
         clusters = []
@@ -455,40 +466,34 @@ async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any
             day_cluster = [_selection_to_cluster_dict(attr) for attr in day_attrs]
             clusters.append(day_cluster)
     else:
-        valid_attractions = []
+        valid_attractions, no_coordinates = [], []
         for attr in selected_attractions:
             loc = attr.get("location")
             if loc and loc.get("longitude") and loc.get("latitude"):
                 valid_attractions.append(_selection_to_cluster_dict(attr))
-
-        if not valid_attractions:
-            names = [a["name"] for a in selected_attractions]
-            simple_info = "\n".join([f"第{i+1}天: {name}" for i, name in enumerate(names)])
-            return {"cluster_info": f"景点坐标缺失，按选择顺序分配:\n{simple_info}", "clusters_data": []}
-
-        n = len(valid_attractions)
-        dist_matrix = [[0.0] * n for _ in range(n)]
-        for i in range(n):
-            for j in range(i + 1, n):
-                d = _haversine_distance(
-                    valid_attractions[i]["latitude"], valid_attractions[i]["longitude"],
-                    valid_attractions[j]["latitude"], valid_attractions[j]["longitude"]
-                )
-                dist_matrix[i][j] = d
-                dist_matrix[j][i] = d
+            else:
+                no_coordinates.append(_selection_to_cluster_dict(attr))
 
         if request.journey and request.journey.planning:
             from ....services.journey_planning import dates, capacity
             open_days=[i for i,day in enumerate(dates(request)) if capacity(request,day)>0]
-            groups=_cluster_attractions_by_proximity(valid_attractions,len(open_days)) if open_days else []
-            clusters=[[] for _ in range(request.travel_days)]
-            for index,group in zip(open_days,groups): clusters[index]=group
         else:
-            clusters = _cluster_attractions_by_proximity(valid_attractions, request.travel_days)
+            open_days=list(range(request.travel_days))
+        groups=_cluster_attractions_by_proximity(valid_attractions,len(open_days)) if open_days and valid_attractions else [[] for _ in open_days]
+        if groups and valid_attractions:
+            groups=_rebalance_by_duration(groups,{a["name"]:a["visit_minutes"] for a in selected_attractions})
+        clusters=[[] for _ in range(request.travel_days)]
+        for index,group in zip(open_days,groups): clusters[index]=group
+        # Missing coordinates must not silently remove an explicitly selected
+        # place. Keep it for later route checks; zero remains the missing marker.
+        for attraction in no_coordinates:
+            if not open_days: break
+            target=min(open_days,key=lambda i:sum(a.get("visit_minutes") or 90 for a in clusters[i]))
+            clusters[target].append(attraction)
         for i in range(len(clusters)):
-            clusters[i] = _order_cluster_by_tsp(clusters[i])
-
-        valid_attractions_for_format = valid_attractions
+            located=[a for a in clusters[i] if a.get("longitude") and a.get("latitude")]
+            unknown=[a for a in clusters[i] if not(a.get("longitude") and a.get("latitude"))]
+            clusters[i] = _order_cluster_by_tsp(located)+unknown
 
     from ....services.journey_planning import reserve_clusters
     clusters = reserve_clusters(request, clusters, explicit=bool(day_assignments))
@@ -535,4 +540,5 @@ async def cluster_from_selections_node(state: TripPlannerState) -> Dict[str, Any
     final_count = sum(len(c) for c in clusters)
     print(f"✅ 用户选择景点聚类完成: {len(selected_attractions)} 个选中 → {final_count} 个分为 {len(clusters)} 组")
 
-    return {"cluster_info": cluster_info, "attractions_info": attractions_info, "clusters_data": clusters}
+    return {"cluster_info": cluster_info, "attractions_info": attractions_info,
+            "clusters_data": clusters, "user_selected_attractions": selected_attractions}

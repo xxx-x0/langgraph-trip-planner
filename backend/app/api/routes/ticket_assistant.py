@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from ...services.ticket_assistant import TicketRankingRequest, rank_tickets
 from ...services.ticket_search import SearchQuery, local_only, searches
+from ...services.journey_options import JourneyOptionsRequest, recommend_journeys
 
 router = APIRouter(prefix='/tickets', tags=['查票与筛选'])
 
@@ -34,3 +35,8 @@ async def cancel_search(search_id: str):
 @router.post('/recommend')
 async def recommend(body: TicketRankingRequest):
     return await rank_tickets(body)
+
+
+@router.post('/journey-options')
+async def journey_options(body: JourneyOptionsRequest):
+    return await recommend_journeys(body)

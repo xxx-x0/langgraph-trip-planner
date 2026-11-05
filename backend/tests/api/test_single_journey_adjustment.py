@@ -23,7 +23,7 @@ from app.agents.langgraph_agent.assemble.schedule import schedule_day
 def request(planning=False,days=5):
     return TripRequest(city='北京',start_date='2026-11-10',end_date=(date(2026,11,10)+timedelta(days=days-1)).isoformat(),
         travel_days=days,transportation='步行',accommodation='酒店',
-        journey=Journey(origin_city='上海',return_city='上海',planning={}) if planning else None)
+        journey=Journey(origin_city='上海',return_city='上海',planning={'arrival_policy':'travel_day','departure_policy':'travel_day'}) if planning else None)
 
 
 def cluster(name):
@@ -59,6 +59,7 @@ async def client(monkeypatch):
     async def routes(day,*args):
         return [dict(from_name=a['ref_name'],to_name=b['ref_name'],duration='20分钟',detail='模拟地图路线') for a,b in zip(day.timeline_order,day.timeline_order[1:]) if a['ref_name']!=b['ref_name']]
     monkeypatch.setattr(adjustment,'compute_day_route',routes)
+    monkeypatch.setattr('app.services.meal_recovery.search_dining_for_day',AsyncMock(return_value={'main':[]}))
     async with AsyncClient(transport=ASGITransport(app),base_url='http://test') as c: yield c
 
 
@@ -148,6 +149,58 @@ async def test_map_failure_and_stale_projection_never_write_partial_results(clie
 
 
 @pytest.mark.asyncio
+async def test_joint_preview_assembles_skeletons_and_moves_only_displaced_visits_before_atomic_save(client):
+    ident=await seed(request(days=3),assemble=False)
+    url=f'/api/trip/draft/{ident}/journey-adjustment'
+    before=adjustment.snapshot(await drafts.get_draft(ident))
+    body={'journey':late_journey(),'assemble_pending':True}
+    response=await client.post(url,json=body)
+    assert response.status_code==200,response.text
+    preview=response.json()
+    assert adjustment.snapshot(await drafts.get_draft(ident))==before
+    assert all(day is not None for day in preview['days_detail'])
+    assert not preview['days_detail'][0]['attractions']
+    assert not preview['unassigned_attractions']
+    names=[a['name'] for day in preview['days_detail'] for a in day['attractions']]
+    assert sorted(names)==['次日公园','首日园林']
+    saved=await client.post(url,json=body|dict(adjustment_id=preview['adjustment_id'],preview_token=preview['preview_token'],acknowledge_adjustments=True))
+    assert saved.status_code==200,saved.text
+    value=(await client.get('/api/trip/draft/'+ident)).json()
+    assert [[a['name'] for a in d['attractions']] for d in value['days_detail']]==[[a['name'] for a in d['attractions']] for d in preview['days_detail']]
+
+
+@pytest.mark.asyncio
+async def test_impossible_auto_lunch_does_not_remove_unrelated_attractions(client):
+    ident=await seed(request(days=3))
+    async with async_session() as session:
+        record=await session.get(TripDraft,ident)
+        days=json.loads(record.days_detail_json)
+        days[0]['meals']=[dict(name='下午才开门的餐厅',type='lunch',preferred_slot='lunch',schedule_mode='auto',open_hours='16:30-22:00')]
+        days[0]['timeline_order'].append(dict(kind='meal',ref_name='下午才开门的餐厅'))
+        record.days_detail_json=json.dumps(days,ensure_ascii=False)
+        await session.commit()
+    journey=late_journey();journey['outbound']['arrival_time']='2026-11-10T12:00'
+    before=adjustment.snapshot(await drafts.get_draft(ident))
+    response=await client.post(f'/api/trip/draft/{ident}/journey-adjustment',json={'journey':journey})
+    assert response.status_code==200,response.text
+    preview=response.json()
+    assert [a['name'] for a in preview['days_detail'][0]['attractions']]==['首日园林']
+    assert not preview['days_detail'][0]['meals']
+    assert not preview['unassigned_attractions']
+    assert preview['meal_recovery'][0]['old_restaurant']=='下午才开门的餐厅'
+    assert preview['meal_recovery'][0]['status']=='unavailable'
+    assert adjustment.snapshot(await drafts.get_draft(ident))==before
+
+
+def test_joint_preview_uses_same_last_admission_check_as_day_save():
+    day=DayDetail(day_index=0,date='2026-11-10',day_start_time='15:00',
+        attractions=[Attraction(name='限时入场公园',address='测试',description='模拟',visit_duration=60,open_hours='08:00-18:00；最晚入场14:00')],
+        timeline_order=[dict(kind='attraction',ref_name='限时入场公园')])
+    schedule_day(day)
+    assert '限时入场公园超过已知最晚入场时间' in adjustment.violations(day,day)
+
+
+@pytest.mark.asyncio
 async def test_confirm_rejects_weather_or_catalog_change_even_when_days_unchanged(client):
     ident=await seed();url=f'/api/trip/draft/{ident}/journey-adjustment';body={'journey':late_journey()}
     p=(await client.post(url,json=body)).json()
@@ -218,8 +271,8 @@ async def test_estimated_or_missing_routes_do_not_become_verified_adjustments(cl
 def test_reserved_travel_day_does_not_crowd_out_the_next_group():
     groups=reserve_clusters(request(True),[[cluster('A')],[cluster('B')],[],[],[]])
     assert not groups[0] and not groups[-1]
-    assert [x['name'] for x in groups[1]]==['A']
-    assert [x['name'] for x in groups[2]]==['B']
+    assert [x['name'] for x in groups[1]]==['B']
+    assert [x['name'] for x in groups[2]]==['A']
 
 
 @pytest.mark.asyncio
@@ -243,7 +296,7 @@ async def test_pending_placement_in_an_empty_saved_day_uses_the_new_city_window(
 @pytest.mark.parametrize('no_city_day',[False,True])
 async def test_transport_change_preserves_unassembled_skeleton_selections(client,no_city_day):
     ident=await seed(request(days=2),assemble=False)
-    journey=dict(origin_city='上海',return_city='上海',planning={}) if no_city_day else late_journey()
+    journey=dict(origin_city='上海',return_city='上海',planning={'arrival_policy':'travel_day','departure_policy':'travel_day'}) if no_city_day else late_journey()
     url=f'/api/trip/draft/{ident}/journey-adjustment';body={'journey':journey}
     before=adjustment.snapshot(await drafts.get_draft(ident))
     response=await client.post(url,json=body);assert response.status_code==200,response.text

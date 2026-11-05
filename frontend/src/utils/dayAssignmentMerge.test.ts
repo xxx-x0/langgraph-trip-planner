@@ -65,6 +65,6 @@ it('reserves transit days and retains only fitting assignments for the pending c
 it('keeps nearby groups together without taking the next group’s entire day',async()=>{
  const {reserveAssignmentWindows}=await import('./dayAssignmentMerge')
  const rows=reserveAssignmentWindows([[{name:'A'},{name:'B'}],[{name:'C'}],[],[],[]],[{unavailable:true},{},{},{},{unavailable:true}])
- expect(rows[1].map(a=>a.name)).toEqual(['A','B'])
- expect(rows[2].map(a=>a.name)).toEqual(['C'])
+ expect(rows[1].map(a=>a.name)).toEqual(['C'])
+ expect(rows[2].map(a=>a.name)).toEqual(['A','B'])
 })

@@ -51,6 +51,7 @@ Thumbs.db
 
 # 数据库文件
 backend/data/*.db
+backend/data/travel-memory-media/
 
 # 设计参考文件
 design-md/

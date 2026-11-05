@@ -6,6 +6,8 @@
 
 Vue应用使用组件局部状态，路由为 `/`、`/discover`、`/draft/:id`、`/result`、`/my-trips`、`/trip/:id`、`/multi-trip/:id?`。日常流程为填写本次需求 → 发现和勾选景点 → 分配日期 → 创建骨架草稿 → 装配和编辑每日安排 → 定稿 → 只读历史。定稿前修改在草稿完成。
 
+2026-11-03 增加独立旅行记录入口：`/travel-records`、`/travel-records/new`、`/travel-records/:id`、`/travel-records/:id/edit`。`/api/travel-records` 共11个路径、13个方法，负责回忆、原图、来源只读补记和ZIP恢复。新表 `travel_memories` 与本地原件目录独立于计划、规划图和偏好服务；不更改既有表结构，也不把定稿状态推断为实际到访。原先52路径数字仅对应上述2026-10-24基线；当前完整清单以运行时OpenAPI为准。详见 [存储决策](adr/0002-travel-memory-ownership.md) 和 [交接](travel-memories-v1.md)。
+
 `backend/run.py` 启动 `app.api.main:app`；默认后端8000、Vite5173，Vite将 `/api` 代理到后端，验证时可用 `VITE_BACKEND_URL` 指向隔离实例。FastAPI注册trip_lg、discover_router、trip_draft、trip_history、map_lg、poi_lg、admin，以及multi_trip、tickets。当前OpenAPI为52个路径；LTP-8的 `architecture-inventory.json` 是当时35路径的历史盘点，不能用作当前全表；当前方法以 `/openapi.json` 为准。
 
 | 入口 | 实际执行 |
@@ -20,6 +22,7 @@ Vue应用使用组件局部状态，路由为 `/`、`/discover`、`/draft/:id`�
 | `POST /api/trip/draft/{id}/finalize` | 独立定稿流水线，复用已保存日程；由当前结构化事实生成每日/全局说明和标题，保存历史和草稿状态，兼容观察记录参与同一事务 |
 | `/api/multi-trips`及其preview/save/copy/cities子路径 | 整趟多城市聚合、显式城市快照、预览令牌/revision和只读版本保存 |
 | `POST /api/tickets/recommend` | 传入单城/多城安排context时先排除冲突候选，再让模型只选既有ID；无context不代表已存安排适配，采用仍须预览确认 |
+| `POST /api/tickets/journey-options` | 规划前按明确条件过滤真实候选，组合去返班次与逐日剩余时间；综合推荐选默认AI／Jev，价格与时长走规则，返回只读方案，不修改草稿 |
 | `/api/trips` | 历史列表、详情、搜索、状态及删除；已有手动保存接口保留 |
 | `/api/trip/preferences/{user_id}` | 既有明确偏好或观察数据的读写/删除管理，不自动影响任何规划入口 |
 | `/api/map/*`、`/api/poi/*`、`/api/admin/attractions/*` | 地图/POI辅助与地点缓存管理；不代表账号或公开部署能力 |

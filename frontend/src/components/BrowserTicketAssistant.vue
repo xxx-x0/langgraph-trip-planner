@@ -4,6 +4,13 @@
     <BackgroundTicketSearch ref="backgroundSearch" :query="query" :disabled="disabled" :context-key="JSON.stringify([contextKey,scheduleContext])" @reset="invalidate" @candidates="backgroundCandidates" />
     <p>候选带回后先核对已保存安排和缓冲。未设优先级时展示不同取舍；价格和车程直接排序，兼顾或日间软偏好使用 AI 筛选。采用后预览并确认保存。</p>
     <label>这次更看重<select v-model="priority" :disabled="busy"><option value="unspecified">先看不同选择</option><option value="balanced">时间与价格兼顾</option><option value="price">列表参考价较低</option><option value="time">车程较短</option><option value="daytime">白天出发和到达</option></select></label>
+    <label v-if="usesAI" class="ticket-engine">
+      推荐方式
+      <select v-model="engine" :disabled="busy">
+        <option value="default">默认 AI</option>
+        <option value="jev">Jev（WindHub）</option>
+      </select>
+    </label>
     <p v-if="priority==='daytime'">软偏好：尽量 {{departureAfter}} 后出发、{{arrivalBefore}} 前到达且不跨日；其他可行班次仍可作备选。</p>
     <details class="ticket-extra"><summary>更多要求（可选）</summary>
       <label>接受席别（不选表示不限）<select v-model="acceptedSeats" multiple aria-label="接受席别" :disabled="busy"><option v-for="seat in seatOptions" :key="seat" :value="seat">{{seat}}</option></select></label>
@@ -13,7 +20,7 @@
       <label><input v-model="daytimeHard" type="checkbox" :disabled="busy" />上述时段必须满足（且不跨日）</label>
     </details>
     <div v-if="preferenceExcluded.length" role="status"><p>有 {{preferenceExcluded.length}} 条不满足本次明确条件，可修改更多要求或重新查询；未自动放宽条件。</p><details><summary>查看条件不匹配原因</summary><p v-for="p in preferenceExcluded" :key="p.candidate.id">{{p.candidate.service}}：{{p.reasons.join('；')}}</p></details></div>
-    <div class="actions"><button v-if="tickets.length" :disabled="busy||disabled" @click="rank">{{busy?'正在筛选…':['balanced','daytime'].includes(priority)?'重新AI筛选':'重新筛选'}}</button></div>
+    <div class="actions"><button v-if="tickets.length" :disabled="busy||disabled" @click="rank">{{busy?'正在筛选…':usesAI?'重新AI筛选':'重新筛选'}}</button></div>
     <p v-if="status" role="status">{{status}}</p>
     <details class="extension-fallback"><summary>使用已有浏览器扩展（备用方式）</summary>
     <div class="actions"><button :disabled="disabled||busy||!!queryError(query)||!link.prefilled" @click="start">{{waiting?'重新发起查票':'打开查票并自动带回'}}</button></div>
@@ -21,14 +28,15 @@
     <details v-if="!connected||updateAvailable"><summary>{{updateAvailable?'更新浏览器查票助手':'首次使用：连接浏览器查票助手'}}</summary><p>在 Chrome 或 Edge 安装本机“旅行规划查票助手”，并在同一个浏览器打开本应用。安装后刷新此页。扩展只为本次发起的查询读取票务列表；兼顾或日间软偏好筛选时，候选字段交给当前配置的 AI。</p><p>安装包：<a href="/ticket-assistant-extension.zip" download>下载浏览器助手</a>。解压后，在浏览器扩展管理页打开开发者模式，选择“加载已解压的扩展程序”，选中解压目录。更新已有扩展时，将文件解压到原目录，点击“重新加载”，再刷新规划页和查票页。安装包内附具体说明。</p></details>
     <p v-if="!link.prefilled">{{link.note}}</p>
     </details>
-    <div v-if="excluded.length && !recommendations.length && !busy" class="conflict-help" role="status"><strong>本次候选都放不进当前安排</strong><p v-if="scheduleContext?.kind==='multi'">先核对换城当天两座城市的活动和休息，再查票。修改每日安排后，还需同步回整趟旅行。</p><p v-else>先核对抵达日或离开日的活动、用餐和接驳时间，也可以预览具体班次的冲突，再决定调整当天安排或换一班。</p><slot name="conflict-actions" /><p v-if="scheduleContext?.kind==='multi'">也可以先选班次，生成两侧当天的调整建议。取消的景点、用餐和休息会单独列出，确认前不改变行程。</p></div>
-    <details v-if="excluded.length" class="exclusions"><summary>已排除 {{excluded.length}} 条与当前安排冲突的候选</summary><p>逐班展开查看原因；已保存的活动不会自动删除。</p><div class="exclusion-list"><details v-for="e in excluded" :key="e.candidate.id"><summary>{{e.candidate.service}} · {{e.candidate.departure.replace('T',' ')}} — {{e.candidate.arrival?.slice(11,16)}}<small>{{e.conflicts[0]}}</small></summary><ul><li v-for="reason in e.conflicts" :key="reason">{{reason}}</li></ul><button v-if="scheduleContext?.kind==='multi' && e.leg" :disabled="disabled||busy||waiting" @click="emit('adjust',{leg:e.leg,ticketBasis})">按此班次调整两侧当天安排</button><template v-else-if="scheduleContext?.kind==='draft' && e.leg"><button :disabled="disabled||busy||waiting" @click="adopt(e.leg)">预览此班次与当天冲突</button><button :disabled="disabled||busy||waiting" @click="emit('adjust',{leg:e.leg,ticketBasis,direction:query.direction})">按此班次重新安排</button></template></details></div></details>
+    <div v-if="excluded.length && !recommendations.length && !busy" class="conflict-help" role="status"><strong>这些班次需要联动调整景点</strong><p v-if="scheduleContext?.kind==='multi'">选择下方班次，可生成两侧当天的调整预览，取消的景点、用餐和休息会单独列出。若手动编辑城市工作副本，仍需同步回整趟旅行。</p><p v-else>选择下方班次，让系统尝试把可移动的景点安排到其他时段或日期。锁定和固定预约会保留，放不下的景点列入待安排。</p><slot name="conflict-actions" /></div>
+    <details v-if="excluded.length" class="exclusions" :open="!recommendations.length"><summary>{{excluded.length}} 条需要调整日程的班次</summary><p>这些候选已排除在直接衔接推荐之外。可以预览联动调整，确认前不改变已保存安排。</p><div class="exclusion-list"><details v-for="e in excluded" :key="e.candidate.id"><summary>{{e.candidate.service}} · {{e.candidate.departure.replace('T',' ')}} — {{e.candidate.arrival?.slice(11,16)}}<small>{{e.conflicts[0]}}</small></summary><ul><li v-for="reason in e.conflicts" :key="reason">{{reason}}</li></ul><button v-if="scheduleContext?.kind==='multi' && e.leg" :disabled="disabled||busy||waiting" @click="emit('adjust',{leg:e.leg,ticketBasis})">按此班次调整两侧当天安排</button><button v-else-if="scheduleContext?.kind==='draft' && e.leg" :disabled="disabled||busy||waiting" @click="emit('adjust',{leg:e.leg,ticketBasis,direction:query.direction})">按此班次重新安排</button></details></div></details>
     <div v-if="recommendations.length" class="recommendations">
-      <p>{{rankedBy==='options'?'不同取舍 · 未设唯一首选':rankedBy==='ai'?'AI推荐':rankedBy==='metric'?'按所选指标排序':'规则排序'}} · 本次带回 {{tickets.length}} 条，展示 {{recommendations.length}} 个候选；每批最多80条，不代表完整列表。<span v-if="usingBackground">可重新后台查询，获取更新候选。</span><span v-else>网站加载更多结果后，可点击网站右下角“重新带回当前列表”。</span></p>
+      <p>{{rankingLabel}} · 本次带回 {{tickets.length}} 条，展示 {{recommendations.length}} 个候选；每批最多80条，不代表完整列表。<span v-if="usingBackground">可重新后台查询，获取更新候选。</span><span v-else>网站加载更多结果后，可点击网站右下角“重新带回当前列表”。</span></p>
       <article v-for="(r,index) in recommendations" :key="r.candidate.id">
         <h5>{{rankedBy==='options'?'':(index+1)+'. '}}{{r.candidate.service}} · {{r.candidate.seat||'席别待确认'}}</h5>
         <p>{{r.candidate.from_station}} → {{r.candidate.to_station}}<br />{{r.candidate.departure.replace('T',' ')}} — {{r.candidate.arrival.replace('T',' ')}}</p>
-        <strong>{{r.candidate.fare_per_person===null?'列表参考价未知':'列表每人参考 ¥'+r.candidate.fare_per_person}}{{r.candidate.mode==='flight'?' 起':''}}</strong>
+        <strong v-if="r.candidate.fare_per_person===null">列表参考价未知</strong>
+        <strong v-else>列表每人参考 ¥{{r.candidate.fare_per_person}}{{r.candidate.mode==='flight'?' 起':''}}</strong>
         <p v-if="r.badges?.length">{{r.badges.join(' · ')}}</p>
         <p v-if="r.fit_status==='requires_adjustment'"><strong>需调整后可用</strong>：采用前在预览核对</p><p v-else-if="r.fit_status==='direct'">原安排可用</p>
         <ul v-if="r.adjustments?.length"><li v-for="a in r.adjustments" :key="a.date+a.kind+a.ref_name">{{a.date}} {{a.city}} {{a.ref_name}}：{{a.before}} → {{a.after}}</li></ul>
@@ -48,6 +56,10 @@ import type {TicketScheduleContext} from '@/utils/ticketSchedule'
 const props=defineProps<{query:TicketQuery;disabled?:boolean;contextKey:string;scheduleContext?:TicketScheduleContext}>()
 const emit=defineEmits<{(e:'adjust',value:{leg:JourneyLeg;ticketBasis?:string;direction?:'outbound'|'inbound'}):void;(e:'adopt',value:{leg:JourneyLeg;direction:'outbound'|'inbound';ticketBasis?:string}):void}>()
 const priority=ref('unspecified'),connected=ref(false),waiting=ref(false),busy=ref(false),status=ref(''),tickets=ref<any[]>([]),recommendations=ref<any[]>([]),rankedBy=ref('')
+const engine=ref<'default'|'jev'>('default')
+const usesAI=computed(()=>['balanced','daytime'].includes(priority.value))
+const rankingLabels:Record<string,string>={options:'不同取舍 · 未设唯一首选',ai:'AI推荐',jev:'Jev 推荐',metric:'按所选指标排序'}
+const rankingLabel=computed(()=>rankingLabels[rankedBy.value]||'规则排序')
 const backgroundSearch=ref<InstanceType<typeof BackgroundTicketSearch>>()
 const usingBackground=ref(false)
 function backgroundCandidates(values:any[]){usingBackground.value=true;tickets.value=values;void rank()}
@@ -61,7 +73,7 @@ let requestId='',generation=0,controller:AbortController|undefined,connectionTim
 function post(type:string,extra:Record<string,unknown>={}){window.postMessage({channel:'ltp-ticket-app-v1',type,requestId,...extra},window.location.origin)}
 function invalidate(){if(requestId)post('ltp-cancel');requestId='';generation++;controller?.abort();clearTimeout(connectionTimer);clearTimeout(waitTimer);clearTimeout(expiryTimer);waiting.value=false;busy.value=false;tickets.value=[];recommendations.value=[];excluded.value=[];preferenceExcluded.value=[];ticketBasis.value='';status.value=''}
 watch([()=>JSON.stringify(props.query),()=>props.contextKey,()=>JSON.stringify(props.scheduleContext)],invalidate)
-watch([priority,acceptedSeats,priceLimit,departureAfter,arrivalBefore,daytimeHard],()=>{generation++;controller?.abort();busy.value=false;recommendations.value=[];excluded.value=[];preferenceExcluded.value=[];ticketBasis.value='';if(tickets.value.length)status.value='偏好已改变或条件已更新，点击重新筛选。'})
+watch([priority,engine,acceptedSeats,priceLimit,departureAfter,arrivalBefore,daytimeHard],()=>{generation++;controller?.abort();busy.value=false;recommendations.value=[];excluded.value=[];preferenceExcluded.value=[];ticketBasis.value='';if(tickets.value.length)status.value='偏好已改变或推荐方式已更新，点击重新筛选。'})
 function start(){
   if(props.disabled||busy.value||queryError(props.query)||!link.value.prefilled)return
   backgroundSearch.value?.stop(false)
@@ -76,7 +88,7 @@ async function rank(){
   if(props.disabled||!tickets.value.length)return
   const current=++generation;controller?.abort();controller=new AbortController();busy.value=true;recommendations.value=[];excluded.value=[];preferenceExcluded.value=[];ticketBasis.value='';status.value='候选已带回，正在核对安排并筛选…'
   try{
-    const result=await recommendTickets({query:{mode:props.query.mode,direction:props.query.direction,from_place:props.query.from,to_place:props.query.to,date:props.query.date,passengers:props.query.passengers,priority:priority.value,preferences:{accepted_seats:acceptedSeats.value,max_reference_fare_per_person:priceLimit.value===''?null:priceLimit.value,departure_after:departureAfter.value,arrival_before:arrivalBefore.value,daytime_hard:daytimeHard.value}},candidates:tickets.value,context:props.scheduleContext},controller.signal)
+    const result=await recommendTickets({query:{mode:props.query.mode,direction:props.query.direction,from_place:props.query.from,to_place:props.query.to,date:props.query.date,passengers:props.query.passengers,priority:priority.value,preferences:{accepted_seats:acceptedSeats.value,max_reference_fare_per_person:priceLimit.value===''?null:priceLimit.value,departure_after:departureAfter.value,arrival_before:arrivalBefore.value,daytime_hard:daytimeHard.value}},candidates:tickets.value,context:props.scheduleContext,engine:usesAI.value?engine.value:'default'},controller.signal)
     if(current!==generation)return
     recommendations.value=result.recommendations;excluded.value=result.excluded||[];preferenceExcluded.value=result.preference_excluded||[];ticketBasis.value=result.schedule_basis||'';rankedBy.value=result.ranked_by;status.value=result.message
   }catch(e:any){if(current===generation){recommendations.value=[];ticketBasis.value='';status.value=e?.response?.status===409?'安排已改变，请重新读取草稿后查票；旧推荐未采用。':'本次筛选未完成，候选已保留，可重试；已保存行程未改变。'}}finally{if(current===generation)busy.value=false}
@@ -96,6 +108,7 @@ onMounted(()=>{window.addEventListener('message',receive);post('ltp-ping')})
 onBeforeUnmount(()=>{invalidate();window.removeEventListener('message',receive)})
 </script>
 <style scoped>
+.ticket-engine{margin-top:12px}
 .ticket-extra{margin:12px 0}.ticket-extra label{margin:10px 0;max-width:100%}.ticket-extra input{font:inherit;max-width:100%;box-sizing:border-box}.ticket-extra select[multiple]{min-height:90px}.ticket-extra input[type=checkbox]{width:auto;align-self:flex-start}
 
 .conflict-help{padding:14px;background:#fff4e3;border:1px solid #d4b984;border-radius:10px;margin:16px 0}.exclusion-list{max-height:420px;overflow:auto;border-top:1px solid #d8e1da}.exclusion-list>details{padding:12px 4px;border-bottom:1px solid #d8e1da}.exclusion-list small{display:block;line-height:1.6;color:#52655a;margin:6px 0}.exclusion-list summary{font-weight:600}.exclusions>summary{padding:12px 0}

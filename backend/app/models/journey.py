@@ -85,8 +85,10 @@ class JourneyLeg(BaseModel):
 
 
 class JourneyPlanning(BaseModel):
-    arrival_policy: Literal['travel_day', 'time_window', 'unreserved'] = 'travel_day'
-    departure_policy: Literal['travel_day', 'time_window', 'unreserved'] = 'travel_day'
+    # Unknown transport does not mean an entire day is unavailable. Explicit
+    # reservations on existing journeys still retain their original meaning.
+    arrival_policy: Literal['travel_day', 'time_window', 'unreserved'] = 'unreserved'
+    departure_policy: Literal['travel_day', 'time_window', 'unreserved'] = 'unreserved'
     ready_at: str | None = None
     leave_by: str | None = None
 

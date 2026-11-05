@@ -1,8 +1,8 @@
 <template>
   <section class="comparison">
-    <h2>先选怎么去，再看怎么玩</h2>
-    <p>浏览器助手带回机票或高铁候选，AI帮你筛选，采用后直接预览行程变化。也可手动补充备选，比较全程费用和时间；接驳时间仍是估计。</p>
-    <TicketAssistant :request="request" :disabled="disabled || busy" :comparison-full="candidates.length>=6" :schedule-context="{kind:'draft',draft_id:draftId,request,days_detail:daysDetail||[]}" @add="importCandidate" @adopt="adoptTicket" @adjust="adjustTicket" />
+    <h2>换一班交通，一起调整怎么玩</h2>
+    <p>后台查询班次后，先比较能衔接当前安排的选择。想选的班次需要腾出时间时，可以直接生成跨日调整预览，保留景点与原游览时长，再确认变化。</p>
+    <TicketAssistant :request="request" :compact="compact" :disabled="disabled || busy" :comparison-full="candidates.length>=6" :schedule-context="{kind:'draft',draft_id:draftId,request,days_detail:daysDetail||[]}" @add="importCandidate" @adopt="adoptTicket" @adjust="adjustTicket" />
     <p v-if="candidates.length >= 6">已有6个备选，请移除一个后再导入。</p>
     <details :open="editorOpen" @toggle="editorOpen=($event.target as HTMLDetailsElement).open">
       <summary>添加或修改一个备选（最多6个）</summary>
@@ -53,7 +53,7 @@ import TicketAssistant from './TicketAssistant.vue'
 import JourneyEditor from './JourneyEditor.vue'
 import type {Journey,JourneyLeg,TripFormData} from '@/types'
 import {compareJourneys} from '@/services/api'
-const props=defineProps<{draftId:string;request:TripFormData;daysDetail?:unknown[];disabled?:boolean}>()
+const props=defineProps<{draftId:string;request:TripFormData;daysDetail?:unknown[];disabled?:boolean;compact?:boolean}>()
 const emit=defineEmits<{(e:'choose',value:Journey,ticketBasis?:string):void;(e:'adjust',value:Journey,ticketBasis?:string):void}>()
 const clone=<T,>(v:T):T=>JSON.parse(JSON.stringify(v))
 const name=ref(''),start=ref(props.request.start_date),end=ref(props.request.end_date),editing=ref<Journey|null>(clone(props.request.journey || null))

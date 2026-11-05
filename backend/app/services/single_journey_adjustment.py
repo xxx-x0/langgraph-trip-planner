@@ -9,16 +9,27 @@ from fastapi import HTTPException
 from ..models.schemas import Attraction, Location, Budget
 from .journey_service import apply_context, travel_window
 from .journey_planning import capacity, pending_item
-from .transport_adjustment import violations
+from .transport_adjustment import violations as transport_violations
+from .place_hours import place_hours_report
 from .external_calls import operation_deadline
 from ..agents.langgraph_agent.assemble.route import compute_day_route
-from ..agents.langgraph_agent.assemble.schedule import schedule_day, clock, clock_minutes
+from ..agents.langgraph_agent.assemble.schedule import schedule_day, clock, clock_minutes, slot_label
 from ..agents.langgraph_agent.assemble.narrative import refresh_day_description
 from ..agents.langgraph_agent.assemble.budget import compute_day_budget, combine_budgets
+from .meal_recovery import recover_slot, missing_slots, record_recovery
 
 _proposals={}
 FIELDS=('request_json','days_detail_json','macro_plan_json','clusters_data_json','hotels_by_day_json',
         'dining_pool_json','weather_info_json','selected_attractions_json','status')
+
+
+def violations(day, baseline):
+    # Use the same dated hours/admission checks as daily save and finalize.
+    problems=transport_violations(day, baseline) + place_hours_report(day)['violations']
+    if day.coordination_policy:
+        from .trip_coordination import pace_problems
+        problems+=pace_problems(day,None,[])
+    return list(dict.fromkeys(problems))
 
 
 def snapshot(record):
@@ -69,7 +80,8 @@ def as_attraction(cluster):
     return Attraction.model_validate(fields)
 
 
-async def propose(record, payload, request, *, placements=None, discard_ids=None):
+async def propose(record, payload, request, *, placements=None, discard_ids=None, assemble_pending=False, refill_meals=False):
+    started = time.monotonic()
     placements,discard_ids=placements or [],discard_ids or []
     raw=json.loads(record.request_json)
     pending=copy.deepcopy(raw.get('_transport_unassigned',[]))
@@ -79,6 +91,11 @@ async def propose(record, payload, request, *, placements=None, discard_ids=None
     details=[d.model_copy(deep=True) if d else None for d in payload.days_detail]
     macro=payload.macro_plan.model_copy(deep=True)
     changes=[]
+    dining_pool = copy.deepcopy(json.loads(record.dining_pool_json or '[]'))
+    while len(dining_pool) < request.travel_days: dining_pool.append({})
+    displaced_meals = {}
+    meal_recovery = []
+    meals_only = refill_meals and request.journey == payload.request.journey and not (placements or discard_ids or assemble_pending)
     if set(discard_ids)-{p['id'] for p in pending}:
         raise HTTPException(409,'待安排景点已变化，请重新加载')
     for item in list(pending):
@@ -105,7 +122,7 @@ async def propose(record, payload, request, *, placements=None, discard_ids=None
         return set(day.locked_attraction_names) | {a.ref_name for a in day.time_constraints.appointments if a.kind=='attraction'} if day.time_constraints else set(day.locked_attraction_names)
 
     async with operation_deadline(110):
-        if not only_catalog and not placements:
+        if not only_catalog and not placements and not meals_only:
             kept=[]
             for rest in request.rest_periods:
                 w=travel_window(request,rest.date.isoformat())
@@ -114,6 +131,16 @@ async def propose(record, payload, request, *, placements=None, discard_ids=None
                 else: kept.append(rest)
             request.rest_periods=kept
             for i,day in enumerate(details):
+                if day is None and assemble_pending:
+                    from ..agents.langgraph_agent.assemble.timeline import rule_assemble_day_timeline
+                    ctx=payload.days[i].model_copy(deep=True)
+                    apply_context(ctx,request)
+                    ctx.day_start_time=clock(max(clock_minutes(request.default_day_start_time),
+                                                ctx.travel_window.get('start_minutes',0))) if not ctx.travel_window.get('unavailable') else request.default_day_start_time
+                    day=rule_assemble_day_timeline(ctx)
+                    details[i]=day
+                    await rebuild(day)
+                    changes.append(f'{day.date}：按交通窗口核对原选景点、用餐和实际路线')
                 if day is None:
                     # Skeletons need the same catalog protection before their first assembly.
                     available=capacity(request,payload.days[i].date)
@@ -130,7 +157,7 @@ async def propose(record, payload, request, *, placements=None, discard_ids=None
                 # with the saved routes now so finalize cannot silently change it later.
                 schedule_day(day)
                 removed=[]
-                if not violations(day,day) and day.rest_periods==payload.days_detail[i].rest_periods:
+                if not violations(day,day) and (payload.days_detail[i] is None or day.rest_periods==payload.days_detail[i].rest_periods):
                     continue  # Keep successful saved routes/times when no activity changes.
                 if day.travel_window.get('unavailable') or capacity(request,day.date)==0:
                     if protected(day) or (day.time_constraints and day.time_constraints.appointments):
@@ -138,7 +165,10 @@ async def propose(record, payload, request, *, placements=None, discard_ids=None
                     if any(m.schedule_mode=='manual' for m in day.meals):
                         raise HTTPException(422,f'{day.date}手动用餐无法放入交通日，请先调整该用餐；原安排未改变')
                     removed=list(day.attractions);day.attractions=[]
-                    for meal in day.meals: changes.append(f'{day.date}：移除本城用餐 {meal.name}；请核对在途用餐')
+                    for meal in day.meals:
+                        slot = meal.preferred_slot or meal.type
+                        if slot in ('lunch','dinner'): displaced_meals[(i,slot)] = meal.name
+                        else: changes.append(f'{day.date}：移除本城用餐 {meal.name}；本城已无可用时段')
                     day.meals=[];day.hotel=None;day.timeline_order=[]
                     await rebuild(day)
                 else:
@@ -150,10 +180,18 @@ async def propose(record, payload, request, *, placements=None, discard_ids=None
                         problems=violations(day,day)
                         if not problems: break
                         names={x.name for x in [*day.attractions,*day.meals] if any(x.name in p for p in problems)}
-                        meal=next((m for m in reversed(day.meals) if m.name in names and m.schedule_mode!='manual' and not(day.time_constraints and any(a.ref_name==m.name for a in day.time_constraints.appointments))),None)
-                        if meal:
+                        # A missing meal slot is reported without a restaurant
+                        # name. Match that slot as well, otherwise an impossible
+                        # lunch can make every unrelated attraction get removed.
+                        attraction=next((a for a in reversed(day.attractions) if a.name in names and a.name not in protected(day)),None)
+                        meal=next((m for m in reversed(day.meals) if (m.name in names or f'{slot_label(m.preferred_slot or m.type)}未能保留' in problems) and m.schedule_mode!='manual' and not(day.time_constraints and any(a.ref_name==m.name for a in day.time_constraints.appointments))),None)
+                        if meal and attempt<4:
                             day.meals.remove(meal)
-                            changes.append(f'{day.date}：移除本城用餐 {meal.name}；请核对在途或其他日期的用餐')
+                            slot = meal.preferred_slot or meal.type
+                            if slot in ('lunch','dinner'): displaced_meals[(i,slot)] = meal.name
+                            else: changes.append(f'{day.date}：移除本城用餐 {meal.name}；原餐厅无法容纳')
+                        elif attraction and attempt<4:
+                            removed.append(attraction);day.attractions.remove(attraction)
                         else:
                             attraction=next((a for a in reversed(day.attractions) if a.name not in protected(day)),None)
                             if not attraction or attempt==4:
@@ -167,7 +205,7 @@ async def propose(record, payload, request, *, placements=None, discard_ids=None
                     clusters[i]=[a for a in clusters[i] if a['name']!=attraction.name]
                     changes.append(f'{day.date}：{attraction.name}移出原日，原游览时长保留')
 
-        if not only_catalog:
+        if not only_catalog and not meals_only:
             for item in list(pending):
                 if placements and item['id']!=placements[0]['id']: continue
                 attraction=as_attraction(item['cluster'])
@@ -200,6 +238,31 @@ async def propose(record, payload, request, *, placements=None, discard_ids=None
                     item['reason']='本次有界调整未找到可容纳日期，保留待安排；未删除，也不代表不存在其他排法'
                     changes.append(item['name']+'保留待安排，不会自动缩短游览或计入已安排内容')
 
+        # Only recover meals displaced by this operation. The separate opt-in is
+        # needed for older gaps, so normal reordering never restores deleted meals.
+        if refill_meals:
+            for i, day in enumerate(details):
+                for slot in missing_slots(day): displaced_meals.setdefault((i,slot), None)
+        for (i, slot), old_name in displaced_meals.items():
+            day = details[i]
+            if not day or any(m.type == slot for m in day.meals): continue
+            remaining = 108 - (time.monotonic() - started)
+            result = dict(date=day.date, slot=slot, status='unavailable', old_restaurant=old_name)
+            if remaining < 3:
+                result['reason'] = '本次路线核对已用完可用时间，补餐尚未完成；可在保存后重试推荐。'
+            else:
+                try:
+                    async with operation_deadline(min(40, remaining)):
+                        day, pool, result = await recover_slot(day,slot,request,dining_pool[i] or {},
+                            rebuild=rebuild,validate=violations,old_restaurant=old_name)
+                    details[i] = day
+                    dining_pool[i] = pool
+                except TimeoutError:
+                    result['reason'] = '本次查店或路线核对超时，补餐尚未完成；可重试推荐。'
+            record_recovery(day, result)
+            meal_recovery.append(result)
+            changes.append(f'{day.date}：'+day.meal_adjustments[-1])
+
     budgets=[];impacts=[]
     from .schedule_constraints import schedule_changes
     for i,ctx in enumerate(payload.days):
@@ -230,4 +293,4 @@ async def propose(record, payload, request, *, placements=None, discard_ids=None
         if budget.is_within_budget is not False: budget.is_within_budget=None
         budget.unknown_cost_items.append('待安排景点或尚未装配日期的费用未计入')
     return dict(request=request,details=details,clusters=clusters,macro=macro,unassigned=pending,discarded=discarded,
-                changes=changes,impacts=impacts,budget=budget)
+                changes=changes,impacts=impacts,budget=budget,dining_pool=dining_pool,meal_recovery=meal_recovery)

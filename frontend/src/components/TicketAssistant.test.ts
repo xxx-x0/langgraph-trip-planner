@@ -8,6 +8,25 @@ const field=(w:any,text:string)=>w.findAll('label').find((l:any)=>l.text().start
 afterEach(()=>vi.unstubAllGlobals())
 async function preview(){const w=mount(TicketAssistant,{props:{request}});await field(w,'车票文字').setValue(sample);await button(w,'识别并预览').trigger('click');await flushPromises();return w}
 describe('query and ticket handoff',()=>{
+ it('keeps compact conditions collapsed and switches the saved return route without manual entry',async()=>{
+  const r:any={...request,journey:{...request.journey,return_city:'南京',inbound:{mode:'flight'}}}
+  const w=mount(TicketAssistant,{props:{request:r,compact:true}})
+  expect(w.get('.query-settings').attributes('open')).toBeUndefined()
+  await w.get('[aria-label="查询方向"] button:last-child').trigger('click')
+  expect(w.get('[aria-label="查询方向"] button:last-child').attributes('aria-pressed')).toBe('true')
+  expect(field(w,'查询出发日期').element.value).toBe('2026-10-22')
+  expect(field(w,'查询出发地').element.value).toBe('北京')
+  expect(field(w,'查询目的地').element.value).toBe('南京')
+  expect(field(w,'查询交通方式').element.value).toBe('flight')
+  expect(w.get('.query-settings').attributes('open')).toBeUndefined()
+  await w.get('[aria-label="查询交通方式"] button:first-child').trigger('click')
+  expect(field(w,'查询交通方式').element.value).toBe('train')
+  expect(w.emitted('adopt')).toBeUndefined();w.unmount()
+ })
+ it('opens missing query conditions in compact mode so the origin can be supplied',()=>{
+  const w=mount(TicketAssistant,{props:{request:{...request,journey:null},compact:true}})
+  expect(w.get('.query-settings').attributes('open')).toBeDefined();w.unmount()
+ })
  it('changes the link and copy text for return dates and cities',async()=>{const w=mount(TicketAssistant,{props:{request}});await field(w,'查询方向').setValue('inbound');await field(w,'查询出发日期').setValue('2026-10-23');expect(w.get('a[target="_blank"]').attributes('href')).toContain('date=2026-10-23');expect((w.get('textarea[aria-label="查询条件"]').element as HTMLTextAreaElement).value).toContain('出发地：北京');w.unmount()})
  it('uses saved travel modes and passes only a confirmed all-adult party',async()=>{
   const r:any={...request,hotel_occupancy:{room_count:1,adults_per_room:2,children_ages:[]},journey:{...request.journey,outbound:{mode:'flight'},inbound:{mode:'train'}}}

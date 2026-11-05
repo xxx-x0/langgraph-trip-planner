@@ -78,6 +78,21 @@ def test_ai_select_rejects_empty_destination():
     assert resp.status_code == 422
 
 
+def test_ai_select_uses_authoritative_transport_windows():
+    from app.models.journey import JourneyLeg
+    request = dict(city='北京', start_date='2026-11-10', end_date='2026-11-12', travel_days=3,
+                   transportation='公共交通', accommodation='酒店', journey=dict(origin_city='上海', return_city='上海',
+                   outbound=JourneyLeg(departure_station='上海虹桥', arrival_station='北京南', departure_time='2026-11-10T08:00', arrival_time='2026-11-10T17:00').model_dump(mode='json')))
+    with patch('app.api.routes.trip_lg.pick_attractions_from_pool', new=AsyncMock(return_value={'must_ids': [], 'optional_ids': []})) as picker:
+        response = client.post('/api/discover/ai_select', json=dict(destination='北京', days=3, attractions=[], request=request))
+    assert response.status_code == 200
+    windows = picker.await_args.kwargs['daily_windows']
+    assert windows[0]['start_minutes'] == 19*60
+    assert not windows[0]['unavailable']
+    assert windows[-1]['end_minutes'] == 1440
+    assert client.post('/api/discover/ai_select', json=dict(destination='上海', days=3, attractions=[], request=request)).status_code == 422
+
+
 def test_ai_select_returns_500_on_extract_exception():
     with patch(
         "app.api.routes.trip_lg.pick_attractions_from_pool",

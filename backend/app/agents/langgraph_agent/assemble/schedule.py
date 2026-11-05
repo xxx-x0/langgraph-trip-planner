@@ -92,12 +92,21 @@ def schedule_day(detail: DayDetail, *, suggest=True) -> None:
         if kind == 'attraction' and name in attractions:
             a = attractions[name]
             reserve_appointment(kind, name)
+            if detail.coordination_policy:
+                # Joint planning can deliberately wait for a known opening. This
+                # time is visible and still checked against appointments/pace.
+                windows = opening_windows(a.open_hours)
+                starts = [max(now, lo) for lo, hi in windows if max(now, lo) + (a.visit_duration or 120) <= hi]
+                if starts and min(starts) > now:
+                    append('wait', '等待开放', min(starts)-now, detail=a.name+'按已知开放时间安排')
             append(kind, name, a.visit_duration or 120, cost=a.ticket_price,
                    detail=a.description[:60])
         elif kind == 'meal' and name in meals:
             meal = meals[name]
             is_main = meal.category == DiningCategory.MAIN or meal.type in {'main', 'breakfast', 'lunch', 'dinner'}
             target_start = {'breakfast': 420, 'lunch': 690, 'dinner': 1050}.get(meal.preferred_slot or meal.type, now)
+            if detail.coordination_policy and (meal.preferred_slot or meal.type) == 'dinner':
+                target_start = 1020  # Early dinner is useful before a return journey.
             if is_main and meal.type == 'main':
                 target_start = 690 if now < 900 else 1050 if now < 1290 else now
             ready = max(now, target_start)
@@ -129,7 +138,8 @@ def schedule_day(detail: DayDetail, *, suggest=True) -> None:
                     append('wait', '等待用餐时段', gap, detail='预留短暂休息；未固定景点预约时间')
             if is_main:
                 original = meal.type
-                meal.type = 'breakfast' if now < 630 else 'lunch' if now <= 870 else 'dinner' if now >= 1050 else 'main'
+                dinner_start = 1020 if detail.coordination_policy else 1050
+                meal.type = 'breakfast' if now < 630 else 'lunch' if now <= 870 else 'dinner' if now >= dinner_start else 'main'
                 actual_slots.add(meal.type)
                 if original in {'breakfast', 'lunch', 'dinner'} and original != meal.type:
                     warnings.append(f'{meal.name}原{slot_label(original)}在{clock(now)}，已按实际时段标记为{slot_label(meal.type)}')
@@ -147,7 +157,7 @@ def schedule_day(detail: DayDetail, *, suggest=True) -> None:
     if detail.attractions or detail.meals or detail.rest_periods:
         for slot in ['lunch', 'dinner']:
             if slot not in actual_slots:
-                warnings.append(f'{slot_label(slot)}未安排，请自行安排或补充餐厅')
+                warnings.append(f'{slot_label(slot)}未安排')
         if clock_minutes(detail.day_start_time) < 600 and 'breakfast' not in actual_slots:
             warnings.append('早餐未安排，请出发前自行安排')
     detail.timeline_schedule = schedule

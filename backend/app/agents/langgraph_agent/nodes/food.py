@@ -599,17 +599,23 @@ async def search_dining_pool_node(state: Dict[str, Any]) -> Dict[str, Any]:
     return {"dining_pool": pools}
 
 
-async def search_dining_for_day(request, attractions, start_time=None, schedule=None, hotel=None, meals=None):
+async def search_dining_for_day(request, attractions, start_time=None, schedule=None, hotel=None, meals=None,
+                                *, anchors_override=None, main_only=False, detail_limit=None):
     from ....services.recommendations import cluster_attractions, meal_anchors, intent_for, explain_dining, dining_for_slot
     from ....models.schemas import DiningCandidate
-    anchors = meal_anchors(attractions, start_time or request.default_day_start_time, schedule, hotel, meals)
+    anchors = anchors_override or meal_anchors(attractions, start_time or request.default_day_start_time, schedule, hotel, meals)
     centers = []
     for before, after, _ in anchors.values():
-        loc = before.location if before else (after.location if after else None)
-        center = (loc.longitude, loc.latitude) if loc else None
-        if center not in centers: centers.append(center)
+        # Recovery searches both sides of the actual meal gap, including the departure hotel.
+        places = (before, after) if anchors_override else (before or after,)
+        for place in places:
+            loc = place.location if place else None
+            center = (loc.longitude, loc.latitude) if loc else None
+            if center not in centers: centers.append(center)
+    if any(centers): centers = [c for c in centers if c is not None]
+    categories = (DiningCategory.MAIN,) if main_only else tuple(DiningCategory)
     results = []
-    for cat in DiningCategory:
+    for cat in categories:
         found = []
         for center in ((centers + [None] if request.dining_style == "dedicated" and None not in centers else centers) if cat == DiningCategory.MAIN else centers[:1]):
             try:
@@ -631,22 +637,22 @@ async def search_dining_for_day(request, attractions, start_time=None, schedule=
             found = [p for pair in zip_longest(found,supplement) for p in pair if p is not None]
         results.append(found)
     pool = {}
-    for cat, res in zip(DiningCategory, results):
+    for cat, res in zip(categories, results):
         # Preserve spatial variety before ratings; deduplicate actual POI IDs.
         unique = {p.get('poi_id') or p['name']:p for p in res}
         candidates = [DiningCandidate.model_validate(_poi_to_dining_candidate(p,cat,'nearby' if any(centers) else 'city_search')) for p in unique.values()]
-        explain_dining(candidates, attractions, intent_for(request), start_time or request.default_day_start_time, schedule, hotel, meals)
+        explain_dining(candidates, attractions, intent_for(request), start_time or request.default_day_start_time, schedule, hotel, meals, anchors_override=anchors_override)
         selected = []
-        for slot in ('lunch','dinner') if cat == DiningCategory.MAIN else ('lunch',):
+        for slot in tuple(anchors) if cat == DiningCategory.MAIN else ('lunch',):
             for candidate in dining_for_slot(candidates,slot,intent_for(request))[:(5 if cat == DiningCategory.MAIN else 3)]:
                 if candidate not in selected: selected.append(candidate)
         selected = selected[:8]
         raw_selected = [unique[c.poi_id or c.name] for c in selected]
         if any(p.get('poi_id') and (not p.get('open_hours') or not p.get('longitude')) for p in raw_selected):
             detail_tool = await get_langchain_amap_service().get_tool('maps_search_detail')
-            await _enrich_pois_with_detail(raw_selected,detail_tool,max_calls=len(raw_selected))
+            await _enrich_pois_with_detail(raw_selected,detail_tool,max_calls=detail_limit if detail_limit is not None else len(raw_selected))
         selected = [DiningCandidate.model_validate(_poi_to_dining_candidate(p,cat,'nearby' if any(centers) else 'city_search')) for p in raw_selected]
         # A closure supplied by the provider is retained as a reason, never advertised as open.
-        explain_dining(selected,attractions,intent_for(request),start_time or request.default_day_start_time,schedule,hotel,meals)
+        explain_dining(selected,attractions,intent_for(request),start_time or request.default_day_start_time,schedule,hotel,meals,anchors_override=anchors_override)
         pool[cat.value] = [c.model_dump(mode='json') for c in selected]
     return pool

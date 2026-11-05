@@ -21,12 +21,22 @@ def reserve_clusters(request, clusters, *, explicit=False):
     capacities=[capacity(request,d) for d in dates(request)]
     result=[[] for _ in capacities]
     loads=[0]*len(capacities)
+    overflow=[]
     for source,group in enumerate(clusters):
         if explicit:
             if source>=len(capacities) or sum(a.get('visit_minutes') or a.get('visit_duration') or 120 for a in group)>capacities[source]:
                 raise HTTPException(422, f'第{source+1}天的明确景点分配超出交通预留后的可用时间，请先修改日期分配或交通预留')
             result[source]=copy.deepcopy(group)
             continue
+        moved=[]
+        for item in group:
+            visit=item.get('visit_minutes') or item.get('visit_duration') or 120
+            if source<len(capacities) and loads[source]+visit+20<=capacities[source]:
+                result[source].append(copy.deepcopy(item));loads[source]+=visit+20
+            else:
+                moved.append(item)
+        overflow.append(moved)
+    for group in overflow:
         target=None
         for item in group:
             visit=item.get('visit_minutes') or item.get('visit_duration') or 120
@@ -34,7 +44,7 @@ def reserve_clusters(request, clusters, *, explicit=False):
             candidates=[i for i,c in enumerate(capacities) if loads[i]+visit+20<=c]
             if not candidates: continue  # Retained in the draft's unassigned catalog.
             if target not in candidates:
-                target=source if source in candidates and loads[source]==0 else min(candidates,key=lambda i:(loads[i]/capacities[i],i))
+                target=min(candidates,key=lambda i:(loads[i]/capacities[i],i))
             result[target].append(copy.deepcopy(item));loads[target]+=visit+20
     return result
 

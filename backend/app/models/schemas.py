@@ -35,6 +35,7 @@ class TripRequest(BaseModel):
     """旅行规划请求"""
     journey: Optional[Journey] = None
     rest_periods: List[RestPeriod] = Field(default_factory=list, max_length=60)
+    coordination_policy: Dict[str, Any] = Field(default_factory=dict)
     city: str = Field(..., description="目的地城市", example="北京")
     start_date: str = Field(..., description="开始日期 YYYY-MM-DD", example="2025-06-01")
     end_date: str = Field(..., description="结束日期 YYYY-MM-DD", example="2025-06-03")
@@ -321,6 +322,7 @@ class DayTimeConstraints(BaseModel):
 
 class DayPlan(BaseModel):
     """单日行程"""
+    coordination_policy: Dict[str, Any] = Field(default_factory=dict)
     locked_attraction_names: List[str] = Field(default_factory=list)
     removed_attraction_names: List[str] = Field(default_factory=list)
     date: str = Field(..., description="日期 YYYY-MM-DD")
@@ -566,6 +568,7 @@ class DraftDayContext(BaseModel):
     schedule_suggestion: Dict[str, Any] = Field(default_factory=dict)
     travel_window: Dict[str, Any] = Field(default_factory=dict)
     rest_periods: List[RestPeriod] = Field(default_factory=list)
+    coordination_policy: Dict[str, Any] = Field(default_factory=dict)
 
 
 class DayDetail(BaseModel):
@@ -606,6 +609,7 @@ class DayDetail(BaseModel):
     route_comparison: Dict[str, Any] = Field(default_factory=dict)
     travel_window: Dict[str, Any] = Field(default_factory=dict)
     rest_periods: List[RestPeriod] = Field(default_factory=list)
+    coordination_policy: Dict[str, Any] = Field(default_factory=dict)
 
 
 class TripDraftPayload(BaseModel):
@@ -709,6 +713,13 @@ class AISelectRequest(BaseModel):
     days: int = Field(..., ge=1, le=30, description="行程天数")
     attractions: List[Dict[str, Any]] = Field(default_factory=list, description="当前景点池")
     preferences: Optional[Dict[str, Any]] = Field(default=None, description="可选偏好")
+    request: TripRequest | None = None
+
+    @model_validator(mode='after')
+    def same_trip(self):
+        if self.request and (self.destination != self.request.city or self.days != self.request.travel_days):
+            raise ValueError('选景城市及天数与当前旅行不一致')
+        return self
 
 
 class AISelectResponse(BaseModel):

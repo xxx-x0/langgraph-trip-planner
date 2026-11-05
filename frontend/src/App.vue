@@ -20,6 +20,7 @@
                   <span class="nav-icon">▤</span>
                   <span class="nav-label">我的行程</span>
                 </router-link>
+                <router-link to="/travel-records" aria-label="旅行记录" class="nav-item" :class="{ 'nav-active': activeWorkspace === 'memories' }" :aria-current="activeWorkspace === 'memories' ? 'page' : undefined"><span class="nav-label">旅行记录</span></router-link>
                 <router-link v-if="qualityEnabled" to="/quality/runs" aria-label="质量工作台" class="nav-item quality-nav" :class="{ 'nav-active': activeWorkspace === 'quality' }" :aria-current="activeWorkspace === 'quality' ? 'page' : undefined"><span class="nav-label">质量工作台</span></router-link>
               </div>
               <button :aria-label="resolvedTheme === 'dark' ? '切换到亮色模式' : '切换到暗色模式'" class="theme-toggle" @click="toggleTheme" :title="resolvedTheme === 'dark' ? '切换到亮色模式' : '切换到暗色模式'">
@@ -63,6 +64,7 @@ onMounted(async () => {
   }
 })
 const activeWorkspace = computed(() => {
+  if (route.path.startsWith('/travel-records')) return 'memories'
   if (route.path.startsWith('/quality')) return 'quality'
   if (route.path.startsWith('/multi-trip') || route.query.multi) return 'multi'
   if (route.path === '/my-trips' || route.path.startsWith('/trip/') || route.path === '/result') return 'saved'
@@ -107,7 +109,5 @@ body {
 .nav-item:hover{background:var(--color-bg-tertiary);color:var(--color-text-primary)}.nav-active{background:var(--color-primary-bg);color:var(--color-primary);font-weight:600}
 .theme-toggle{display:grid;place-items:center;width:34px;height:34px;flex-shrink:0;border:1px solid var(--color-border);border-radius:50%;background:transparent;color:var(--color-text-secondary);cursor:pointer;transition:background .2s}.theme-toggle:hover{background:var(--color-bg-tertiary)}.theme-icon{font-size:18px}
 .app-footer{text-align:center;background:var(--desk-bg)!important;border-top:1px solid var(--color-border);color:var(--color-text-secondary);font-size:11px;padding:28px 16px!important;letter-spacing:.08em}
-@media(max-width:640px){.app-header{padding:0 14px!important}.header-inner{gap:10px}.header-right{gap:6px}.header-nav{gap:2px}.nav-item{padding:9px 7px;font-size:11px}.logo-text{font-size:19px}.theme-toggle{width:30px;height:30px}}
-@media(max-width:640px){.header-nav:has(.quality-nav){gap:0}.header-nav:has(.quality-nav) .nav-item{padding:9px 5px;font-size:10px}}
-@media(max-width:360px){.app-header{padding:0 10px!important}.header-inner{gap:6px}.header-right{gap:4px}.logo-text{font-size:16px;white-space:nowrap}.nav-item{padding:9px 5px;white-space:nowrap}}
+@media(max-width:720px){.app-header{padding:0 12px!important}.header-inner{gap:10px}.header-left{flex-shrink:0}.header-right{gap:6px;min-width:0}.header-nav{gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none}.nav-item{padding:10px;min-height:42px;font-size:12px;white-space:nowrap;flex-shrink:0}.logo-text{font-size:0}.logo-text::after{content:'Go!';font-size:19px}.theme-toggle{width:30px;height:30px}}
 </style>

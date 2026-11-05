@@ -33,6 +33,7 @@
         <h1 class="hero-title">{{ tripPlan.title || tripPlan.city + '旅行计划' }}</h1>
         <p class="result-meta">{{ tripPlan.start_date }} — {{ tripPlan.end_date }}<span v-if="isSaved"> · 已保存的行程</span></p>
         <div class="hero-actions">
+          <router-link v-if="savedMemorySourceId" class="hero-btn" :to="{ path: '/travel-records/new', query: { source_kind: 'single', source_id: String(savedMemorySourceId) } }">记录这次旅行</router-link>
           <button class="hero-btn" @click="handleSaveTrip" :disabled="savingTrip || isSaved || isExporting">
             {{ isSaved ? '已保存' : '保存行程' }}
           </button>
@@ -157,6 +158,7 @@ const activeTab = ref('overview')
 const visitedTabs = ref(new Set(['overview']))
 const activeDays = ref<number[]>([0])
 const isSaved = ref(false)
+const savedMemorySourceId = ref<number | null>(null)
 const savingTrip = ref(false)
 const isExporting = ref(false)
 const tabAnchorRef = ref<HTMLElement | null>(null)
@@ -259,6 +261,7 @@ async function startStreaming() {
         // 把 URL 改成 /trip/:id 以便后续分享和刷新；但 tripPlan 已填充，无需重新加载
         if (event.trip_id) {
           isSaved.value = true
+          savedMemorySourceId.value = event.trip_id
           await router.replace({ path: `/trip/${event.trip_id}` })
         }
         if (tripPlan.value) {
@@ -299,6 +302,7 @@ const loadTripFromHistory = async (tripId: number) => {
     if (res.data?.plan) {
       tripPlan.value = res.data.plan
       isSaved.value = true
+      savedMemorySourceId.value = tripId
     } else {
       message.error('行程数据格式不正确，可能需要重新规划行程')
     }
@@ -313,8 +317,9 @@ const handleSaveTrip = async () => {
   try {
     const formData = sessionStorage.getItem('tripFormData')
     const request = formData ? JSON.parse(formData) : undefined
-    await saveTripToHistory(tripPlan.value, request)
+    const saved = await saveTripToHistory(tripPlan.value, request)
     isSaved.value = true
+    savedMemorySourceId.value = saved.data.id
     message.success('行程已保存到我的行程！')
   } catch (e: any) {
     message.error('保存失败：' + (e.message || '未知错误'))

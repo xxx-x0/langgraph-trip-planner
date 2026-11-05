@@ -144,7 +144,8 @@ async def get_draft(draft_id: str) -> Optional[TripDraft]:
 
 
 async def patch_day_detail(
-    draft_id: str, day_index: int, day_detail: DayDetail, *, expected_day: Any = _UNSET, expected_request: Any = _UNSET
+    draft_id: str, day_index: int, day_detail: DayDetail, *, expected_day: Any = _UNSET, expected_request: Any = _UNSET,
+    updated_request: str | None = None
 ) -> None:
     async with async_session() as session:
         await session.execute(text("BEGIN IMMEDIATE"))
@@ -162,6 +163,10 @@ async def patch_day_detail(
             raise DraftChangedDuringFinalize("该天安排已被更新，本次结果未保存；请加载最新草稿后重试")
         days[day_index] = day_detail.model_dump(mode="json")
         record.days_detail_json = json.dumps(days, ensure_ascii=False, default=str)
+        if updated_request is not None:
+            if expected_request is _UNSET:
+                raise ValueError('更新自动休息须同时校验原请求快照')
+            record.request_json=updated_request
         await session.commit()
 
 
@@ -294,10 +299,13 @@ async def replace_journey(draft_id, request, expected_request, expected_days, *,
         data['journey']=request.journey.model_dump(mode='json') if request.journey else None
         if planning_update:
             data['rest_periods']=[r.model_dump(mode='json') for r in request.rest_periods]
+            data['coordination_policy']=request.coordination_policy
             data['_transport_unassigned']=planning_update['unassigned']
             data['_transport_discarded']=planning_update['discarded']
             record.clusters_data_json=json.dumps(planning_update['clusters'],ensure_ascii=False)
             record.macro_plan_json=planning_update['macro'].model_dump_json()
+            if 'dining_pool' in planning_update:
+                record.dining_pool_json=json.dumps(planning_update['dining_pool'],ensure_ascii=False)
         if details is not None:
             record.days_detail_json=json.dumps([d.model_dump(mode='json') if d else None for d in details],ensure_ascii=False)
         record.request_json=json.dumps(data,ensure_ascii=False)

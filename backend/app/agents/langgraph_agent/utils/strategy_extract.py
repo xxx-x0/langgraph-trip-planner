@@ -302,6 +302,7 @@ async def pick_attractions_from_pool(
     days: int,
     pool: List[Dict[str, Any]],
     preferences: Optional[Any] = None,
+    daily_windows: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """从景点池中挑选推荐项，返回 ids 和解释信息。
 
@@ -321,8 +322,32 @@ async def pick_attractions_from_pool(
         durations = {p.get("name", ""): 120 for p in pool}
 
     # Step 2: LLM 选
-    must_target = days * 360  # 6h/天
-    optional_target = days * 120  # 2h/天
+    # These are recommendation allowances, not verified routes. A partial day
+    # must not receive a full day's attractions merely because it has a date.
+    allowances = None
+    if daily_windows is not None:
+        allowances = []
+        for window in daily_windows:
+            available = 0 if window.get('unavailable') else max(0, min(1320, window.get('end_minutes', 1440))-max(480, window.get('start_minutes', 0)))
+            allowances.append(min(360, max(0, available-min(120, available//3))))
+    must_target = sum(allowances) if allowances is not None else days * 360
+    optional_target = days * 120
+    durations_by_id = {p.get('poi_id'): p.get('visit_minutes') or durations.get(p.get('name', ''), 120) for p in pool}
+
+    def fit_picks(must_ids, optional_ids):
+        if allowances is None:
+            return must_ids, optional_ids
+        remaining, kept, extra = list(allowances), [], list(optional_ids)
+        for ident in dict.fromkeys(must_ids):
+            minutes = durations_by_id.get(ident, 120)
+            possible = [i for i, capacity in enumerate(remaining) if capacity >= minutes]
+            if possible:
+                target = min(possible, key=lambda i: remaining[i])
+                remaining[target] -= minutes
+                kept.append(ident)
+            else:
+                extra.append(ident)
+        return kept, [i for i in dict.fromkeys(extra) if i not in kept]
 
     pool_lines = []
     for p in pool:
@@ -344,12 +369,15 @@ async def pick_attractions_from_pool(
         )
 
     prefs_str = _format_preferences(preferences)
+    window_facts = [{k: w[k] for k in ('date', 'start_minutes', 'end_minutes', 'unavailable', 'provisional') if k in w} for w in daily_windows] if daily_windows is not None else None
     prompt = f"""你是行程规划助手。请从下面这个 {destination} 的景点池里，
 为一个 {days} 天的行程挑选必去和备选景点。
 
 行程目标：
-- 必去景点（must）：总游览时长约 {must_target} 分钟（6 小时/天）
-- 备选景点（optional）：额外约 {optional_target} 分钟（2 小时/天）
+- 必去景点（must）：总游览时长不超过 {must_target} 分钟，已为用餐与市内移动留初步余量
+- 备选景点（optional）：额外约 {optional_target} 分钟，供替换，不视为全部都能安排
+- 每日交通后窗口：{json.dumps(window_facts, ensure_ascii=False) if window_facts is not None else '未提供，时间暂定'}
+- 首末天依实际可用时间选择，不能自动整天留空，也不能忽略长途交通排满。营业和真实路线仍在后续核对。
 
 用户偏好：{prefs_str}
 
@@ -402,6 +430,7 @@ async def pick_attractions_from_pool(
         valid_ids = {p.get("poi_id") for p in pool if p.get("poi_id")}
         must_ids = [i for i in must_ids if i in valid_ids]
         optional_ids = [i for i in optional_ids if i in valid_ids and i not in must_ids]
+        must_ids, optional_ids = fit_picks(must_ids, optional_ids)
 
         if not must_ids and not optional_ids:
             raise ValueError("LLM 返回空集")
@@ -422,6 +451,7 @@ async def pick_attractions_from_pool(
     except Exception:
         logger.exception("pick_attractions_from_pool LLM call failed, falling back to rating")
         must_ids, optional_ids = _rating_based_fallback(pool, days)
+        must_ids, optional_ids = fit_picks(must_ids, optional_ids)
         reasons = {poi_id: "按评分和行程天数自动推荐" for poi_id in must_ids}
         tags = {poi_id: ["高评分"] for poi_id in must_ids}
         return {
@@ -429,5 +459,5 @@ async def pick_attractions_from_pool(
             "optional_ids": optional_ids,
             "reasons": reasons,
             "tags": tags,
-            "summary": "AI 推荐暂不可用，已按评分排序生成推荐",
+            "summary": "AI 推荐暂不可用，已按评分及交通后的可用时间生成推荐" if allowances is not None else "AI 推荐暂不可用，已按评分排序生成推荐",
         }
